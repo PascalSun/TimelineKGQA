@@ -24,3 +24,22 @@ link: [ICEWS Events](https://dataverse.harvard.edu/dataset.xhtml?persistentId=do
 ## Description of the data
 
 The data spanned from 1995 to 2023 now.
+
+## Download data
+
+Data is available within the link above, or this
+link: [ICEWS Events](https://pascalsun.sg4.quickconnect.to/d/s/xkoI2xvSvWopVqbmdNQ0wQxh5JwknS8K/FByRCtROPpmYWCpleIfh_LAL1wc6Lysb-grMgdjDqOws)
+
+The file we focus on will be `ICEWS Coded Event Data`
+
+Put them into the folder `data/ICEWS`
+
+The structure of the data is as follows:
+
+```bash
+├── data/
+│   └── icews/
+│      │── ICEWS Coded Event Data/
+│      └── ICEWS Dictionaries/
+```
+
