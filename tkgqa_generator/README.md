@@ -48,7 +48,11 @@ The workflow of the temporal logic question answering pairs over knowledge graph
 1. **Unified Knowledge Graph**: Transform the knowledge graph into a unified format, where **SPO** are nodes,
    and [start_time, end_time] are attributes.
 2. **Generate TRUE Temporal Logic Statement**:
-   - 
+    - 1RE
+    - 2RA
+    - 3RA-R
+    - 3RA-A
+3. Generate QA pairs with templates
 
 ![Workflow](./docs/imgs/experiment-design.png)
 
