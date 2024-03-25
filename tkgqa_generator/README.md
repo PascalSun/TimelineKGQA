@@ -6,6 +6,10 @@ We plan to generate temporal question answering pairs from knowledge graphs from
 - **Temporal Pattern**
 - **Temporal Modifier**
 
+Overall MindMap will be like this:
+
+![MindMap](./docs/imgs/Statement_type.png)
+
 ## Unified Knowledge Graph
 
 There are a lot of ways to represent temporal information within the knowledge graph.
