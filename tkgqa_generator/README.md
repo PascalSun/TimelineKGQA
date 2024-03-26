@@ -75,6 +75,13 @@ pip install -r requirements.dev.txt
 pip install -e .
 ```
 
+If you are doing development, you will also need a database to store the knowledge graph.
+
+```bash
+# spin up the database
+docker-compose up -d
+```
+
 ### Folder Structure
 
 ```bash
