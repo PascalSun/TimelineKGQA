@@ -46,6 +46,122 @@ ORDER BY year;
 
 ![Yearly Events](../imgs/sql_year_events_no.png)
 
+#### For each year, each month, the number of events
+
+```sql
+SELECT EXTRACT(YEAR FROM CAST("Event Date" AS DATE))  AS year,
+       EXTRACT(MONTH FROM CAST("Event Date" AS DATE)) AS month,
+       COUNT(*)                                       AS event_count
+FROM icews
+GROUP BY year, month
+ORDER BY year, month;
+```
+
+![Monthly Events](../imgs/sql_year_month_events_no.png)
+
+#### Sector Distribution
+
+```sql
+
+SELECT "Source Sectors", COUNT(*) AS total_records
+FROM icews
+GROUP BY "Source Sectors"
+ORDER BY total_records DESC;
+```
+
+Majority of the events are from the `null` sector, which means no source sector assigned, the number is 4315622.
+A lot of events are from multiple sectors.
+Ohter than that, top sections include
+
+```csv
+"General Population / Civilian / Social,Social",540124
+"Government,Police",501993
+"Social,General Population / Civilian / Social",481059
+"Police,Government",412783
+"Government,Military",353416
+"Military,Government",277339
+Unidentified Forces,203532
+"Government,Legislative / Parliamentary",170821
+"Executive,Executive Office,Government",148222
+"Dissident,Protestors / Popular Opposition / Mobs",145254
+"Government,Judicial",135696
+"Legislative / Parliamentary,Government",133953
+Parties,133178
+```
+
+#### Country event distribution
+
+```sql
+SELECT "Country", COUNT(*) AS total_records
+FROM icews
+GROUP BY "Country"
+ORDER BY total_records DESC;
+```
+
+254 Countries/Regions, the top 10 countries are:
+
+```csv
+India,1584754
+Russian Federation,1107847
+United States,1027424
+China,820521
+United Kingdom,505387
+Australia,453535
+Japan,444193
+Iran,429701
+Occupied Palestinian Territory,369623
+Iraq,367640
+```
+
+#### Convert to GPS and plot on the map
+
+```sql
+ALTER TABLE icews
+    ADD COLUMN geom geometry(Point, 4326);
+UPDATE icews
+SET geom = ST_SetSRID(ST_MakePoint(longitude, latitude), 4326);
+```
+
+![map](../imgs/map_demo_view.png)
+
+#### All events from Australia
+
+```sql
+SELECT *
+FROM icews
+WHERE "Country" = 'Australia';
+```
+
+#### One example of the event
+
+```
+SELECT *
+FROM icews
+WHERE "Story ID" = '57125054';
+```
+
+![event](../imgs/event_example.png)
+
+#### Story ID distribution
+
+```sql
+SELECT cnt, COUNT(*) AS stories
+FROM (
+    SELECT "Story ID", COUNT(*) AS cnt
+    FROM icews
+    GROUP BY "Story ID"
+    HAVING COUNT(*) > 1
+) AS duplicate_stories
+GROUP BY cnt
+ORDER BY cnt;
+```
+
+![story](../imgs/distribution_of_stories.png)
+
+### Probelms
+
+The entity do not have consertive stories.
+
 ## Download data
 
 Data is available within the link above, or this
