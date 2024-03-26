@@ -60,7 +60,15 @@ The workflow of the temporal logic question answering pairs over knowledge graph
 
 ![Workflow](./docs/imgs/experiment-design.png)
 
-## Folder Structure
+## Development Setup
+
+### Install the package
+
+```bash
+pip install -e .
+```
+
+### Folder Structure
 
 ```bash
 tkgqa_generator/
