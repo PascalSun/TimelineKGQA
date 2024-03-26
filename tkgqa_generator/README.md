@@ -8,7 +8,7 @@ We plan to generate temporal question answering pairs from knowledge graphs from
 
 Overall MindMap will be like this:
 
-![MindMap](./docs/imgs/Statement_type.png)
+![MindMap](./docs/imgs/Statement_Type.png)
 
 ## Unified Knowledge Graph
 
