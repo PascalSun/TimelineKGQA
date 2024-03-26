@@ -158,6 +158,23 @@ ORDER BY cnt;
 
 ![story](../imgs/distribution_of_stories.png)
 
+
+#### Get count for unique source name and target name
+
+```sql
+SELECT "Source Name", COUNT(*) AS source_count
+FROM icews
+GROUP BY "Source Name"
+ORDER BY source_count DESC;
+```
+
+```sql
+SELECT "Target Name", COUNT(*) AS target_count
+FROM icews
+GROUP BY "Target Name"
+ORDER BY target_count DESC;
+```
+
 ### Probelms
 
 The entity do not have consertive stories.
