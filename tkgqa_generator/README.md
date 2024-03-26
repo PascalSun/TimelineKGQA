@@ -60,7 +60,29 @@ The workflow of the temporal logic question answering pairs over knowledge graph
 
 ![Workflow](./docs/imgs/experiment-design.png)
 
-## Folder Structure
+## Development Setup
+
+### Install the package
+
+```bash
+# cd to current directory
+cd tkgqa_generator
+pip install -r requirements.txt
+# if you are doing development
+pip install -r requirements.dev.txt
+
+# and then install the package
+pip install -e .
+```
+
+If you are doing development, you will also need a database to store the knowledge graph.
+
+```bash
+# spin up the database
+docker-compose up -d
+```
+
+### Folder Structure
 
 ```bash
 tkgqa_generator/

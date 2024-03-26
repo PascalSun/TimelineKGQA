@@ -1,0 +1,17 @@
+version: '3.7'
+
+services:
+  postgis:
+    image: postgis/postgis
+    container_name: postgis
+    environment:
+      - POSTGRES_DB=tkgqa
+      - POSTGRES_USER=tkgqa
+      - POSTGRES_PASSWORD=tkgqa
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgis_data:/var/lib/postgresql/data
+
+volumes:
+  postgis_data:
