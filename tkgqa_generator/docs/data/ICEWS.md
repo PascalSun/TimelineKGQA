@@ -21,9 +21,30 @@ ICEWS Dictionaries are kind of ontology of the datasets, which is still useful.
 The core event data is the ICEWS Events data, which is from this
 link: [ICEWS Events](https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/28075)
 
-## Description of the data
+## Exploration of the data
 
 The data spanned from 1995 to 2023 now.
+
+### SQL Exploration
+
+#### Total number of events
+
+```sql
+SELECT COUNT(*)
+FROM icews;
+-- Results: 18662558
+```
+
+#### For each year, the number of events
+
+```sql
+SELECT EXTRACT(YEAR FROM CAST("Event Date" AS DATE)) AS year, COUNT(*) AS total_records
+FROM icews
+GROUP BY EXTRACT(YEAR FROM CAST("Event Date" AS DATE))
+ORDER BY year;
+```
+
+![Yearly Events](../imgs/sql_year_events_no.png)
 
 ## Download data
 
