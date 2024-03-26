@@ -65,6 +65,13 @@ The workflow of the temporal logic question answering pairs over knowledge graph
 ### Install the package
 
 ```bash
+# cd to current directory
+cd tkgqa_generator
+pip install -r requirements.txt
+# if you are doing development
+pip install -r requirements.dev.txt
+
+# and then install the package
 pip install -e .
 ```
 
