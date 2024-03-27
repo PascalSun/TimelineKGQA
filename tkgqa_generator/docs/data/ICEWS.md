@@ -146,18 +146,15 @@ WHERE "Story ID" = '57125054';
 
 ```sql
 SELECT cnt, COUNT(*) AS stories
-FROM (
-    SELECT "Story ID", COUNT(*) AS cnt
-    FROM icews
-    GROUP BY "Story ID"
-    HAVING COUNT(*) > 1
-) AS duplicate_stories
+FROM (SELECT "Story ID", COUNT(*) AS cnt
+      FROM icews
+      GROUP BY "Story ID"
+      HAVING COUNT(*) > 1) AS duplicate_stories
 GROUP BY cnt
 ORDER BY cnt;
 ```
 
 ![story](../imgs/distribution_of_stories.png)
-
 
 #### Get count for unique source name and target name
 
@@ -175,7 +172,23 @@ GROUP BY "Target Name"
 ORDER BY target_count DESC;
 ```
 
-### Probelms
+### Sector/Agents/Actor
+
+### Number of Sector/Agen/Actor
+
+```sql
+SELECT COUNT(*)
+FROM icews_sectors;
+-- 590
+SELECT COUNT(*)
+FROM icews_agents;
+-- 701
+SELECT COUNT(*)
+FROM icews_actors
+-- 108005
+```
+
+### Problems
 
 The entity do not have consertive stories.
 
@@ -187,6 +200,8 @@ link: [ICEWS Events](https://pascalsun.sg4.quickconnect.to/d/s/xkoI2xvSvWopVqbmd
 The file we focus on will be `ICEWS Coded Event Data`
 
 Put them into the folder `data/ICEWS`
+
+Do the same for `ICEWS Dictionaries
 
 The structure of the data is as follows:
 
