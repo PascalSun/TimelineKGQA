@@ -71,7 +71,7 @@ ORDER BY total_records DESC;
 
 Majority of the events are from the `null` sector, which means no source sector assigned, the number is 4315622.
 A lot of events are from multiple sectors.
-Ohter than that, top sections include
+Other than that, top sections include
 
 ```csv
 "General Population / Civilian / Social,Social",540124
@@ -119,7 +119,7 @@ Iraq,367640
 ALTER TABLE icews
     ADD COLUMN geom geometry(Point, 4326);
 UPDATE icews
-SET geom = ST_SetSRID(ST_MakePoint(longitude, latitude), 4326);
+SET geom = ST_SetSRID(ST_MakePoint(Longitude, Latitude), 4326);
 ```
 
 ![map](../imgs/map_demo_view.png)
@@ -146,18 +146,15 @@ WHERE "Story ID" = '57125054';
 
 ```sql
 SELECT cnt, COUNT(*) AS stories
-FROM (
-    SELECT "Story ID", COUNT(*) AS cnt
-    FROM icews
-    GROUP BY "Story ID"
-    HAVING COUNT(*) > 1
-) AS duplicate_stories
+FROM (SELECT "Story ID", COUNT(*) AS cnt
+      FROM icews
+      GROUP BY "Story ID"
+      HAVING COUNT(*) > 1) AS duplicate_stories
 GROUP BY cnt
 ORDER BY cnt;
 ```
 
 ![story](../imgs/distribution_of_stories.png)
-
 
 #### Get count for unique source name and target name
 
@@ -175,9 +172,29 @@ GROUP BY "Target Name"
 ORDER BY target_count DESC;
 ```
 
-### Probelms
+### Sector/Agents/Actor
 
-The entity do not have consertive stories.
+### Number of Sector/Agen/Actor
+
+```sql
+SELECT COUNT(*)
+FROM icews_sectors;
+-- 590
+SELECT COUNT(*)
+FROM icews_agents;
+-- 701
+SELECT COUNT(*)
+FROM icews_actors
+-- 108005
+```
+
+For the sector tree, visualization is like this:
+
+![Sector Tree](../imgs/sectors.png)
+
+### Problems
+
+The entity does not have conservative stories.
 
 ## Download data
 
@@ -187,6 +204,8 @@ link: [ICEWS Events](https://pascalsun.sg4.quickconnect.to/d/s/xkoI2xvSvWopVqbmd
 The file we focus on will be `ICEWS Coded Event Data`
 
 Put them into the folder `data/ICEWS`
+
+Do the same for `ICEWS Dictionaries
 
 The structure of the data is as follows:
 

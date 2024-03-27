@@ -1,0 +1,8 @@
+pandas
+jupyter
+sqlalchemy
+psycopg2-binary
+isort
+black
+igraph
+plotly
