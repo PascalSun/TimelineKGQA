@@ -8,8 +8,10 @@ from tkgqa_generator.constants import (
     DATA_ICEWS_DICTS_DATA_DIR,
     DATA_ICEWS_EVENTS_DATA_DIR,
     DB_CONNECTION_STR,
+    DOC_DIR
 )
 from tkgqa_generator.utils import get_logger
+import plotly.graph_objects as go
 
 logger = get_logger(__name__)
 
@@ -72,5 +74,60 @@ def load_icews_data():
             df.to_sql(table_name, con=engine, if_exists="replace", index=False)
 
 
+def explore_icews_data():
+    """
+    Read the ICEWS_Sector, as it is a tree, plot a tree for this.
+    :return:
+    """
+    engine = create_engine(DB_CONNECTION_STR)
+    df = pd.read_sql_table("icews_sectors", con=engine)
+    # Initialize lists to hold the transformed data
+    names = []
+    parents = []
+
+    logger.info(df.head())
+
+    # Track the last seen name at each level to establish parent-child relationships
+    last_seen = {-1: ''}  # Root has no name
+
+    # Iterate over the rows in the original dataframe
+    for _, row in df.iterrows():
+        for level in range(len(row)):
+            logger.info(f"Level: {level}")
+            # Check if the cell is not empty
+            if not pd.isnull(row[level]):
+                # This level's name
+                name = row[level]
+                # Parent is the last seen name in the previous level
+                parent = last_seen[level - 1]
+                # Update this level's last seen name
+                last_seen[level] = name
+                # If this name at this level is not already added, add it to the lists
+                if not name in names or parents[names.index(name)] != parent:
+                    names.append(name)
+                    parents.append(parent)
+                break  # Move to the next row once the first non-empty cell is processed
+
+    # Creating a new dataframe from the transformed data
+    transformed_df = pd.DataFrame({'name': names, 'parent': parents})
+
+    # Display the first few rows of the transformed dataframe
+    logger.info(transformed_df.head())
+
+    # Creating a tree diagram with Plotly
+    fig = go.Figure(go.Treemap(
+        labels=transformed_df['name'],
+        parents=transformed_df['parent'],
+    ))
+
+    fig.update_layout(margin=dict(t=0, l=0, r=0, b=0))
+
+    # Display the figure
+    # fig.show()
+    doc_data_icews_sectors = DOC_DIR / "data"
+    fig.write_html(doc_data_icews_sectors / "ICEWS_SECTORS.html")
+
+
 if __name__ == "__main__":
-    load_icews_data()
+    # load_icews_data()
+    explore_icews_data()

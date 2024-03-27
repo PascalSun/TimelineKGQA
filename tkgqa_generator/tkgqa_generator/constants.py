@@ -4,6 +4,7 @@ from pathlib import Path
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 
 DATA_DIR = PROJECT_DIR / "data"
+DOC_DIR = PROJECT_DIR / "docs"
 
 DATA_ICEWS = "ICEWS"
 DATA_ICEWS_EVENTS = "ICEWS Coded Event Data"
