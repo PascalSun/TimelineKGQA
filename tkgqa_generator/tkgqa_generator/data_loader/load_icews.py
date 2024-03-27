@@ -129,5 +129,5 @@ def explore_icews_data():
 
 
 if __name__ == "__main__":
-    # load_icews_data()
+    load_icews_data()
     explore_icews_data()
