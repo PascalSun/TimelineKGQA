@@ -113,6 +113,8 @@ Occupied Palestinian Territory,369623
 Iraq,367640
 ```
 
+![Country Distribution](../imgs/icews_events_country.png)
+
 #### Convert to GPS and plot on the map
 
 ```sql
