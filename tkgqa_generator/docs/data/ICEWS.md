@@ -174,7 +174,7 @@ ORDER BY target_count DESC;
 
 ### Sector/Agents/Actor
 
-### Number of Sector/Agen/Actor
+#### Number of Sector/Agen/Actor
 
 ```sql
 SELECT COUNT(*)
@@ -188,9 +188,81 @@ FROM icews_actors
 -- 108005
 ```
 
+#### Sector data
+
 For the sector tree, visualization is like this:
 
 ![Sector Tree](../imgs/sectors.png)
+
+#### Actor data
+
+This should be the temporal duration data we are looking for.
+
+The columns are
+
+- Country
+- Actor Name
+- Actor Type
+- Affiliation to
+- Affiliation Start Date
+- Affiliation End Date
+- Aliases
+
+For each year, how many actors are starting
+
+```sql
+SELECT EXTRACT(YEAR FROM CAST("Affiliation Start Date" AS DATE)) AS year, COUNT(*) AS total_records
+FROM icews_actors
+WHERE "Affiliation Start Date" != 'beginning of time'
+  and EXTRACT(YEAR FROM CAST("Affiliation Start Date" AS DATE)) < 2030
+GROUP BY EXTRACT(YEAR FROM CAST("Affiliation Start Date" AS DATE))
+ORDER BY year;
+```
+
+```sql
+SELECT EXTRACT(YEAR FROM CAST("Affiliation End Date" AS DATE)) AS year, COUNT(*) AS total_records
+FROM icews_actors
+WHERE "Affiliation End Date" != 'end of time'
+  and EXTRACT(YEAR FROM CAST("Affiliation End Date" AS DATE)) < 2040
+GROUP BY EXTRACT(YEAR FROM CAST("Affiliation End Date" AS DATE))
+ORDER BY year;
+```
+
+![actor_start_distribution_year.png](../imgs/actor_start_distribution_year.png)
+
+![actor_start_distribution_year.png](../imgs/actor_end_distribution_year.png)
+
+```sql
+SELECT COUNT(*), "Country"
+FROM icews_actors
+GROUP BY "Country";
+-- 4557,United States
+-- 4458,India
+-- 3988,Multi-National Corporations
+-- 2742,Bangladesh
+-- 2191,United Kingdom
+-- 1716,Non-Governmental Organizations
+-- 1694,Russian Federation
+-- 1299,South Africa
+-- 1299,France
+-- 1293,Mexico
+-- 1290,Cambodia
+-- 1289,Nigeria
+-- 1252,Chile
+-- 1199,Argentina
+-- 1182,Brazil
+-- 1166,Colombia
+-- 1159,Canada
+-- 1067,Iran
+```
+
+```sql
+SELECT COUNT(*), icews_actors."Actor Type"
+FROM icews_actors
+GROUP BY icews_actors."Actor Type";
+-- 84923,Individual
+-- 23082,Group
+```
 
 ### Problems
 
