@@ -71,7 +71,7 @@ ORDER BY total_records DESC;
 
 Majority of the events are from the `null` sector, which means no source sector assigned, the number is 4315622.
 A lot of events are from multiple sectors.
-Ohter than that, top sections include
+Other than that, top sections include
 
 ```csv
 "General Population / Civilian / Social,Social",540124
@@ -119,7 +119,7 @@ Iraq,367640
 ALTER TABLE icews
     ADD COLUMN geom geometry(Point, 4326);
 UPDATE icews
-SET geom = ST_SetSRID(ST_MakePoint(longitude, latitude), 4326);
+SET geom = ST_SetSRID(ST_MakePoint(Longitude, Latitude), 4326);
 ```
 
 ![map](../imgs/map_demo_view.png)
@@ -188,9 +188,13 @@ FROM icews_actors
 -- 108005
 ```
 
+For the sector tree, visualization is like this:
+
+![Sector Tree](../imgs/sectors.png)
+
 ### Problems
 
-The entity do not have consertive stories.
+The entity does not have conservative stories.
 
 ## Download data
 
