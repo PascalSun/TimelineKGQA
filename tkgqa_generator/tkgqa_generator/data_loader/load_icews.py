@@ -133,6 +133,28 @@ def explore_icews_data(view_sector_tree_web: bool = False):
         fig.show()
 
 
+def unified_kg_icews_actor():
+    """
+    run sql query
+    ```sql
+    CREATE TABLE unified_kg_icews_actor AS
+    SELECT
+        "Actor Name" AS subject,
+        json_build_object('Country', "Country", 'Aliases', "Aliases") AS subject_json,
+        'Affiliation To' AS predicate,
+        '{}'::json AS predicate_json, -- Correctly cast empty JSON object
+        "Affiliation To" AS object,
+        '{}'::json AS object_json, -- Correctly cast empty JSON object
+        "Affiliation Start Date" AS start_time,
+        "Affiliation End Date" AS end_time
+    FROM
+        icews_actors;
+    ```
+    :return:
+    """
+    pass
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Load ICEWS data to DB")
     parser.add_argument(
