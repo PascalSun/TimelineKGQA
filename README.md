@@ -14,6 +14,8 @@ The project will have two main parts:
     - [x] Explore further about the Sectors
     - [x] Figure out the "Source Name" and "Target Name" with high occurrence and low sector level
     - [ ] Visualize for a given source name => timeline
-      - [ ] Visualize the count distribution of the Source Name
-      - [ ] Visualize the embedding of the Target Name for the source name
-      - [ ] Visualize the embedding of the Event Text for the target name
+        - [ ] Visualize the count distribution of the Source Name
+        - [ ] Visualize the embedding of the Target Name for the source name
+        - [ ] Visualize the embedding of the Event Text for the target name
+    - [ ] ICEWS Actor Unified KG
+        - [ ] Verify the alias, make sure there are no entities are actually the same
