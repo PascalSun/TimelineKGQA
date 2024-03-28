@@ -131,8 +131,6 @@ def explore_icews_data(view_sector_tree_web: bool = False):
 
     if view_sector_tree_web:
         fig.show()
-    doc_data_icews_sectors = DOC_DIR / "data"
-    fig.write_html(doc_data_icews_sectors / "ICEWS_SECTORS.html")
 
 
 if __name__ == "__main__":
