@@ -1,5 +1,9 @@
 import logging
 import sys
+from datetime import datetime
+from typing import Optional
+
+import requests
 
 
 def get_logger(name):
@@ -22,3 +26,18 @@ def get_logger(name):
     # Add console handler to logger
     logger.addHandler(console_handler)
     return logger
+
+
+class API:
+    def __init__(self, domain: str = "https://api.nlp-tlp.org", token: str = ""):
+        self.domain = domain
+        self.token = token
+
+    def create_embedding(self, text: str, model_name: str = "Mixtral-8x7b"):
+        url = f"{self.domain}/llm/call-llm/create-embedding/"
+        r = requests.post(
+            url,
+            data={"model_name": model_name, "prompt": text},
+            headers={"Authorization": f"Token {self.token}"},
+        )
+        return r.json()

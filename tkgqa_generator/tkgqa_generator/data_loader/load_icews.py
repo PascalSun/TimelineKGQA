@@ -10,7 +10,7 @@ from tkgqa_generator.constants import (
     DB_CONNECTION_STR,
     DOC_DIR,
 )
-from tkgqa_generator.utils import get_logger
+from tkgqa_generator.utils import get_logger, API
 import plotly.graph_objects as go
 import argparse
 
@@ -18,10 +18,13 @@ logger = get_logger(__name__)
 
 
 class ICEWSDataLoader:
-    def __init__(self, data_type="all", view_sector_tree_web: bool = False):
+    def __init__(
+        self, data_type="all", view_sector_tree_web: bool = False, token: str = ""
+    ):
         self.engine = create_engine(DB_CONNECTION_STR)
         self.data_type = data_type
         self.view_sector_tree_web = view_sector_tree_web
+        self.api = API(token=token)
 
     def icews_load_data(self):
         """
@@ -82,6 +85,8 @@ class ICEWSDataLoader:
                         df = pd.read_csv(csv_path, low_memory=False)
                     table_name = file.rsplit(".", 2)[0].replace(".", "_")
                     logger.info(f"Loading {table_name} into database")
+                    if "id" not in df.columns:
+                        df["id"] = range(1, 1 + len(df))
                     df.to_sql(
                         table_name, con=self.engine, if_exists="replace", index=False
                     )
@@ -211,6 +216,87 @@ class ICEWSDataLoader:
         cursor.commit()
         cursor.close()
 
+    def icews_actor_embedding(self, model_name: str = "Mixtral-8x7b"):
+        """
+        embedding iceews actors with several models, add columns to original table
+        embedding content will be subject affiliated to object
+        :return:
+        """
+        # add a json field for the embedding, then we can have {"model_name": "embedding"}
+        add_embedding_column_sql = """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT FROM information_schema.columns 
+                WHERE table_name = 'icews_actors' AND column_name = 'embedding' AND table_schema = 'public'
+            ) THEN
+                ALTER TABLE public.icews_actors ADD COLUMN embedding JSONB;
+            END IF;
+        END
+        $$;
+        """
+        cursor = self.engine.connect()
+        cursor.execute(text(add_embedding_column_sql))
+        cursor.commit()
+        cursor.close()
+
+        # loop the table, and get the embedding for each actor
+
+        while True:
+            # get the one that has not been embedded with SQL, embedding?.model_name is null
+            with self.engine.connect() as conn:
+                r = conn.execute(
+                    text(
+                        f"""
+                        SELECT *
+                        FROM icews_actors
+                        WHERE embedding? '{model_name}' IS NULL
+                        LIMIT 10;
+                        """
+                    )
+                )
+                result_no = 0
+                for row in r.mappings():
+                    logger.info(row)
+                    result_no += 1
+                    record_id = row["id"]
+                    subject = row["Actor Name"]
+                    object = row["Affiliation To"]
+                    prompt = f"{subject} affiliated to {object}"
+                    response = self.api.create_embedding(prompt, model_name=model_name)
+                    embedding = response["data"][0]["embedding"]
+                    # update the embedding column
+                    conn.execute(
+                        text(
+                            f"""
+                            UPDATE icews_actors
+                            SET embedding = jsonb_build_object('{model_name}', '{embedding}')
+                            WHERE id = {record_id};
+                            """
+                        )
+                    )
+
+                    conn.commit()
+
+                if result_no == 0:
+                    logger.info("All actors have been embedded")
+                    break
+
+    def icews_actor_entity_resolution_check(self):
+        """
+        Check the entity resolution for the ICEWS actors
+        :return:
+        """
+        pass
+
+    def icews_actor_entity_timeline(self, actor_name: str):
+        """
+        SELECT * FROM icews_actors WHERE "Actor Name" = actor_name;
+        :param actor_name:
+        :return:
+        """
+        pass
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Load ICEWS data to DB")
@@ -226,10 +312,26 @@ if __name__ == "__main__":
         help="Whether to view the sector tree in a web browser",
         default=False,
     )
+
+    parser.add_argument(
+        "--token",
+        type=str,
+        help="API token for the LLM model",
+        default="f07d79cda0137abacd39258654090410650c2c0d",
+    )
+    parser.add_argument(
+        "--llm_model_name",
+        type=str,
+        help="Model name for the LLM model",
+        default="Mixtral-8x7b",
+    )
     args = parser.parse_args()
     icews_data_loader = ICEWSDataLoader(
-        data_type=args.load_data, view_sector_tree_web=args.explore_data_view_sector
+        data_type=args.load_data,
+        view_sector_tree_web=args.explore_data_view_sector,
+        token=args.token,
     )
     icews_data_loader.icews_load_data()
     icews_data_loader.icews_explore_data()
     icews_data_loader.icews_actor_unified_kg()
+    icews_data_loader.icews_actor_embedding(model_name=args.llm_model_name)
