@@ -250,8 +250,10 @@ class ICEWSDataLoader:
                         f"""
                         SELECT *
                         FROM icews_actors
-                        WHERE embedding? '{model_name}' IS NULL
-                        LIMIT 10;
+                        WHERE id not in (SELECT id
+                                         FROM icews_actors
+                                         WHERE embedding ? '{model_name}')
+                        LIMIT 1;
                         """
                     )
                 )
@@ -275,7 +277,6 @@ class ICEWSDataLoader:
                             """
                         )
                     )
-
                     conn.commit()
 
                 if result_no == 0:
