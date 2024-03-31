@@ -113,6 +113,52 @@ Occupied Palestinian Territory,369623
 Iraq,367640
 ```
 
+![Country Distribution](../imgs/icews_events_country.png)
+
+#### Event text distribution (edge)
+
+```sql
+SELECT COUNT(*), "Event Text"
+FROM icews
+GROUP BY "Event Text"
+ORDER BY COUNT(*) DESC
+LIMIT 30;
+```
+
+In total we have 273 Event Texts, the top 30 are:
+```csv
+3080611,Make statement
+2071970,Consult
+1230464,Express intent to meet or negotiate
+1145847,Make a visit
+1145812,Host a visit
+884206,Make an appeal or request
+825543,"Arrest, detain, or charge with legal action"
+680572,Praise or endorse
+579460,Criticize or denounce
+522472,Use conventional military force
+462241,Accuse
+444268,Engage in negotiation
+380198,Use unconventional violence
+355367,Demonstrate or rally
+351145,Sign formal agreement
+286431,Express intent to cooperate
+271811,Express intent to engage in diplomatic cooperation (such as policy support)
+270530,Engage in diplomatic cooperation
+230565,Demand
+203805,fight with small arms and light weapons
+198600,Reject
+182051,Investigate
+149900,Make optimistic comment
+136411,Discuss by telephone
+108548,Threaten
+99449,Make pessimistic comment
+85663,Engage in symbolic act
+81941,Meet at a 'third' location
+79850,"Return, release person(s)"
+77621,"Abduct, hijack, or take hostage"
+```
+
 #### Convert to GPS and plot on the map
 
 ```sql
