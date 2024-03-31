@@ -28,6 +28,9 @@ def get_logger(name):
     return logger
 
 
+logger = get_logger(__name__)
+
+
 class API:
     def __init__(self, domain: str = "https://api.nlp-tlp.org", token: str = ""):
         self.domain = domain
@@ -38,6 +41,25 @@ class API:
         r = requests.post(
             url,
             data={"model_name": model_name, "prompt": text},
+            headers={"Authorization": f"Token {self.token}"},
+        )
+        logger.info(f"status code: {r.status_code}")
+        logger.info(r.text)
+        return r.json()
+
+    def queue_create_embedding(
+        self, prompts: str, model_name: str = "Mixtral-8x7b", name: str = "icews_actor"
+    ):
+        url = f"{self.domain}/queue_task/llm_batch/"
+        r = requests.post(
+            url,
+            data={
+                "model_name": model_name,
+                "name": name,
+                "prompts": prompts,
+                "llm_task_type": "create_embedding",
+                "task_worker": "gpu",
+            },
             headers={"Authorization": f"Token {self.token}"},
         )
         return r.json()

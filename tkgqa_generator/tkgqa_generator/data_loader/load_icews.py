@@ -1,4 +1,5 @@
 import os
+import time
 import zipfile
 
 import pandas as pd
@@ -8,23 +9,31 @@ from tkgqa_generator.constants import (
     DATA_ICEWS_DICTS_DATA_DIR,
     DATA_ICEWS_EVENTS_DATA_DIR,
     DB_CONNECTION_STR,
+    DATA_DIR,
     DOC_DIR,
 )
 from tkgqa_generator.utils import get_logger, API
 import plotly.graph_objects as go
 import argparse
+from transformers import BertModel, BertTokenizer
+import json
 
 logger = get_logger(__name__)
 
 
 class ICEWSDataLoader:
     def __init__(
-        self, data_type="all", view_sector_tree_web: bool = False, token: str = ""
+        self,
+        data_type="all",
+        view_sector_tree_web: bool = False,
+        token: str = "",
+        queue_name: str = "",
     ):
         self.engine = create_engine(DB_CONNECTION_STR)
         self.data_type = data_type
         self.view_sector_tree_web = view_sector_tree_web
         self.api = API(token=token)
+        self.queue_name = queue_name
 
     def icews_load_data(self):
         """
@@ -253,7 +262,9 @@ class ICEWSDataLoader:
                         WHERE id not in (SELECT id
                                          FROM icews_actors
                                          WHERE embedding ? '{model_name}')
-                        LIMIT 1;
+                        ORDER BY id
+                        DESC 
+                        ;
                         """
                     )
                 )
@@ -268,20 +279,114 @@ class ICEWSDataLoader:
                     response = self.api.create_embedding(prompt, model_name=model_name)
                     embedding = response["data"][0]["embedding"]
                     # update the embedding column
-                    conn.execute(
-                        text(
-                            f"""
-                            UPDATE icews_actors
-                            SET embedding = jsonb_build_object('{model_name}', '{embedding}')
-                            WHERE id = {record_id};
-                            """
+                    with timer(
+                        logger,
+                        f"Updating embedding for {subject} affiliated to {object}",
+                    ):
+                        conn.execute(
+                            text(
+                                f"""
+                                UPDATE icews_actors
+                                SET embedding = jsonb_build_object('{model_name}', '{embedding}')
+                                WHERE id = {record_id};
+                                """
+                            )
                         )
-                    )
-                    conn.commit()
+
+                        conn.commit()
+                    time.sleep(0.3)
 
                 if result_no == 0:
                     logger.info("All actors have been embedded")
                     break
+
+    def icews_actor_queue_embedding(self, model_name: str = "Mixtral-8x7b"):
+        """
+        embedding iceews actors with several models, add columns to original table
+        embedding content will be subject affiliated to object
+        :return:
+        """
+
+        # get the one that has not been embedded with SQL, embedding?.model_name is null
+        with self.engine.connect() as conn:
+            r = conn.execute(
+                text(
+                    f"""
+                        SELECT *
+                        FROM icews_actors
+                        WHERE id not in (SELECT id
+                                         FROM icews_actors
+                                         WHERE embedding ? '{model_name}')
+                        ORDER BY id
+                        DESC 
+                        ;
+                        """
+                )
+            )
+
+            prompts = []
+            for row in r.mappings():
+                logger.info(row)
+                record_id = row["id"]
+                subject = row["Actor Name"]
+                object = row["Affiliation To"]
+                prompt = f"{subject} affiliated to {object}"
+                prompts.append(prompt)
+
+            # every 100 prompts, send to the queue
+            for i in range(0, len(prompts), 100):
+                if i + 100 > len(prompts):
+                    response = self.api.queue_create_embedding(
+                        prompts[i:], model_name=model_name, name=self.queue_name
+                    )
+                else:
+                    response = self.api.queue_create_embedding(
+                        prompts[i : i + 100],
+                        model_name=model_name,
+                        name=self.queue_name,
+                    )
+                time.sleep(0.3)
+
+    def icews_actor_embedding_csv(self, queue_embedding_filename: str):
+        conn = self.engine.connect()
+        df = pd.read_csv(DATA_DIR / "ICEWS" / "processed" / queue_embedding_filename)
+        for _, row in df.iterrows():
+            prompt = row["prompt"]
+            subject = prompt.split(" affiliated to ")[0].replace("'", "''")
+            object = prompt.split(" affiliated to ")[1].replace("'", "''")
+            embedding = json.loads(json.loads(row["response"]))["data"][0]["embedding"]
+
+            # logger.debug(f"Subject: {subject}, Object: {object}, Embedding: {embedding}")
+
+            # update the embedding column
+
+            conn.execute(
+                text(
+                    f"""
+                    UPDATE icews_actors
+                    SET embedding = jsonb_build_object('Mixtral-8x7b', '{embedding}')
+                    WHERE "Actor Name" = '{subject}' AND "Affiliation To" = '{object}';
+                    """
+                )
+            )
+            conn.commit()
+
+    def __icews_actor_bert_embedding(self):
+        """
+        Use the BERT model to embed the ICEWS actors
+        :return:
+        """
+        # Load pre-trained model tokenizer (vocabulary)
+        tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+
+        # Load pre-trained model
+        model = BertModel.from_pretrained("bert-base-uncased")
+        model.eval()  # Set the model to evaluation mode
+        encoded_input = tokenizer(text, return_tensors="pt")
+
+        with torch.no_grad():
+            outputs = model(**encoded_input)
+        last_hidden_states = outputs.last_hidden_state
 
     def icews_actor_entity_resolution_check(self):
         """
@@ -326,13 +431,36 @@ if __name__ == "__main__":
         help="Model name for the LLM model",
         default="Mixtral-8x7b",
     )
+
+    parser.add_argument(
+        "--queue_embedding_name",
+        type=str,
+        help="Queue embedding name",
+        default=None,
+    )
+    parser.add_argument(
+        "--queue_embedding_filename",
+        type=str,
+        help="Queue embedding filename",
+        default=None,
+    )
     args = parser.parse_args()
     icews_data_loader = ICEWSDataLoader(
         data_type=args.load_data,
         view_sector_tree_web=args.explore_data_view_sector,
         token=args.token,
+        queue_name=args.queue_embedding_name,
     )
     icews_data_loader.icews_load_data()
     icews_data_loader.icews_explore_data()
     icews_data_loader.icews_actor_unified_kg()
-    icews_data_loader.icews_actor_embedding(model_name=args.llm_model_name)
+    if args.queue_embedding_name:
+        # this will cause timeout
+        icews_data_loader.icews_actor_queue_embedding(model_name=args.llm_model_name)
+    else:
+        icews_data_loader.icews_actor_embedding(model_name=args.llm_model_name)
+    # this is when finished the queue, and want to update the embedding
+    if args.queue_embedding_filename:
+        icews_data_loader.icews_actor_embedding_csv(
+            queue_embedding_filename=args.queue_embedding_filename
+        )
