@@ -1,22 +1,23 @@
+import argparse
+import json
 import os
 import time
 import zipfile
 
 import pandas as pd
+import plotly.graph_objects as go
+import torch
 from sqlalchemy import create_engine, text
+from transformers import BertModel, BertTokenizer
 
 from tkgqa_generator.constants import (
+    DATA_DIR,
     DATA_ICEWS_DICTS_DATA_DIR,
     DATA_ICEWS_EVENTS_DATA_DIR,
     DB_CONNECTION_STR,
-    DATA_DIR,
     DOC_DIR,
 )
-from tkgqa_generator.utils import get_logger, API
-import plotly.graph_objects as go
-import argparse
-from transformers import BertModel, BertTokenizer
-import json
+from tkgqa_generator.utils import API, get_logger, timer
 
 logger = get_logger(__name__)
 
@@ -276,9 +277,14 @@ class ICEWSDataLoader:
                     subject = row["Actor Name"]
                     object = row["Affiliation To"]
                     prompt = f"{subject} affiliated to {object}"
-                    response = self.api.create_embedding(prompt, model_name=model_name)
-                    embedding = response["data"][0]["embedding"]
-                    # update the embedding column
+                    if model_name == "bert":
+                        embedding = self.__icews_actor_bert_embedding(prompt)
+                    else:
+                        response = self.api.create_embedding(
+                            prompt, model_name=model_name
+                        )
+                        embedding = response["data"][0]["embedding"]
+                        # update the embedding column
                     with timer(
                         logger,
                         f"Updating embedding for {subject} affiliated to {object}",
@@ -292,7 +298,6 @@ class ICEWSDataLoader:
                                 """
                             )
                         )
-
                         conn.commit()
                     time.sleep(0.3)
 
@@ -347,7 +352,7 @@ class ICEWSDataLoader:
                     )
                 time.sleep(0.3)
 
-    def icews_actor_embedding_csv(self, queue_embedding_filename: str):
+    def icews_actor_embedding_csv(self, queue_embedding_filename: str, model_name: str):
         conn = self.engine.connect()
         df = pd.read_csv(DATA_DIR / "ICEWS" / "processed" / queue_embedding_filename)
         for _, row in df.iterrows():
@@ -364,14 +369,14 @@ class ICEWSDataLoader:
                 text(
                     f"""
                     UPDATE icews_actors
-                    SET embedding = jsonb_build_object('Mixtral-8x7b', '{embedding}')
+                    SET embedding = jsonb_build_object('{model_name}', '{embedding}')
                     WHERE "Actor Name" = '{subject}' AND "Affiliation To" = '{object}';
                     """
                 )
             )
             conn.commit()
 
-    def __icews_actor_bert_embedding(self):
+    def __icews_actor_bert_embedding(self, prompt: str):
         """
         Use the BERT model to embed the ICEWS actors
         :return:
@@ -382,11 +387,13 @@ class ICEWSDataLoader:
         # Load pre-trained model
         model = BertModel.from_pretrained("bert-base-uncased")
         model.eval()  # Set the model to evaluation mode
-        encoded_input = tokenizer(text, return_tensors="pt")
+        encoded_input = tokenizer(prompt, return_tensors="pt")
 
         with torch.no_grad():
             outputs = model(**encoded_input)
         last_hidden_states = outputs.last_hidden_state
+        logger.info(last_hidden_states)
+        return last_hidden_states
 
     def icews_actor_entity_resolution_check(self):
         """
@@ -462,5 +469,6 @@ if __name__ == "__main__":
     # this is when finished the queue, and want to update the embedding
     if args.queue_embedding_filename:
         icews_data_loader.icews_actor_embedding_csv(
-            queue_embedding_filename=args.queue_embedding_filename
+            queue_embedding_filename=args.queue_embedding_filename,
+            model_name=args.llm_model_name,
         )
