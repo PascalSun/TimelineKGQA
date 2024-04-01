@@ -24,11 +24,11 @@ logger = get_logger(__name__)
 
 class ICEWSDataLoader:
     def __init__(
-        self,
-        data_type="all",
-        view_sector_tree_web: bool = False,
-        token: str = "",
-        queue_name: str = "",
+            self,
+            data_type="all",
+            view_sector_tree_web: bool = False,
+            token: str = "",
+            queue_name: str = "",
     ):
         self.engine = create_engine(DB_CONNECTION_STR)
         self.data_type = data_type
@@ -286,8 +286,8 @@ class ICEWSDataLoader:
                         embedding = response["data"][0]["embedding"]
                         # update the embedding column
                     with timer(
-                        logger,
-                        f"Updating embedding for {subject} affiliated to {object}",
+                            logger,
+                            f"Updating embedding for {subject} affiliated to {object}",
                     ):
                         conn.execute(
                             text(
@@ -330,8 +330,10 @@ class ICEWSDataLoader:
             )
 
             prompts = []
+            logger.info(self.queue_name)
+            logger.info(model_name)
             for row in r.mappings():
-                logger.info(row)
+                logger.debug(row)
                 record_id = row["id"]
                 subject = row["Actor Name"]
                 object = row["Affiliation To"]
@@ -346,7 +348,7 @@ class ICEWSDataLoader:
                     )
                 else:
                     response = self.api.queue_create_embedding(
-                        prompts[i : i + 100],
+                        prompts[i: i + 100],
                         model_name=model_name,
                         name=self.queue_name,
                     )
@@ -356,6 +358,8 @@ class ICEWSDataLoader:
         conn = self.engine.connect()
         df = pd.read_csv(DATA_DIR / "ICEWS" / "processed" / queue_embedding_filename)
         for _, row in df.iterrows():
+            if row["model_name"] != model_name:
+                continue
             prompt = row["prompt"]
             subject = prompt.split(" affiliated to ")[0].replace("'", "''")
             object = prompt.split(" affiliated to ")[1].replace("'", "''")
@@ -461,11 +465,13 @@ if __name__ == "__main__":
     icews_data_loader.icews_load_data()
     icews_data_loader.icews_explore_data()
     icews_data_loader.icews_actor_unified_kg()
-    if args.queue_embedding_name:
+    if args.queue_embedding_name and args.queue_embedding_name != "Individual":
         # this will cause timeout
         icews_data_loader.icews_actor_queue_embedding(model_name=args.llm_model_name)
-    else:
+    elif args.queue_embedding_name == "Individual":
         icews_data_loader.icews_actor_embedding(model_name=args.llm_model_name)
+    else:
+        logger.info("No need to create embeddings specified")
     # this is when finished the queue, and want to update the embedding
     if args.queue_embedding_filename:
         icews_data_loader.icews_actor_embedding_csv(
