@@ -7,3 +7,4 @@ black
 igraph
 plotly
 transformers
+sentence-transformers
