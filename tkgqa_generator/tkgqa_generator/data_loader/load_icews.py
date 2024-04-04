@@ -282,11 +282,7 @@ class ICEWSDataLoader:
                     if model_name == "bert":
                         embedding = self.__icews_actor_bert_embedding(prompt)
                     else:
-                        response = self.api.create_embedding(
-                            prompt, model_name=model_name
-                        )
-                        embedding = response["data"][0]["embedding"]
-                        # update the embedding column
+                        raise ValueError(f"Model name {model_name} not supported")
                     with timer(
                         logger,
                         f"Updating embedding for {subject} affiliated to {object}",
