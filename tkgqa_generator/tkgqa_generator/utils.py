@@ -38,17 +38,6 @@ class API:
         self.domain = domain
         self.token = token
 
-    def create_embedding(self, text: str, model_name: str = "Mixtral-8x7b"):
-        url = f"{self.domain}/llm/call-llm/create-embedding/"
-        r = requests.post(
-            url,
-            data={"model_name": model_name, "prompt": text},
-            headers={"Authorization": f"Token {self.token}"},
-        )
-        logger.info(f"status code: {r.status_code}")
-        logger.info(r.text)
-        return r.json()
-
     def queue_create_embedding(
         self, prompts: str, model_name: str = "Mixtral-8x7b", name: str = "icews_actor"
     ):
@@ -60,7 +49,7 @@ class API:
                 "name": name,
                 "prompts": prompts,
                 "llm_task_type": "create_embedding",
-                "task_worker": "gpu",
+                "task_type": "gpu",
             },
             headers={"Authorization": f"Token {self.token}"},
         )
