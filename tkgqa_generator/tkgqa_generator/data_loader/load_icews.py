@@ -25,11 +25,11 @@ logger = get_logger(__name__)
 
 class ICEWSDataLoader:
     def __init__(
-        self,
-        data_type="all",
-        view_sector_tree_web: bool = False,
-        token: str = "",
-        queue_name: str = "",
+            self,
+            data_type="all",
+            view_sector_tree_web: bool = False,
+            token: str = "",
+            queue_name: str = "",
     ):
         self.engine = create_engine(DB_CONNECTION_STR)
         self.data_type = data_type
@@ -284,8 +284,8 @@ class ICEWSDataLoader:
                     else:
                         raise ValueError(f"Model name {model_name} not supported")
                     with timer(
-                        logger,
-                        f"Updating embedding for {subject} affiliated to {object}",
+                            logger,
+                            f"Updating embedding for {subject} affiliated to {object}",
                     ):
                         conn.execute(
                             text(
@@ -350,7 +350,7 @@ class ICEWSDataLoader:
                     )
                 else:
                     response = self.api.queue_create_embedding(
-                        prompts[i : i + 100],
+                        prompts[i: i + 100],
                         model_name=model_name,
                         name=self.queue_name,
                     )
@@ -407,6 +407,19 @@ class ICEWSDataLoader:
         :return:
         """
         pass
+
+    def icews_actor_subject_count_distribution(self, actor_name: str):
+        """
+        get all records for the actor_name, present the occurrence across timeline
+        xaixs: year
+        yaxis: month
+        :return:
+        """
+        get_all_records_for_actor_name = f"""
+        SELECT * FROM icews_actors WHERE "Actor Name" = {actor_name};
+        """
+        actor_df = pd.read_sql_query(get_all_records_for_actor_name, con=self.engine)
+        logger.info(actor_df.head())
 
     def icews_actor_entity_timeline(self, actor_name: str):
         """
