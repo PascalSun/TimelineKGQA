@@ -14,8 +14,10 @@ The project will have two main parts:
     - [x] Explore further about the Sectors
     - [x] Figure out the "Source Name" and "Target Name" with high occurrence and low sector level
     - [ ] Visualize for a given source name => timeline
-        - [ ] Visualize the count distribution of the Source Name
-        - [ ] Visualize the embedding of the Target Name for the source name
-        - [ ] Visualize the embedding of the Event Text for the target name
+        - [x] Visualize the temporal logic for the source name along the timeline
+        - [x] Similarity Matrix between all the SPO embeddings for the given source name along the timeline
+        - [ ] Visualize the embedding of the Target Name for the source name, along the timeline, mark the line with
+          color
+        - [ ] Visualize the embedding of the Event Text for the given target name
     - [ ] ICEWS Actor Unified KG
         - [ ] Verify the alias, make sure there are no entities are actually the same

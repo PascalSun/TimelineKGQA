@@ -12,6 +12,7 @@ import torch
 from sentence_transformers import SentenceTransformer
 from sqlalchemy import create_engine, text
 from transformers import BertModel, BertTokenizer
+import colorsys
 
 from tkgqa_generator.constants import (
     DATA_DIR,
@@ -27,11 +28,11 @@ logger = get_logger(__name__)
 
 class ICEWSDataLoader:
     def __init__(
-        self,
-        data_type="all",
-        view_sector_tree_web: bool = False,
-        token: str = "",
-        queue_name: str = "",
+            self,
+            data_type="all",
+            view_sector_tree_web: bool = False,
+            token: str = "",
+            queue_name: str = "",
     ):
         self.engine = create_engine(DB_CONNECTION_STR)
         self.data_type = data_type
@@ -286,8 +287,8 @@ class ICEWSDataLoader:
                     else:
                         raise ValueError(f"Model name {model_name} not supported")
                     with timer(
-                        logger,
-                        f"Updating embedding for {subject} affiliated to {object}",
+                            logger,
+                            f"Updating embedding for {subject} affiliated to {object}",
                     ):
                         conn.execute(
                             text(
@@ -352,7 +353,7 @@ class ICEWSDataLoader:
                     )
                 else:
                     response = self.api.queue_create_embedding(
-                        prompts[i : i + 100],
+                        prompts[i: i + 100],
                         model_name=model_name,
                         name=self.queue_name,
                     )
@@ -370,9 +371,9 @@ class ICEWSDataLoader:
             r = conn.execute(
                 text(
                     f"""
-                        SELECT "Actor Name"
+                        SELECT "Affiliation To"
                         FROM icews_actors
-                        GROUP BY "Actor Name"
+                        GROUP BY "Affiliation To"
                         ;
                         """
                 )
@@ -382,7 +383,7 @@ class ICEWSDataLoader:
             logger.info(self.queue_name)
             logger.info(model_name)
             for row in r.mappings():
-                prompt = row["Actor Name"]
+                prompt = row["Affiliation To"]
                 prompts.append(prompt)
 
             # every 100 prompts, send to the queue
@@ -393,7 +394,7 @@ class ICEWSDataLoader:
                     )
                 else:
                     response = self.api.queue_create_embedding(
-                        prompts[i : i + 100],
+                        prompts[i: i + 100],
                         model_name=model_name,
                         name=self.queue_name,
                     )
@@ -447,11 +448,31 @@ class ICEWSDataLoader:
         return embeddings.tolist()
 
     @staticmethod
-    def __similarity_to_color(similarity):
-        # Assuming similarity ranges from -1 to 1, normalize to 0-1
-        # normalized_similarity = (similarity + 1) / 2
-        # Use a colormap (e.g., 'RdYlGn' for Red-Yellow-Green)
-        return plt.get_cmap("RdYlGn")(similarity)
+    def __similarity_to_color(value):
+        """
+        Returns an RGB color tuple (r, g, b) based on the given value between 0 and 1.
+        The color gradient transitions from red (for 0) to green (for 1).
+        """
+        # Clamp the value between 0 and 1
+        value = max(0, min(1, value))
+
+        # Map the value to the hue range (0 to 120)
+        hue = (value) * 1.2  # Scaling factor to adjust the hue range
+
+        # Convert the hue to RGB color tuple
+        rgb = colorsys.hsv_to_rgb(hue / 3, 1, 1)  # HSV to RGB conversion
+
+        # Convert RGB values to integers between 0 and 255
+        rgb = tuple(int(c * 255) for c in rgb)
+
+        return rgb
+
+    # @staticmethod
+    # def __similarity_to_color(similarity):
+    #     # Assuming similarity ranges from -1 to 1, normalize to 0-1
+    #     # normalized_similarity = (similarity + 1) / 2
+    #     # Use a colormap (e.g., 'RdYlGn' for Red-Yellow-Green)
+    #     return plt.get_cmap("viridis")(similarity)
 
     def icews_actor_entity_resolution_check(self):
         """
@@ -461,10 +482,10 @@ class ICEWSDataLoader:
         pass
 
     def icews_actor_subject_count_distribution(
-        self,
-        actor_name: str,
-        semantic_search: bool = False,
-        model_name: str = "bert",
+            self,
+            actor_name: str,
+            semantic_search: bool = False,
+            model_name: str = "bert",
     ):
         """
         Get all records for the actor_name and present the occurrence across a timeline.
@@ -558,6 +579,7 @@ class ICEWSDataLoader:
         first_embedding_value = torch.tensor(eval(first_embedding_value))
         logger.info(first_embedding_value.shape)
         # Iterate over each record to plot it
+        embeddings = []
         for index, row in actor_df.iterrows():
             # Adding a line for each affiliation duration
             logger.info(row["start_year"])
@@ -569,6 +591,7 @@ class ICEWSDataLoader:
                 torch.tensor(embedding_value),
                 dim=0,
             )
+            embeddings.append(embedding_value)
             logger.info(f"Similarity: {similarity}")
             line_color = self.__similarity_to_color(similarity)
             fig.add_trace(
@@ -590,13 +613,13 @@ class ICEWSDataLoader:
                 )
             )
         min_start_year = (
-            actor_df["start_year"].min() + actor_df["start_month"].min() / 12 - 5
+                actor_df["start_year"].min() + actor_df["start_month"].min() / 12 - 5
         )  # Extend left by subtracting 1
         max_end_year = (
-            actor_df["end_year"].max() + actor_df["end_month"].max() / 12 + 5
+                actor_df["end_year"].max() + actor_df["end_month"].max() / 12 + 5
         )  # Optionally extend right
         max_index = (
-            actor_df.index.max() + 1
+                actor_df.index.max() + 1
         )  # Assuming index is continuous and starts from 0
 
         # Update layout for readability and adjust x and y axis ranges
@@ -615,6 +638,14 @@ class ICEWSDataLoader:
             ),
         )
 
+        fig.show()
+
+        # calculate the similarity between the embeddings
+        embeddings = torch.stack(embeddings)
+        similarity_matrix = torch.mm(embeddings, embeddings.T)
+        logger.info(similarity_matrix.shape)
+        # visualize the similarity matrix
+        fig = px.imshow(similarity_matrix)
         fig.show()
 
     def icews_actor_entity_timeline(self, actor_name: str):
@@ -677,33 +708,33 @@ if __name__ == "__main__":
     )
 
     # load the data
-    icews_data_loader.icews_load_data()
-    # explore the data
-    icews_data_loader.icews_explore_data()
-
-    # create unified knowledge graph
-    icews_data_loader.icews_actor_unified_kg()
-
-    # create embeddings
-    if args.queue_embedding_name and args.queue_embedding_name != "Individual":
-        # this will cause timeout
-        logger.info(f"Queue embedding: {args.queue_embedding_name}")
-        icews_data_loader.icews_actor_queue_embedding(model_name=args.llm_model_name)
-    elif args.queue_embedding_name == "Individual":
-        logger.info(f"Individual embedding: {args.llm_model_name}")
-        icews_data_loader.icews_actor_embedding(model_name=args.llm_model_name)
-    else:
-        logger.info("No need to create embeddings specified")
-    # this is when finished the queue, and want to update the embedding
-    if args.queue_embedding_filename and args.llm_model_name:
-        logger.info(f"Process embedding filename: {args.queue_embedding_filename}")
-        icews_data_loader.icews_actor_embedding_csv(
-            queue_embedding_filename=args.queue_embedding_filename,
-            model_name=args.llm_model_name,
-        )
+    # icews_data_loader.icews_load_data()
+    # # explore the data
+    # icews_data_loader.icews_explore_data()
+    #
+    # # create unified knowledge graph
+    # icews_data_loader.icews_actor_unified_kg()
+    #
+    # # create embeddings
+    # if args.queue_embedding_name and args.queue_embedding_name != "Individual":
+    #     # this will cause timeout
+    #     logger.info(f"Queue embedding: {args.queue_embedding_name}")
+    #     icews_data_loader.icews_actor_queue_embedding(model_name=args.llm_model_name)
+    # elif args.queue_embedding_name == "Individual":
+    #     logger.info(f"Individual embedding: {args.llm_model_name}")
+    #     icews_data_loader.icews_actor_embedding(model_name=args.llm_model_name)
+    # else:
+    #     logger.info("No need to create embeddings specified")
+    # # this is when finished the queue, and want to update the embedding
+    # if args.queue_embedding_filename and args.llm_model_name:
+    #     logger.info(f"Process embedding filename: {args.queue_embedding_filename}")
+    #     icews_data_loader.icews_actor_embedding_csv(
+    #         queue_embedding_filename=args.queue_embedding_filename,
+    #         model_name=args.llm_model_name,
+    #     )
 
     icews_data_loader.icews_actor_queue_actor_name_embedding(model_name="bert")
     # plot the distribution of the actor
     icews_data_loader.icews_actor_subject_count_distribution(
-        "australia", semantic_search=True
+        "Putin", semantic_search=True
     )
