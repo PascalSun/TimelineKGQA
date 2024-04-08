@@ -338,6 +338,59 @@ WHERE year < 2020
 ORDER BY year;
 ```
 
+Transform embedding to vector
+
+```sql
+ALTER TABLE icews_actors
+    ADD COLUMN bert         VECTOR(384),
+    ADD COLUMN llama2_13b   VECTOR(5120),
+    ADD COLUMN mixtral_8x7b VECTOR(4096);
+CREATE EXTENSION IF NOT EXISTS pgvector;
+
+UPDATE icews_actors
+SET bert         = ARRAY(
+        SELECT unnest(
+                       regexp_split_to_array(
+                               trim(both '[]' from embedding ->> 'bert'),
+                               ','
+                       )::float[]
+               )
+                   )::vector,
+    llama2_13b   = ARRAY(
+            SELECT unnest(
+                           regexp_split_to_array(
+                                   trim(both '[]' from embedding ->> 'llama2-13b'),
+                                   ','
+                           )::float[]
+                   )
+                   )::vector,
+    mixtral_8x7b =ARRAY(
+            SELECT unnest(
+                           regexp_split_to_array(
+                                   trim(both '[]' from embedding ->> 'Mixtral-8x7b'),
+                                   ','
+                           )::float[]
+                   )
+                  )::vector;
+
+SELECT *
+FROM icews_actors
+WHERE bert IS NULL
+   OR llama2_13b IS NULL
+   OR mixtral_8x7b IS NULL;
+
+SELECT ARRAY(
+               SELECT unnest(
+                              regexp_split_to_array(
+                                      trim(both '[]' from embedding ->> 'bert'),
+                                      ','
+                              )::float[]
+                      )
+       )::vector
+FROM icews_actors
+LIMIT 1;
+```
+
 Most of the stories happen in the years:
 
 ```csv

@@ -55,6 +55,24 @@ class API:
         )
         return r.json()
 
+    def get_task_status(self, task_id: str):
+        url = f"{self.domain}/queue_task/{task_id}/status"
+        r = requests.get(url, headers={"Authorization": f"Token {self.token}"})
+        return r.json()
+
+    def queue_embedding_and_wait_for_result(
+        self, prompts: str, model_name: str = "Mixtral-8x7b", name: str = "icews_actor"
+    ):
+        res_json = self.queue_create_embedding(prompts, model_name, name)
+        task_id = res_json["task_ids"][0]
+        logger.info(f"Task ID: {task_id}")
+        while True:
+            res_json = self.get_task_status(task_id)
+            if res_json["status"] == "completed":
+                desc = res_json["description"]
+                return eval(description)
+            time.sleep(1)
+
 
 class timer:
     """

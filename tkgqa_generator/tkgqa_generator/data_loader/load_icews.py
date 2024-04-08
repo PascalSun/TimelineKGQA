@@ -358,6 +358,47 @@ class ICEWSDataLoader:
                     )
                 time.sleep(0.3)
 
+    def icews_actor_queue_actor_name_embedding(self, model_name: str = "bert"):
+        """
+        embedding iceews actors with several models, add columns to original table
+        embedding content will be subject affiliated to object
+        :return:
+        """
+
+        # get the one that has not been embedded with SQL, embedding?.model_name is null
+        with self.engine.connect() as conn:
+            r = conn.execute(
+                text(
+                    f"""
+                        SELECT "Actor Name"
+                        FROM icews_actors
+                        GROUP BY "Actor Name"
+                        ;
+                        """
+                )
+            )
+
+            prompts = []
+            logger.info(self.queue_name)
+            logger.info(model_name)
+            for row in r.mappings():
+                prompt = row["Actor Name"]
+                prompts.append(prompt)
+
+            # every 100 prompts, send to the queue
+            for i in range(0, len(prompts), 100):
+                if i + 100 > len(prompts):
+                    response = self.api.queue_create_embedding(
+                        prompts[i:], model_name=model_name, name=self.queue_name
+                    )
+                else:
+                    response = self.api.queue_create_embedding(
+                        prompts[i : i + 100],
+                        model_name=model_name,
+                        name=self.queue_name,
+                    )
+                time.sleep(0.3)
+
     def icews_actor_embedding_csv(self, queue_embedding_filename: str, model_name: str):
         conn = self.engine.connect()
         df = pd.read_csv(DATA_DIR / "ICEWS" / "processed" / queue_embedding_filename)
@@ -419,32 +460,77 @@ class ICEWSDataLoader:
         """
         pass
 
-    def icews_actor_subject_count_distribution(self, actor_name: str):
+    def icews_actor_subject_count_distribution(
+        self,
+        actor_name: str,
+        semantic_search: bool = False,
+        model_name: str = "bert",
+    ):
         """
         Get all records for the actor_name and present the occurrence across a timeline.
         X-axis: Year
         Y-axis: Month
         When hovering over a point, it shows the value of "Affiliation To".
         """
-        # SQL query to get all records for the specified actor_name
-        get_all_records_for_actor_name = f"""
-        SELECT 
-        "Actor Name",
-        "Affiliation Start Date",
-        "Affiliation End Date",
-        "Affiliation To",
-        embedding
-        FROM icews_actors WHERE "Actor Name" = '{actor_name}';
-        """
-        # Execute the query
-        actor_df = pd.read_sql_query(get_all_records_for_actor_name, con=self.engine)
+        if not semantic_search:
+            # SQL query to get all records for the specified actor_name
+            get_all_records_for_actor_name = f"""
+            SELECT 
+            "Actor Name",
+            "Affiliation Start Date",
+            "Affiliation End Date",
+            "Affiliation To",
+            {model_name} as embedding
+            FROM icews_actors WHERE "Actor Name" = '{actor_name}';
+            """
+            # Execute the query
+            actor_df = pd.read_sql_query(
+                get_all_records_for_actor_name, con=self.engine
+            )
+        else:
+            # get the embedding of the actor_name
+            if model_name == "bert":
+                actor_name_embedding = self.__icews_actor_bert_embedding(actor_name)
+            else:
+                actor_name_embedding = self.api.queue_embedding_and_wait_for_result(
+                    [actor_name], model_name=model_name, name="tkgqa"
+                )
+            # query
+            get_relevant_records_for_actor_name = f"""
+            SELECT
+            "Actor Name"
+            FROM icews_actors
+            WHERE {model_name} IS NOT NULL
+            ORDER BY {model_name} <-> '{actor_name_embedding}'
+            LIMIT 10;
+            """
+            # Execute the query
+            related_actiors = pd.read_sql_query(
+                get_relevant_records_for_actor_name, con=self.engine
+            )
+            # find the one with highest occurrence in the records for 'Actor Name' field
+            # voting in RAG
+            vote_winner = related_actiors["Actor Name"].value_counts().idxmax()
+            get_all_records_for_actor_name = f"""
+                        SELECT 
+                        "Actor Name",
+                        "Affiliation Start Date",
+                        "Affiliation End Date",
+                        "Affiliation To",
+                        {model_name} as embedding
+                        FROM icews_actors WHERE "Actor Name" = '{vote_winner}';
+                        """
+            # Execute the query
+            actor_df = pd.read_sql_query(
+                get_all_records_for_actor_name, con=self.engine
+            )
 
         # Replace placeholders with extreme dates for ease of handling
         actor_df["Affiliation Start Date"] = actor_df["Affiliation Start Date"].replace(
             "beginning of time", "1990-01-01"
         )
         actor_df["Affiliation End Date"] = actor_df["Affiliation End Date"].replace(
-            "end of time", "2015-12-31"
+            "end of time", "2025-12-31"
         )
 
         # Convert dates to datetime format
@@ -467,21 +553,17 @@ class ICEWSDataLoader:
 
         # Prepare a figure object
         fig = go.Figure()
-
-        # get the bert embedding for the first record
-        embedding = actor_df.loc[0, "embedding"]
-
-        first_embedding_value = embedding["bert"]
-        # convert to tensor
-        logger.info(f"First embedding: {type(first_embedding_value)}")
-        first_embedding_value = torch.tensor(json.loads(first_embedding_value))
+        first_embedding_value = actor_df.iloc[0]["embedding"]
+        logger.info(first_embedding_value)
+        first_embedding_value = torch.tensor(eval(first_embedding_value))
+        logger.info(first_embedding_value.shape)
         # Iterate over each record to plot it
         for index, row in actor_df.iterrows():
             # Adding a line for each affiliation duration
             logger.info(row["start_year"])
             logger.info(index)
-            embedding_value = row["embedding"]["bert"]
-            embedding_value = torch.tensor(json.loads(embedding_value))
+            embedding_value = row["embedding"]
+            embedding_value = torch.tensor(eval(embedding_value))
             similarity = torch.nn.functional.cosine_similarity(
                 torch.tensor(first_embedding_value),
                 torch.tensor(embedding_value),
@@ -496,20 +578,37 @@ class ICEWSDataLoader:
                         row["end_year"] + row["end_month"] / 12,
                     ],
                     y=[index + 1, index + 1],
-                    mode="lines+markers",
+                    mode="lines+markers+text",  # Keep markers and text in the mode
                     line=dict(color="rgb" + str(line_color[:3]), width=4),
                     name=row["Affiliation To"],
                     hoverinfo="text",
-                    text=f"Affiliation To: {row['Affiliation To']}<br>Start: {row['start_year']}-{row['start_month']}<br>End: {row['end_year']}-{row['end_month']} <br>Similarity: {similarity:.2f}",
+                    text=[
+                        f"{row['Actor Name']} Affiliation To: {row['Affiliation To']}<br>Start: {row['start_year']}-{row['start_month']}<br>End: {row['end_year']}-{row['end_month']} <br>Similarity: {similarity:.2f}",
+                        "",  # No text for the end point
+                    ],
+                    textposition="top center",  # Adjust as needed for the starting point
                 )
             )
+        min_start_year = (
+            actor_df["start_year"].min() + actor_df["start_month"].min() / 12 - 5
+        )  # Extend left by subtracting 1
+        max_end_year = (
+            actor_df["end_year"].max() + actor_df["end_month"].max() / 12 + 5
+        )  # Optionally extend right
+        max_index = (
+            actor_df.index.max() + 1
+        )  # Assuming index is continuous and starts from 0
 
-        # Update layout for readability
+        # Update layout for readability and adjust x and y axis ranges
         fig.update_layout(
             title=f"Affiliation Timeline for {actor_name}",
             xaxis_title="Year",
-            yaxis_title="index",
+            yaxis_title="Index",
+            xaxis=dict(
+                range=[min_start_year, max_end_year]  # Extend the x-axis to the left
+            ),
             yaxis=dict(
+                range=[0, max_index + 2],  # Extend the y-axis to the top
                 tickmode="array",
                 tickvals=actor_df.index.tolist(),
                 ticktext=actor_df.index.tolist(),
@@ -546,7 +645,7 @@ if __name__ == "__main__":
         "--token",
         type=str,
         help="API token for the LLM model",
-        default="f07d79cda0137abacd39258654090410650c2c0d",
+        default="221d6c1982662ee3e5e6178f67040c72ce6685fb",
     )
     parser.add_argument(
         "--llm_model_name",
@@ -603,5 +702,8 @@ if __name__ == "__main__":
             model_name=args.llm_model_name,
         )
 
+    icews_data_loader.icews_actor_queue_actor_name_embedding(model_name="bert")
     # plot the distribution of the actor
-    icews_data_loader.icews_actor_subject_count_distribution("Barack Obama")
+    icews_data_loader.icews_actor_subject_count_distribution(
+        "australia", semantic_search=True
+    )
