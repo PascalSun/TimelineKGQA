@@ -4,7 +4,9 @@ import os
 import time
 import zipfile
 
+import matplotlib.pyplot as plt
 import pandas as pd
+import plotly.express as px
 import plotly.graph_objects as go
 import torch
 from sentence_transformers import SentenceTransformer
@@ -25,11 +27,11 @@ logger = get_logger(__name__)
 
 class ICEWSDataLoader:
     def __init__(
-            self,
-            data_type="all",
-            view_sector_tree_web: bool = False,
-            token: str = "",
-            queue_name: str = "",
+        self,
+        data_type="all",
+        view_sector_tree_web: bool = False,
+        token: str = "",
+        queue_name: str = "",
     ):
         self.engine = create_engine(DB_CONNECTION_STR)
         self.data_type = data_type
@@ -284,8 +286,8 @@ class ICEWSDataLoader:
                     else:
                         raise ValueError(f"Model name {model_name} not supported")
                     with timer(
-                            logger,
-                            f"Updating embedding for {subject} affiliated to {object}",
+                        logger,
+                        f"Updating embedding for {subject} affiliated to {object}",
                     ):
                         conn.execute(
                             text(
@@ -350,7 +352,7 @@ class ICEWSDataLoader:
                     )
                 else:
                     response = self.api.queue_create_embedding(
-                        prompts[i: i + 100],
+                        prompts[i : i + 100],
                         model_name=model_name,
                         name=self.queue_name,
                     )
@@ -365,10 +367,12 @@ class ICEWSDataLoader:
             prompt = row["prompt"]
             subject = prompt.split(" affiliated to ")[0].replace("'", "''")
             object = prompt.split(" affiliated to ")[1].replace("'", "''")
-            if model_name == 'bert':
+            if model_name == "bert":
                 embedding = json.loads(json.loads(row["response"]))["embedding"]
             else:
-                embedding = json.loads(json.loads(row["response"]))["data"][0]["embedding"]
+                embedding = json.loads(json.loads(row["response"]))["data"][0][
+                    "embedding"
+                ]
             # logger.debug(f"Subject: {subject}, Object: {object}, Embedding: {embedding}")
 
             # update the embedding column
@@ -401,6 +405,13 @@ class ICEWSDataLoader:
         embeddings = model.encode(prompt)
         return embeddings.tolist()
 
+    @staticmethod
+    def __similarity_to_color(similarity):
+        # Assuming similarity ranges from -1 to 1, normalize to 0-1
+        # normalized_similarity = (similarity + 1) / 2
+        # Use a colormap (e.g., 'RdYlGn' for Red-Yellow-Green)
+        return plt.get_cmap("RdYlGn")(similarity)
+
     def icews_actor_entity_resolution_check(self):
         """
         Check the entity resolution for the ICEWS actors
@@ -410,30 +421,102 @@ class ICEWSDataLoader:
 
     def icews_actor_subject_count_distribution(self, actor_name: str):
         """
-        get all records for the actor_name, present the occurrence across timeline
-        xaixs: year
-        yaxis: month
-        :return:
+        Get all records for the actor_name and present the occurrence across a timeline.
+        X-axis: Year
+        Y-axis: Month
+        When hovering over a point, it shows the value of "Affiliation To".
         """
+        # SQL query to get all records for the specified actor_name
         get_all_records_for_actor_name = f"""
-        SELECT * FROM icews_actors WHERE "Actor Name" = '{actor_name}';
+        SELECT 
+        "Actor Name",
+        "Affiliation Start Date",
+        "Affiliation End Date",
+        "Affiliation To",
+        embedding
+        FROM icews_actors WHERE "Actor Name" = '{actor_name}';
         """
+        # Execute the query
         actor_df = pd.read_sql_query(get_all_records_for_actor_name, con=self.engine)
-        # replace "beginning of the time" with 0000-00-00, and "end of the time" with 9999-12-31
-        # extract a year and month column, year can be "beginning of the time" or "end of the time"
-        # the field name called Affiliation Start Date and Affiliation End Date
+
+        # Replace placeholders with extreme dates for ease of handling
         actor_df["Affiliation Start Date"] = actor_df["Affiliation Start Date"].replace(
-            "beginning of time", "0000-00-00"
+            "beginning of time", "1990-01-01"
         )
         actor_df["Affiliation End Date"] = actor_df["Affiliation End Date"].replace(
-            "end of time", "9999-12-31"
+            "end of time", "2015-12-31"
         )
-        logger.info(actor_df["Affiliation Start Date"].tolist())
-        logger.info(actor_df["Affiliation End Date"].tolist())
-        actor_df["start_year"] = pd.to_datetime(actor_df["Affiliation Start Date"]).dt.year
-        # actor_df["start_month"] = pd.to_datetime(actor_df["Affiliation Start Date"]).dt.month
-        # actor_df["end_year"] = pd.to_datetime(actor_df["Affiliation End Date"]).dt.year
-        # actor_df["end_month"] = pd.to_datetime(actor_df["Affiliation End Date"]).dt.month
+
+        # Convert dates to datetime format
+        actor_df["Affiliation Start Date"] = pd.to_datetime(
+            actor_df["Affiliation Start Date"]
+        )
+        actor_df["Affiliation End Date"] = pd.to_datetime(
+            actor_df["Affiliation End Date"]
+        )
+
+        # Extract year and month for both start and end dates
+        actor_df["start_year"] = actor_df["Affiliation Start Date"].dt.year
+        actor_df["start_month"] = actor_df["Affiliation Start Date"].dt.month
+        actor_df["end_year"] = actor_df["Affiliation End Date"].dt.year
+        actor_df["end_month"] = actor_df["Affiliation End Date"].dt.month
+
+        # order by start year and month
+        actor_df = actor_df.sort_values(by=["start_year", "start_month"])
+        actor_df = actor_df.reset_index(drop=True)
+
+        # Prepare a figure object
+        fig = go.Figure()
+
+        # get the bert embedding for the first record
+        embedding = actor_df.loc[0, "embedding"]
+
+        first_embedding_value = embedding["bert"]
+        # convert to tensor
+        logger.info(f"First embedding: {type(first_embedding_value)}")
+        first_embedding_value = torch.tensor(json.loads(first_embedding_value))
+        # Iterate over each record to plot it
+        for index, row in actor_df.iterrows():
+            # Adding a line for each affiliation duration
+            logger.info(row["start_year"])
+            logger.info(index)
+            embedding_value = row["embedding"]["bert"]
+            embedding_value = torch.tensor(json.loads(embedding_value))
+            similarity = torch.nn.functional.cosine_similarity(
+                torch.tensor(first_embedding_value),
+                torch.tensor(embedding_value),
+                dim=0,
+            )
+            logger.info(f"Similarity: {similarity}")
+            line_color = self.__similarity_to_color(similarity)
+            fig.add_trace(
+                go.Scatter(
+                    x=[
+                        row["start_year"] + row["start_month"] / 12,
+                        row["end_year"] + row["end_month"] / 12,
+                    ],
+                    y=[index + 1, index + 1],
+                    mode="lines+markers",
+                    line=dict(color="rgb" + str(line_color[:3]), width=4),
+                    name=row["Affiliation To"],
+                    hoverinfo="text",
+                    text=f"Affiliation To: {row['Affiliation To']}<br>Start: {row['start_year']}-{row['start_month']}<br>End: {row['end_year']}-{row['end_month']} <br>Similarity: {similarity:.2f}",
+                )
+            )
+
+        # Update layout for readability
+        fig.update_layout(
+            title=f"Affiliation Timeline for {actor_name}",
+            xaxis_title="Year",
+            yaxis_title="index",
+            yaxis=dict(
+                tickmode="array",
+                tickvals=actor_df.index.tolist(),
+                ticktext=actor_df.index.tolist(),
+            ),
+        )
+
+        fig.show()
 
     def icews_actor_entity_timeline(self, actor_name: str):
         """
@@ -521,4 +604,4 @@ if __name__ == "__main__":
         )
 
     # plot the distribution of the actor
-    icews_data_loader.icews_actor_subject_count_distribution("Abdul Qayyum Sajjadi")
+    icews_data_loader.icews_actor_subject_count_distribution("Barack Obama")
