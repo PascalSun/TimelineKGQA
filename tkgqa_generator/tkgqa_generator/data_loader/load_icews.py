@@ -416,10 +416,24 @@ class ICEWSDataLoader:
         :return:
         """
         get_all_records_for_actor_name = f"""
-        SELECT * FROM icews_actors WHERE "Actor Name" = {actor_name};
+        SELECT * FROM icews_actors WHERE "Actor Name" = '{actor_name}';
         """
         actor_df = pd.read_sql_query(get_all_records_for_actor_name, con=self.engine)
-        logger.info(actor_df.head())
+        # replace "beginning of the time" with 0000-00-00, and "end of the time" with 9999-12-31
+        # extract a year and month column, year can be "beginning of the time" or "end of the time"
+        # the field name called Affiliation Start Date and Affiliation End Date
+        actor_df["Affiliation Start Date"] = actor_df["Affiliation Start Date"].replace(
+            "beginning of time", "0000-00-00"
+        )
+        actor_df["Affiliation End Date"] = actor_df["Affiliation End Date"].replace(
+            "end of time", "9999-12-31"
+        )
+        logger.info(actor_df["Affiliation Start Date"].tolist())
+        logger.info(actor_df["Affiliation End Date"].tolist())
+        actor_df["start_year"] = pd.to_datetime(actor_df["Affiliation Start Date"]).dt.year
+        # actor_df["start_month"] = pd.to_datetime(actor_df["Affiliation Start Date"]).dt.month
+        # actor_df["end_year"] = pd.to_datetime(actor_df["Affiliation End Date"]).dt.year
+        # actor_df["end_month"] = pd.to_datetime(actor_df["Affiliation End Date"]).dt.month
 
     def icews_actor_entity_timeline(self, actor_name: str):
         """
@@ -505,3 +519,6 @@ if __name__ == "__main__":
             queue_embedding_filename=args.queue_embedding_filename,
             model_name=args.llm_model_name,
         )
+
+    # plot the distribution of the actor
+    icews_data_loader.icews_actor_subject_count_distribution("Abdul Qayyum Sajjadi")
