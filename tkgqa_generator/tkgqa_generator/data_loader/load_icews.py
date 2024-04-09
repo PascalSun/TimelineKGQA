@@ -498,12 +498,13 @@ class ICEWSDataLoader:
             LIMIT 10;
             """
             # Execute the query
-            related_actiors = pd.read_sql_query(
+            related_actors = pd.read_sql_query(
                 get_relevant_records_for_actor_name, con=self.engine
             )
-            # find the one with highest occurrence in the records for 'Actor Name' field
+            # find the one with the highest occurrence in the records for 'Actor Name' field
             # voting in RAG
-            vote_winner = related_actiors["Actor Name"].value_counts().idxmax()
+            vote_winner = related_actors["Actor Name"].value_counts().idxmax()
+            logger.info(f"Vote Winner: {vote_winner}")
             get_all_records_for_actor_name = f"""
                         SELECT 
                         "Actor Name",
@@ -547,7 +548,7 @@ class ICEWSDataLoader:
         # Prepare a figure object
         fig = go.Figure()
         first_embedding_value = actor_df.iloc[0]["embedding"]
-        logger.info(first_embedding_value)
+        logger.info(type(first_embedding_value))
         first_embedding_value = torch.tensor(eval(first_embedding_value))
         logger.info(first_embedding_value.shape)
         # Iterate over each record to plot it
@@ -557,7 +558,7 @@ class ICEWSDataLoader:
             logger.info(row["start_year"])
             logger.info(index)
             embedding_value = row["embedding"]
-            embedding_value = torch.tensor(eval(embedding_value))
+            embedding_value = torch.tensor(embedding_value)
             similarity = torch.nn.functional.cosine_similarity(
                 torch.tensor(first_embedding_value),
                 torch.tensor(embedding_value),
@@ -638,7 +639,7 @@ if __name__ == "__main__":
         default=None,
     )
     parser.add_argument(
-        "--load_data",
+        "--data_name",
         type=str,
         help="Which dataset to load into the database, icews or icews_dicts",
         default="none",
@@ -691,7 +692,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     # initialize the ICEWSDataLoader
     icews_data_loader = ICEWSDataLoader(
-        data_type=args.load_data,
+        data_type=args.data_name,
         view_sector_tree_web=args.explore_data_view_sector,
         token=args.token,
         queue_name=args.queue_embedding_name,
@@ -739,6 +740,9 @@ if __name__ == "__main__":
         )
 
     if mode == "actor_subject_timeline_view":
+
         icews_data_loader.icews_actor_subject_count_distribution(
-            "Putin", semantic_search=True
+            "Putin",
+            semantic_search=True,
+            model_name=args.llm_model_name,
         )
