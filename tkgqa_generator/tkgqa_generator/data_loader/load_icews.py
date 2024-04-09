@@ -283,13 +283,18 @@ class ICEWSDataLoader:
                 time.sleep(0.3)
 
     def icews_actor_queue_actor_name_embedding(
-            self, model_name: str = "bert", field_name: str = "Actor Name"
+            self,
+            model_name: str = "bert",
+            field_name: str = "Actor Name",
+            embedding_field_name: str = None
     ):
         """
         embedding iceews actors with several models, add columns to original table
         embedding content will be subject affiliated to object
         :return:
         """
+        if embedding_field_name is None:
+            embedding_field_name = model_name.replace("-", "_")
 
         # get the one that has not been embedded with SQL, embedding?.model_name is null
         with self.engine.connect() as conn:
@@ -298,6 +303,7 @@ class ICEWSDataLoader:
                     f"""
                         SELECT "{field_name}"
                         FROM icews_actors
+                        WHERE {embedding_field_name} IS NULL
                         GROUP BY "{field_name}"
                         ;
                         """
@@ -717,7 +723,8 @@ if __name__ == "__main__":
         icews_data_loader.icews_actor_queue_embedding(model_name=args.llm_model_name)
 
     if mode == "queue_actor_name_embedding":
-        icews_data_loader.icews_actor_queue_actor_name_embedding(model_name="bert")
+        icews_data_loader.icews_actor_queue_actor_name_embedding(model_name="bert",
+                                                                 embedding_field_name=args.embedding_field_name)
 
     if mode == "insert_embedding":
         """
