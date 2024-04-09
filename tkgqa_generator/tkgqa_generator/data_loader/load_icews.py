@@ -1,4 +1,5 @@
 import argparse
+import colorsys
 import json
 import os
 import time
@@ -12,7 +13,6 @@ import torch
 from sentence_transformers import SentenceTransformer
 from sqlalchemy import create_engine, text
 from transformers import BertModel, BertTokenizer
-import colorsys
 
 from tkgqa_generator.constants import (
     DATA_DIR,
@@ -230,93 +230,19 @@ class ICEWSDataLoader:
         cursor.commit()
         cursor.close()
 
-    def icews_actor_embedding(self, model_name: str = "Mixtral-8x7b"):
+    def icews_actor_queue_embedding(
+            self, model_name: str = "Mixtral-8x7b", embedding_field_name: str = None
+    ):
         """
         embedding iceews actors with several models, add columns to original table
         embedding content will be subject affiliated to object
         :return:
         """
         # add a json field for the embedding, then we can have {"model_name": "embedding"}
-        add_embedding_column_sql = """
-        DO $$
-        BEGIN
-            IF NOT EXISTS (
-                SELECT FROM information_schema.columns 
-                WHERE table_name = 'icews_actors' AND column_name = 'embedding' AND table_schema = 'public'
-            ) THEN
-                ALTER TABLE public.icews_actors ADD COLUMN embedding JSONB;
-            END IF;
-        END
-        $$;
-        """
-        cursor = self.engine.connect()
-        cursor.execute(text(add_embedding_column_sql))
-        cursor.commit()
-        cursor.close()
+        if embedding_field_name is None:
+            embedding_field_name = model_name.replace("-", "_")
 
-        # loop the table, and get the embedding for each actor
-
-        while True:
-            # get the one that has not been embedded with SQL, embedding?.model_name is null
-            with self.engine.connect() as conn:
-                r = conn.execute(
-                    text(
-                        f"""
-                        SELECT *
-                        FROM icews_actors
-                        WHERE id not in (SELECT id
-                                         FROM icews_actors
-                                         WHERE embedding ? '{model_name}')
-                        ORDER BY id
-                        DESC 
-                        ;
-                        """
-                    )
-                )
-                result_no = 0
-                for row in r.mappings():
-                    logger.debug(row)
-                    result_no += 1
-                    record_id = row["id"]
-                    subject = row["Actor Name"]
-                    object = row["Affiliation To"]
-                    prompt = f"{subject} affiliated to {object}"
-                    logger.info(f"Embedding {prompt}")
-                    if model_name == "bert":
-                        embedding = self.__icews_actor_bert_embedding(prompt)
-                    else:
-                        raise ValueError(f"Model name {model_name} not supported")
-                    with timer(
-                            logger,
-                            f"Updating embedding for {subject} affiliated to {object}",
-                    ):
-                        conn.execute(
-                            text(
-                                f"""
-                                UPDATE icews_actors
-                                SET embedding = jsonb_set(
-                                                coalesce(embedding, '{{}}')::jsonb, 
-                                                array['{model_name}'], 
-                                                '"{embedding}"'::jsonb
-                                            )
-                                WHERE id = {record_id};
-                                """
-                            )
-                        )
-                        conn.commit()
-                    time.sleep(0.3)
-
-                if result_no == 0:
-                    logger.info("All actors have been embedded")
-                    break
-
-    def icews_actor_queue_embedding(self, model_name: str = "Mixtral-8x7b"):
-        """
-        embedding iceews actors with several models, add columns to original table
-        embedding content will be subject affiliated to object
-        :return:
-        """
-
+        self.__db_embedding_field(embedding_field_name)
         # get the one that has not been embedded with SQL, embedding?.model_name is null
         with self.engine.connect() as conn:
             r = conn.execute(
@@ -324,9 +250,7 @@ class ICEWSDataLoader:
                     f"""
                         SELECT *
                         FROM icews_actors
-                        WHERE id not in (SELECT id
-                                         FROM icews_actors
-                                         WHERE embedding ? '{model_name}')
+                        WHERE {embedding_field_name} IS NULL
                         ORDER BY id
                         DESC 
                         ;
@@ -348,18 +272,19 @@ class ICEWSDataLoader:
             # every 100 prompts, send to the queue
             for i in range(0, len(prompts), 100):
                 if i + 100 > len(prompts):
-                    response = self.api.queue_create_embedding(
-                        prompts[i:], model_name=model_name, name=self.queue_name
-                    )
+                    queued_prompts = prompts[i:]
                 else:
-                    response = self.api.queue_create_embedding(
-                        prompts[i: i + 100],
-                        model_name=model_name,
-                        name=self.queue_name,
-                    )
+                    queued_prompts = prompts[i: i + 100]
+                response = self.api.queue_create_embedding(
+                    queued_prompts,
+                    model_name=model_name,
+                    name=self.queue_name,
+                )
                 time.sleep(0.3)
 
-    def icews_actor_queue_actor_name_embedding(self, model_name: str = "bert"):
+    def icews_actor_queue_actor_name_embedding(
+            self, model_name: str = "bert", field_name: str = "Actor Name"
+    ):
         """
         embedding iceews actors with several models, add columns to original table
         embedding content will be subject affiliated to object
@@ -371,9 +296,9 @@ class ICEWSDataLoader:
             r = conn.execute(
                 text(
                     f"""
-                        SELECT "Affiliation To"
+                        SELECT "{field_name}"
                         FROM icews_actors
-                        GROUP BY "Affiliation To"
+                        GROUP BY "{field_name}"
                         ;
                         """
                 )
@@ -383,7 +308,7 @@ class ICEWSDataLoader:
             logger.info(self.queue_name)
             logger.info(model_name)
             for row in r.mappings():
-                prompt = row["Affiliation To"]
+                prompt = row[field_name]
                 prompts.append(prompt)
 
             # every 100 prompts, send to the queue
@@ -400,41 +325,82 @@ class ICEWSDataLoader:
                     )
                 time.sleep(0.3)
 
-    def icews_actor_embedding_csv(self, queue_embedding_filename: str, model_name: str):
+    def icews_actor_embedding_csv(
+            self,
+            queue_embedding_filename: str,
+            model_name: str,
+            embedding_field_name: str = None,
+            prompt_field: str = None,
+    ):
+        """
+        Load the embedding from the queue into the database
+        :param queue_embedding_filename:
+        :param model_name:
+        :param embedding_field_name:
+        :return:
+        """
+        if embedding_field_name is None:
+            embedding_field_name = model_name.replace("-", "_")
+        self.__db_embedding_field(embedding_field_name)
         conn = self.engine.connect()
         df = pd.read_csv(DATA_DIR / "ICEWS" / "processed" / queue_embedding_filename)
         for _, row in df.iterrows():
             if row["model_name"] != model_name:
                 continue
-            prompt = row["prompt"]
-            subject = prompt.split(" affiliated to ")[0].replace("'", "''")
-            object = prompt.split(" affiliated to ")[1].replace("'", "''")
+
             if model_name == "bert":
                 embedding = json.loads(json.loads(row["response"]))["embedding"]
             else:
                 embedding = json.loads(json.loads(row["response"]))["data"][0][
                     "embedding"
                 ]
-            # logger.debug(f"Subject: {subject}, Object: {object}, Embedding: {embedding}")
+            logger.debug(embedding)
 
-            # update the embedding column
-            conn.execute(
-                text(
-                    f"""
-                    UPDATE icews_actors
-                    SET embedding = jsonb_set(
-                                        coalesce(embedding, '{{}}'::jsonb), 
-                                        array['{model_name}'], 
-                                        '"{embedding}"'::jsonb
-                                    )
-                    WHERE "Actor Name" = '{subject}' AND "Affiliation To" = '{object}';
-                    """
+            if prompt_field is None:
+                prompt = row["prompt"]
+                subject = prompt.split(" affiliated to ")[0].replace("'", "''")
+                object = prompt.split(" affiliated to ")[1].replace("'", "''")
+                # update the embedding column
+                conn.execute(
+                    text(
+                        f"""
+                        UPDATE icews_actors
+                        SET {embedding_field_name} = array{embedding}::vector
+                        WHERE "Actor Name" = '{subject}' AND "Affiliation To" = '{object}';
+                        """
+                    )
                 )
-            )
-            logger.debug(
-                f"""WHERE "Actor Name" = '{subject}' AND "Affiliation To" = '{object}'"""
-            )
+            else:
+                prompt = row["prompt"]
+                prompt = prompt.replace("'", "''")
+                conn.execute(
+                    text(
+                        f"""
+                        UPDATE icews_actors
+                        SET {embedding_field_name} = array{embedding}::vector
+                        WHERE "{prompt_field}" = '{prompt}';
+                        """
+                    )
+                )
             conn.commit()
+
+    def __db_embedding_field(self, embedding_field_name: str):
+        add_embedding_column_sql = f"""
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT FROM information_schema.columns 
+                WHERE table_name = 'icews_actors' AND column_name = '{embedding_field_name}' AND table_schema = 'public'
+            ) THEN
+                ALTER TABLE public.icews_actors ADD COLUMN {embedding_field_name} vector;
+            END IF;
+        END
+        $$;
+        """
+        cursor = self.engine.connect()
+        cursor.execute(text(add_embedding_column_sql))
+        cursor.commit()
+        cursor.close()
 
     def __icews_actor_bert_embedding(self, prompt: str):
         """
@@ -660,6 +626,12 @@ class ICEWSDataLoader:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Load ICEWS data to DB")
     parser.add_argument(
+        "--mode",
+        type=str,
+        help="Which mode to run the script in",
+        default=None,
+    )
+    parser.add_argument(
         "--load_data",
         type=str,
         help="Which dataset to load into the database, icews or icews_dicts",
@@ -697,6 +669,18 @@ if __name__ == "__main__":
         help="Queue embedding filename",
         default=None,
     )
+    parser.add_argument(
+        "--embedding_field_name",
+        type=str,
+        help="Embedding field name",
+        default=None,
+    )
+    parser.add_argument(
+        "--prompt_field",
+        type=str,
+        help="Prompt field",
+        default=None,
+    )
     # parse the arguments
     args = parser.parse_args()
     # initialize the ICEWSDataLoader
@@ -707,34 +691,47 @@ if __name__ == "__main__":
         queue_name=args.queue_embedding_name,
     )
 
+    mode = args.mode
     # load the data
-    # icews_data_loader.icews_load_data()
-    # # explore the data
-    # icews_data_loader.icews_explore_data()
-    #
-    # # create unified knowledge graph
-    # icews_data_loader.icews_actor_unified_kg()
-    #
-    # # create embeddings
-    # if args.queue_embedding_name and args.queue_embedding_name != "Individual":
-    #     # this will cause timeout
-    #     logger.info(f"Queue embedding: {args.queue_embedding_name}")
-    #     icews_data_loader.icews_actor_queue_embedding(model_name=args.llm_model_name)
-    # elif args.queue_embedding_name == "Individual":
-    #     logger.info(f"Individual embedding: {args.llm_model_name}")
-    #     icews_data_loader.icews_actor_embedding(model_name=args.llm_model_name)
-    # else:
-    #     logger.info("No need to create embeddings specified")
-    # # this is when finished the queue, and want to update the embedding
-    # if args.queue_embedding_filename and args.llm_model_name:
-    #     logger.info(f"Process embedding filename: {args.queue_embedding_filename}")
-    #     icews_data_loader.icews_actor_embedding_csv(
-    #         queue_embedding_filename=args.queue_embedding_filename,
-    #         model_name=args.llm_model_name,
-    #     )
+    if mode == "load_data":
+        """
+        load the data into the database in tabluar format
+        """
+        icews_data_loader.icews_load_data()
+    if mode == "explore_data":
+        """
+        explore the tabular data, output several graphs
+        """
+        icews_data_loader.icews_explore_data()
 
-    icews_data_loader.icews_actor_queue_actor_name_embedding(model_name="bert")
-    # plot the distribution of the actor
-    icews_data_loader.icews_actor_subject_count_distribution(
-        "Putin", semantic_search=True
-    )
+    if mode == "actor_unified_kg":
+        """
+        unified the graph in the same format
+        """
+        icews_data_loader.icews_actor_unified_kg()
+
+    if mode == "queue_actor_spo_embedding":
+        """
+        queue the spo of the graph
+        """
+        icews_data_loader.icews_actor_queue_embedding(model_name=args.llm_model_name)
+
+    if mode == "queue_actor_name_embedding":
+        icews_data_loader.icews_actor_queue_actor_name_embedding(model_name="bert")
+
+    if mode == "insert_embedding":
+        """
+        load data from the csv field back to the database
+        """
+        logger.info(f"Process embedding filename: {args.queue_embedding_filename}")
+        icews_data_loader.icews_actor_embedding_csv(
+            queue_embedding_filename=args.queue_embedding_filename,
+            model_name=args.llm_model_name,
+            embedding_field_name=args.embedding_field_name,
+            prompt_field=args.prompt_field,
+        )
+
+    if mode == "actor_subject_timeline_view":
+        icews_data_loader.icews_actor_subject_count_distribution(
+            "Putin", semantic_search=True
+        )
