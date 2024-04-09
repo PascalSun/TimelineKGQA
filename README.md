@@ -16,8 +16,7 @@ The project will have two main parts:
     - [ ] Visualize for a given source name => timeline
         - [x] Visualize the temporal logic for the source name along the timeline
         - [x] Similarity Matrix between all the SPO embeddings for the given source name along the timeline
-        - [ ] Visualize the embedding of the Target Name for the source name, along the timeline, mark the line with
-          color
-        - [ ] Visualize the embedding of the Event Text for the given target name
+        - [ ] Visualize the embedding of the Target Name(O) for the source name (S), along the timeline, mark the line
+          with color based on similarity
     - [ ] ICEWS Actor Unified KG
         - [ ] Verify the alias, make sure there are no entities are actually the same

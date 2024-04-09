@@ -28,11 +28,11 @@ logger = get_logger(__name__)
 
 class ICEWSDataLoader:
     def __init__(
-        self,
-        data_type="all",
-        view_sector_tree_web: bool = False,
-        token: str = "",
-        queue_name: str = "",
+            self,
+            data_type="all",
+            view_sector_tree_web: bool = False,
+            token: str = "",
+            queue_name: str = "",
     ):
         self.engine = create_engine(DB_CONNECTION_STR)
         self.data_type = data_type
@@ -231,7 +231,7 @@ class ICEWSDataLoader:
         cursor.close()
 
     def icews_actor_queue_embedding(
-        self, model_name: str = "Mixtral-8x7b", embedding_field_name: str = None
+            self, model_name: str = "Mixtral-8x7b", embedding_field_name: str = None
     ):
         """
         embedding iceews actors with several models, add columns to original table
@@ -274,7 +274,7 @@ class ICEWSDataLoader:
                 if i + 100 > len(prompts):
                     queued_prompts = prompts[i:]
                 else:
-                    queued_prompts = prompts[i : i + 100]
+                    queued_prompts = prompts[i: i + 100]
                 response = self.api.queue_create_embedding(
                     queued_prompts,
                     model_name=model_name,
@@ -283,10 +283,10 @@ class ICEWSDataLoader:
                 time.sleep(0.3)
 
     def icews_actor_queue_actor_name_embedding(
-        self,
-        model_name: str = "bert",
-        field_name: str = "Actor Name",
-        embedding_field_name: str = None,
+            self,
+            model_name: str = "bert",
+            field_name: str = "Actor Name",
+            embedding_field_name: str = None,
     ):
         """
         embedding iceews actors with several models, add columns to original table
@@ -303,7 +303,7 @@ class ICEWSDataLoader:
                     f"""
                         SELECT "{field_name}"
                         FROM icews_actors
-                        WHERE {embedding_field_name} IS NULL
+                        WHERE "{embedding_field_name}" IS NULL
                         GROUP BY "{field_name}"
                         ;
                         """
@@ -325,18 +325,18 @@ class ICEWSDataLoader:
                     )
                 else:
                     response = self.api.queue_create_embedding(
-                        prompts[i : i + 100],
+                        prompts[i: i + 100],
                         model_name=model_name,
                         name=self.queue_name,
                     )
                 time.sleep(0.3)
 
     def icews_actor_embedding_csv(
-        self,
-        queue_embedding_filename: str,
-        model_name: str,
-        embedding_field_name: str = None,
-        prompt_field: str = None,
+            self,
+            queue_embedding_filename: str,
+            model_name: str,
+            embedding_field_name: str = None,
+            prompt_field: str = None,
     ):
         """
         Load the embedding from the queue into the database
@@ -454,11 +454,11 @@ class ICEWSDataLoader:
         pass
 
     def icews_actor_subject_count_distribution(
-        self,
-        actor_name: str,
-        semantic_search: bool = False,
-        model_name: str = "bert",
-        embedding_field_name: str = None,
+            self,
+            actor_name: str,
+            semantic_search: bool = False,
+            model_name: str = "bert",
+            embedding_field_name: str = None,
     ):
         """
         Get all records for the actor_name and present the occurrence across a timeline.
@@ -591,13 +591,13 @@ class ICEWSDataLoader:
                 )
             )
         min_start_year = (
-            actor_df["start_year"].min() + actor_df["start_month"].min() / 12 - 5
+                actor_df["start_year"].min() + actor_df["start_month"].min() / 12 - 5
         )  # Extend left by subtracting 1
         max_end_year = (
-            actor_df["end_year"].max() + actor_df["end_month"].max() / 12 + 5
+                actor_df["end_year"].max() + actor_df["end_month"].max() / 12 + 5
         )  # Optionally extend right
         max_index = (
-            actor_df.index.max() + 1
+                actor_df.index.max() + 1
         )  # Assuming index is continuous and starts from 0
 
         # Update layout for readability and adjust x and y axis ranges
@@ -693,6 +693,12 @@ if __name__ == "__main__":
         help="Prompt field",
         default=None,
     )
+    parser.add_argument(
+        "--field_name",
+        type=str,
+        help="Field name",
+        default=None,
+    )
     # parse the arguments
     args = parser.parse_args()
     # initialize the ICEWSDataLoader
@@ -730,7 +736,9 @@ if __name__ == "__main__":
 
     if mode == "queue_actor_name_embedding":
         icews_data_loader.icews_actor_queue_actor_name_embedding(
-            model_name="bert", embedding_field_name=args.embedding_field_name
+            model_name=args.llm_model_name,
+            embedding_field_name=args.embedding_field_name,
+            field_name=args.field_name,
         )
 
     if mode == "insert_embedding":
@@ -746,10 +754,9 @@ if __name__ == "__main__":
         )
 
     if mode == "actor_subject_timeline_view":
-
         icews_data_loader.icews_actor_subject_count_distribution(
-            "Putin",
-            semantic_search=True,
+            "Xi Jinping",
+            semantic_search=False,
             model_name=args.llm_model_name,
             embedding_field_name=args.embedding_field_name,
         )
