@@ -28,11 +28,11 @@ logger = get_logger(__name__)
 
 class ICEWSDataLoader:
     def __init__(
-            self,
-            data_type="all",
-            view_sector_tree_web: bool = False,
-            token: str = "",
-            queue_name: str = "",
+        self,
+        data_type="all",
+        view_sector_tree_web: bool = False,
+        token: str = "",
+        queue_name: str = "",
     ):
         self.engine = create_engine(DB_CONNECTION_STR)
         self.data_type = data_type
@@ -231,7 +231,7 @@ class ICEWSDataLoader:
         cursor.close()
 
     def icews_actor_queue_embedding(
-            self, model_name: str = "Mixtral-8x7b", embedding_field_name: str = None
+        self, model_name: str = "Mixtral-8x7b", embedding_field_name: str = None
     ):
         """
         embedding iceews actors with several models, add columns to original table
@@ -274,7 +274,7 @@ class ICEWSDataLoader:
                 if i + 100 > len(prompts):
                     queued_prompts = prompts[i:]
                 else:
-                    queued_prompts = prompts[i: i + 100]
+                    queued_prompts = prompts[i : i + 100]
                 response = self.api.queue_create_embedding(
                     queued_prompts,
                     model_name=model_name,
@@ -283,10 +283,10 @@ class ICEWSDataLoader:
                 time.sleep(0.3)
 
     def icews_actor_queue_actor_name_embedding(
-            self,
-            model_name: str = "bert",
-            field_name: str = "Actor Name",
-            embedding_field_name: str = None
+        self,
+        model_name: str = "bert",
+        field_name: str = "Actor Name",
+        embedding_field_name: str = None,
     ):
         """
         embedding iceews actors with several models, add columns to original table
@@ -325,18 +325,18 @@ class ICEWSDataLoader:
                     )
                 else:
                     response = self.api.queue_create_embedding(
-                        prompts[i: i + 100],
+                        prompts[i : i + 100],
                         model_name=model_name,
                         name=self.queue_name,
                     )
                 time.sleep(0.3)
 
     def icews_actor_embedding_csv(
-            self,
-            queue_embedding_filename: str,
-            model_name: str,
-            embedding_field_name: str = None,
-            prompt_field: str = None,
+        self,
+        queue_embedding_filename: str,
+        model_name: str,
+        embedding_field_name: str = None,
+        prompt_field: str = None,
     ):
         """
         Load the embedding from the queue into the database
@@ -454,10 +454,11 @@ class ICEWSDataLoader:
         pass
 
     def icews_actor_subject_count_distribution(
-            self,
-            actor_name: str,
-            semantic_search: bool = False,
-            model_name: str = "bert",
+        self,
+        actor_name: str,
+        semantic_search: bool = False,
+        model_name: str = "bert",
+        embedding_field_name: str = None,
     ):
         """
         Get all records for the actor_name and present the occurrence across a timeline.
@@ -465,6 +466,8 @@ class ICEWSDataLoader:
         Y-axis: Month
         When hovering over a point, it shows the value of "Affiliation To".
         """
+        if embedding_field_name is None:
+            embedding_field_name = model_name.replace("-", "_")
         if not semantic_search:
             # SQL query to get all records for the specified actor_name
             get_all_records_for_actor_name = f"""
@@ -473,7 +476,7 @@ class ICEWSDataLoader:
             "Affiliation Start Date",
             "Affiliation End Date",
             "Affiliation To",
-            {model_name} as embedding
+            {embedding_field_name} as embedding
             FROM icews_actors WHERE "Actor Name" = '{actor_name}';
             """
             # Execute the query
@@ -493,8 +496,8 @@ class ICEWSDataLoader:
             SELECT
             "Actor Name"
             FROM icews_actors
-            WHERE {model_name} IS NOT NULL
-            ORDER BY {model_name} <-> '{actor_name_embedding}'
+            WHERE {embedding_field_name} IS NOT NULL
+            ORDER BY {embedding_field_name} <-> array{actor_name_embedding}::vector
             LIMIT 10;
             """
             # Execute the query
@@ -511,7 +514,7 @@ class ICEWSDataLoader:
                         "Affiliation Start Date",
                         "Affiliation End Date",
                         "Affiliation To",
-                        {model_name} as embedding
+                        {model_name.replace("-", "_")} as embedding
                         FROM icews_actors WHERE "Actor Name" = '{vote_winner}';
                         """
             # Execute the query
@@ -558,6 +561,8 @@ class ICEWSDataLoader:
             logger.info(row["start_year"])
             logger.info(index)
             embedding_value = row["embedding"]
+            if type(embedding_value) is str:
+                embedding_value = eval(embedding_value)
             embedding_value = torch.tensor(embedding_value)
             similarity = torch.nn.functional.cosine_similarity(
                 torch.tensor(first_embedding_value),
@@ -586,13 +591,13 @@ class ICEWSDataLoader:
                 )
             )
         min_start_year = (
-                actor_df["start_year"].min() + actor_df["start_month"].min() / 12 - 5
+            actor_df["start_year"].min() + actor_df["start_month"].min() / 12 - 5
         )  # Extend left by subtracting 1
         max_end_year = (
-                actor_df["end_year"].max() + actor_df["end_month"].max() / 12 + 5
+            actor_df["end_year"].max() + actor_df["end_month"].max() / 12 + 5
         )  # Optionally extend right
         max_index = (
-                actor_df.index.max() + 1
+            actor_df.index.max() + 1
         )  # Assuming index is continuous and starts from 0
 
         # Update layout for readability and adjust x and y axis ranges
@@ -724,8 +729,9 @@ if __name__ == "__main__":
         icews_data_loader.icews_actor_queue_embedding(model_name=args.llm_model_name)
 
     if mode == "queue_actor_name_embedding":
-        icews_data_loader.icews_actor_queue_actor_name_embedding(model_name="bert",
-                                                                 embedding_field_name=args.embedding_field_name)
+        icews_data_loader.icews_actor_queue_actor_name_embedding(
+            model_name="bert", embedding_field_name=args.embedding_field_name
+        )
 
     if mode == "insert_embedding":
         """
@@ -745,4 +751,5 @@ if __name__ == "__main__":
             "Putin",
             semantic_search=True,
             model_name=args.llm_model_name,
+            embedding_field_name=args.embedding_field_name,
         )

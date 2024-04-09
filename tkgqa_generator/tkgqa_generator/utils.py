@@ -1,8 +1,10 @@
+import json
 import logging
 import sys
 import time
 from logging import Logger
 from typing import List
+
 import requests
 
 
@@ -37,7 +39,10 @@ class API:
         self.token = token
 
     def queue_create_embedding(
-            self, prompts: List[str], model_name: str = "Mixtral-8x7b", name: str = "icews_actor"
+        self,
+        prompts: List[str],
+        model_name: str = "Mixtral-8x7b",
+        name: str = "icews_actor",
     ):
         url = f"{self.domain}/queue_task/llm_batch/"
         r = requests.post(
@@ -54,12 +59,17 @@ class API:
         return r.json()
 
     def get_task_status(self, task_id: str):
-        url = f"{self.domain}/queue_task/{task_id}/status"
+        url = f"{self.domain}/queue_task/{task_id}/status/"
         r = requests.get(url, headers={"Authorization": f"Token {self.token}"})
+        logger.info(f"url: {url}")
+        # logger.info(f"Task Status: {r.text}")
         return r.json()
 
     def queue_embedding_and_wait_for_result(
-            self, prompts: List[str], model_name: str = "Mixtral-8x7b", name: str = "icews_actor"
+        self,
+        prompts: List[str],
+        model_name: str = "Mixtral-8x7b",
+        name: str = "icews_actor",
     ):
         res_json = self.queue_create_embedding(prompts, model_name, name)
         task_id = res_json["task_ids"][0]
@@ -67,8 +77,13 @@ class API:
         while True:
             res_json = self.get_task_status(task_id)
             if res_json["status"] == "completed":
-                desc = res_json["description"]
-                return eval(desc)
+                desc = res_json["desc"]
+                logger.debug(f"Desc: {desc}")
+                logger.info(type(desc))
+                desc = desc.replace("'", '"')
+                desc_json = json.loads(desc)
+                embedding = desc_json["data"][0]["embedding"]
+                return embedding
             time.sleep(1)
 
 
