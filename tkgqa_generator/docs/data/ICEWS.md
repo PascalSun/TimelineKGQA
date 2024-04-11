@@ -321,7 +321,7 @@ GROUP BY occurrence
 ORDER BY occurrence;
 ```
 
-[Actor Name Distribution](../imgs/occurrence_distribution.png)
+![Actor Name Distribution](../imgs/occurrence_distribution.png)
 
 Most of the Actor Names only appear once: 25043
 Then is the one occurs twice: 13062.
