@@ -126,6 +126,7 @@ LIMIT 30;
 ```
 
 In total we have 273 Event Texts, the top 30 are:
+
 ```csv
 3080611,Make statement
 2071970,Consult
@@ -308,6 +309,100 @@ FROM icews_actors
 GROUP BY icews_actors."Actor Type";
 -- 84923,Individual
 -- 23082,Group
+```
+
+```sql
+SELECT occurrence, COUNT(*) distribution
+FROM (SELECT COUNT(*) as occurrence, icews_actors."Actor Name"
+      FROM icews_actors
+      GROUP BY icews_actors."Actor Name"
+      ORDER BY occurrence DESC) AS OCCURRENCE_DISTRIBUTION
+GROUP BY occurrence
+ORDER BY occurrence;
+```
+
+![Actor Name Distribution](../imgs/occurrence_distribution.png)
+
+Most of the Actor Names only appear once: 25043
+Then is the one occurs twice: 13062.
+Occurrence >= 10 is quite rare, in total 301.
+
+```sql
+SELECT *
+FROM (SELECT EXTRACT(YEAR FROM TO_DATE("Affiliation Start Date", 'YYYY-MM-DD')) AS year,
+             COUNT(DISTINCT "Actor Name")                                       AS num_actor_names
+      FROM icews_actors
+      WHERE "Affiliation Start Date" != 'beginning of time'
+      GROUP BY year) AS num_actor_names_per_year
+WHERE year < 2020
+ORDER BY year;
+```
+
+Transform embedding to vector
+
+```sql
+ALTER TABLE icews_actors
+    ADD COLUMN bert         VECTOR(384),
+    ADD COLUMN llama2_13b   VECTOR(5120),
+    ADD COLUMN mixtral_8x7b VECTOR(4096);
+CREATE EXTENSION IF NOT EXISTS pgvector;
+
+UPDATE icews_actors
+SET bert         = ARRAY(
+        SELECT unnest(
+                       regexp_split_to_array(
+                               trim(both '[]' from embedding ->> 'bert'),
+                               ','
+                       )::float[]
+               )
+                   )::vector,
+    llama2_13b   = ARRAY(
+            SELECT unnest(
+                           regexp_split_to_array(
+                                   trim(both '[]' from embedding ->> 'llama2-13b'),
+                                   ','
+                           )::float[]
+                   )
+                   )::vector,
+    mixtral_8x7b =ARRAY(
+            SELECT unnest(
+                           regexp_split_to_array(
+                                   trim(both '[]' from embedding ->> 'Mixtral-8x7b'),
+                                   ','
+                           )::float[]
+                   )
+                  )::vector;
+
+SELECT *
+FROM icews_actors
+WHERE bert IS NULL
+   OR llama2_13b IS NULL
+   OR mixtral_8x7b IS NULL;
+
+SELECT ARRAY(
+               SELECT unnest(
+                              regexp_split_to_array(
+                                      trim(both '[]' from embedding ->> 'bert'),
+                                      ','
+                              )::float[]
+                      )
+       )::vector
+FROM icews_actors
+LIMIT 1;
+```
+
+Most of the stories happen in the years:
+
+```csv
+year,num_unique_actor_names
+2006,2753
+2007,2596
+2008,2426
+2009,2293
+2005,2242
+2004,2217
+2010,2217
+2001,2167
 ```
 
 ### Problems

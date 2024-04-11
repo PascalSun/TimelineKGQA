@@ -1,17 +1,17 @@
+import json
 import logging
 import sys
 import time
-from datetime import datetime
 from logging import Logger
-from typing import Optional
+from typing import List
 
 import requests
 
 
 def get_logger(name):
     # Create a logger
-    logger = logging.getLogger(name)
-    logger.setLevel(logging.INFO)
+    the_logger = logging.getLogger(name)
+    the_logger.setLevel(logging.INFO)
 
     # Create console handler and set level to debug
     console_handler = logging.StreamHandler(sys.stdout)
@@ -25,9 +25,9 @@ def get_logger(name):
     # Add formatter to console handler
     console_handler.setFormatter(formatter)
 
-    # Add console handler to logger
-    logger.addHandler(console_handler)
-    return logger
+    # Add console handler to the_logger
+    the_logger.addHandler(console_handler)
+    return the_logger
 
 
 logger = get_logger(__name__)
@@ -39,7 +39,10 @@ class API:
         self.token = token
 
     def queue_create_embedding(
-        self, prompts: str, model_name: str = "Mixtral-8x7b", name: str = "icews_actor"
+        self,
+        prompts: List[str],
+        model_name: str = "Mixtral-8x7b",
+        name: str = "icews_actor",
     ):
         url = f"{self.domain}/queue_task/llm_batch/"
         r = requests.post(
@@ -55,32 +58,60 @@ class API:
         )
         return r.json()
 
+    def get_task_status(self, task_id: str):
+        url = f"{self.domain}/queue_task/{task_id}/status/"
+        r = requests.get(url, headers={"Authorization": f"Token {self.token}"})
+        logger.info(f"url: {url}")
+        # logger.info(f"Task Status: {r.text}")
+        return r.json()
+
+    def queue_embedding_and_wait_for_result(
+        self,
+        prompts: List[str],
+        model_name: str = "Mixtral-8x7b",
+        name: str = "icews_actor",
+    ):
+        res_json = self.queue_create_embedding(prompts, model_name, name)
+        task_id = res_json["task_ids"][0]
+        logger.info(f"Task ID: {task_id}")
+        while True:
+            res_json = self.get_task_status(task_id)
+            if res_json["status"] == "completed":
+                desc = res_json["desc"]
+                logger.debug(f"Desc: {desc}")
+                logger.info(type(desc))
+                desc = desc.replace("'", '"')
+                desc_json = json.loads(desc)
+                embedding = desc_json["data"][0]["embedding"]
+                return embedding
+            time.sleep(1)
+
 
 class timer:
     """
     util function used to log the time taken by a part of program
     """
 
-    def __init__(self, logger: Logger, message: str):
+    def __init__(self, the_logger: Logger, message: str):
         """
         init the timer
 
         Parameters
         ----------
-        logger: Logger
+        the_logger: Logger
             logger to write the logs
         message: str
             message to log, like start xxx
         """
         self.message = message
-        self.logger = logger
+        self.logger = the_logger
         self.start = 0
         self.duration = 0
         self.sub_timers = []
 
     def __enter__(self):
         """
-        context enter to start write this
+        context enters to start to write this
         """
         self.start = time.time()
         self.logger.info("Starting %s" % self.message)
