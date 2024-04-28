@@ -3,6 +3,7 @@ import json
 from tkgqa_generator.utils import get_logger
 import numpy as np
 import pandas as pd
+from datetime import datetime
 
 logger = get_logger(__name__)
 
@@ -95,13 +96,13 @@ class TKGQA_GENERATOR:
         :return:
         """
         if start_time1 == "beginning of time":
-            start_time1 = -np.inf
+            start_time1 = datetime.min.replace(year=1)
         if end_time1 == "end of time":
-            end_time1 = np.inf
+            end_time1 = datetime.max.replace(year=9999)
         if start_time2 == "beginning of time":
-            start_time2 = -np.inf
+            start_time2 = datetime.min.replace(year=1)
         if end_time2 == "end of time":
-            end_time2 = np.inf
+            end_time2 = datetime.max.replace(year=9999)
 
         # convert the time to numerical value, format is like this: 1939-04-25
         start_time1 = np.datetime64(start_time1)
@@ -132,10 +133,8 @@ class TKGQA_GENERATOR:
             "end_time": "xxx"
         }
         """
-        df = pd.read_sql_query(f"SELECT * FROM {self.unified_kg_table}", self.connection)
-        for index, row in df.iterrows():
-            pass
-
+        self.cursor.execute(f"SELECT * FROM {self.unified_kg_table}")
+        results = self.cursor.fetchall()
         for result in results:
             # get result to dict, and extract the subject, predicate, object
             result_dict = {
@@ -196,58 +195,21 @@ class TKGQA_GENERATOR:
         Then we query the second one (they should be different)
         Then we generate the statement based on the two items
         """
-        self.cursor.execute(f"SELECT * FROM {self.unified_kg_table}")
-        results = self.cursor.fetchall()
-        spos_2ra_pairs = []
-        for first_spo in results:
-            # the result will be the first SPO item
-            # get the second SPO item
-            self.cursor.execute(f"SELECT * FROM {self.unified_kg_table} WHERE id != {first_spo[0]}")
-            second_results = self.cursor.fetchall()
-            for second_spo in second_results:
-                spos_2ra_pairs.append((first_spo, second_spo))
-
-        # remove the duplicate pairs
-        spos_2ra_pairs = list(set(spos_2ra_pairs))
-        for pair in spos_2ra_pairs:
-            # get the first and second spo
-            first_spo = pair[0]
-            second_spo = pair[1]
-            logger.info(f"first_spo: {first_spo}, second_spo: {second_spo}")
-
-            # extract the allen temporal relation between the two spo time range
-
-        #     # generate the statement
-        #     statement = f"{first_spo['subject']} {first_spo['predicate']} {first_spo['object']} happened before {second_spo['subject']} {second_spo['predicate']} {second_spo['object']}"
-        #
-        #     # store the statement
-        #     result_dict = {
-        #         "statement": statement,
-        #         "subject1": first_spo['subject'],
-        #         "predicate1": first_spo['predicate'],
-        #         "object1": first_spo['object'],
-        #         "start_time1": first_spo['start_time'],
-        #         "end_time1": first_spo['end_time'],
-        #         "subject2": second_spo['subject'],
-        #         "predicate2": second_spo['predicate'],
-        #         "object2": second_spo['object'],
-        #         "start_time2": second_spo['start_time'],
-        #         "end_time2": second_spo['end_time']
-        #     }
-        #
-        #     # Serialize the statement dictionary to a JSON string
-        #     json_statement = json.dumps(result_dict)
-        #
-        #     # Store the statement
-        #     measurement = 'timestamp'
-        #     type_value = '2RA'
-        #
-        #     # Execute the SQL command with the serialized JSON string
-        #     self.cursor.execute(
-        #         f"INSERT INTO {self.unified_kg_table_statement} (measurement, type, statement) VALUES (%s, %s, %s)",
-        #         (measurement, type_value, json_statement)
-        #     )
-        # self.connection.commit()
+        first_spo_df = pd.read_sql_query(f"SELECT * FROM {self.unified_kg_table}", self.connection)
+        second_spo_df = first_spo_df.copy(deep=True)
+        for first_index, first_spo in first_spo_df.iterrows():
+            for second_index, second_spo in second_spo_df.iterrows():
+                if first_index == second_index:
+                    continue
+                logger.info(f"first_spo: {first_spo}, second_spo: {second_spo}")
+                self.allen_temporal_relation(
+                    first_spo['start_time'],
+                    first_spo['end_time'],
+                    second_spo['start_time'],
+                    second_spo['end_time']
+                )
+                break
+            break
 
 
 if __name__ == "__main__":
