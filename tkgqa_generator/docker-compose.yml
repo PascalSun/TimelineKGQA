@@ -1,5 +1,3 @@
-version: '3.7'
-
 services:
   postgis:
     image: postgis/postgis
@@ -19,3 +17,4 @@ services:
 
 volumes:
   postgis_data:
+
