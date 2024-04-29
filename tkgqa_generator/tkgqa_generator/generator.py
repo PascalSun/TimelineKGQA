@@ -176,137 +176,163 @@ class TKGQA_GENERATOR:
             - X > Y => [0, 0, 1, 1, 1, 1]
         """
 
-        ALLEN_OPERATOR_DICT = ALLEN_OPERATOR_DICT = {
+        ALLEN_OPERATOR_DICT = {
             (-1, -1, -1, -1, -1, -1): {
                 "relation": "X < Y",
                 "description": "X is before Y",
-                "category": "time range operation",
+                "category": "tr",
+                "code": "tr-1"
             },
             (-1, -1, -1, -1, 0, -1): {
                 "relation": "X m Y",
                 "description": "X meets Y",
-                "category": "time range operation",
+                "category": "tr",
+                "code": "tr-2"
             },
             (-1, -1, -1, -1, 1, -1): {
                 "relation": "X o Y",
                 "description": "X overlaps Y",
-                "category": "time range operation",
+                "category": "tr",
+                "code": "tr-3"
             },
             (-1, -1, -1, -1, 1, 0): {
                 "relation": "X fi Y",
                 "description": "X finishes Y",
-                "category": "time range operation",
+                "category": "tr",
+                "code": "tr-4"
             },
             (-1, -1, -1, -1, 1, 1): {
                 "relation": "X di Y",
                 "description": "X during Y",
-                "category": "time range operation",
+                "category": "tr",
+                "code": "tr-5"
             },
             (-1, -1, 0, -1, 1, -1): {
                 "relation": "X s Y",
                 "description": "X starts Y",
-                "category": "time range operation",
+                "category": "tr",
+                "code": "tr-6"
             },
             (-1, -1, 0, -1, 1, 0): {
                 "relation": "X = Y",
                 "description": "X equals Y",
-                "category": "time range operation",
+                "category": "tr",
+                "code": "tr-7"
             },
             (-1, -1, 0, -1, 1, 1): {
                 "relation": "X si Y",
                 "description": "X starts Y",
-                "category": "time range operation",
+                "category": "tr",
+                "code": "tr-8"
             },
             (-1, -1, 1, -1, 1, -1): {
                 "relation": "X d Y",
                 "description": "X during Y",
-                "category": "time range operation",
+                "category": "tr",
+                "code": "tr-9"
             },
             (-1, -1, 1, -1, 1, 0): {
                 "relation": "X f Y",
                 "description": "X finishes Y",
-                "category": "time range operation",
+                "category": "tr",
+                "code": "tr-10"
             },
             (-1, -1, 1, -1, 1, 1): {
                 "relation": "X oi Y",
                 "description": "X overlaps Y",
-                "category": "time range operation",
+                "category": "tr",
+                "code": "tr-11"
             },
             (-1, -1, 1, 0, 1, 1): {
                 "relation": "X mi Y",
                 "description": "X meets Y",
-                "category": "time range operation",
+                "category": "tr",
+                "code": "tr-12"
             },
             (-1, -1, 1, 1, 1, 1): {
                 "relation": "X > Y",
                 "description": "X is after Y",
-                "category": "time range operation",
+                "category": "tr",
+                "code": "tr-13"
             },
             (0, -1, -1, -1, -1, -1): {
                 "relation": "X < Y",
                 "description": "X is before Y",
-                "category": "time point and time range operation",
+                "category": "tp&tr",
+                "code": "tptr-14"
             },
             (0, -1, 0, -1, 0, -1): {
                 "relation": "X s Y",
                 "description": "X starts Y",
-                "category": "time point and time range operation",
+                "category": "tp&tr",
+                "code": "tptr-15"
             },
             (0, -1, 1, -1, 1, -1): {
                 "relation": "X d Y",
                 "description": "X during Y",
-                "category": "time point and time range operation",
+                "category": "tp&tr",
+                "code": "tptr-16"
             },
             (0, -1, 1, 0, 1, 0): {
                 "relation": "X f Y",
                 "description": "X finishes Y",
-                "category": "time point and time range operation",
+                "category": "tp&tr",
+                "code": "tptr-17"
             },
             (0, -1, 1, 1, 1, 1): {
                 "relation": "X > Y",
                 "description": "X is after Y",
-                "category": "time point and time range operation",
+                "category": "tp&tr",
+                "code": "tptr-18"
             },
             (-1, 0, -1, -1, -1, -1): {
                 "relation": "X < Y",
                 "description": "X is before Y",
-                "category": "time point and time range operation",
+                "category": "tr&tp",
+                "code": "trtp-19"
             },
             (-1, 0, -1, -1, 0, 0): {
                 "relation": "X fi Y",
                 "description": "X finishes Y",
-                "category": "time point and time range operation",
+                "category": "tr&tp",
+                "code": "trtp-20"
             },
             (-1, 0, -1, -1, 1, 1): {
                 "relation": "X di Y",
                 "description": "X during Y",
-                "category": "time point and time range operation",
+                "category": "tr&tp",
+                "code": "trtp-21"
             },
             (-1, 0, 0, 0, 1, 1): {
                 "relation": "X si Y",
                 "description": "X starts Y",
-                "category": "time point and time range operation",
+                "category": "tr&tp",
+                "code": "trtp-22"
             },
             (-1, 0, 1, 1, 1, 1): {
                 "relation": "X > Y",
                 "description": "X is after Y",
-                "category": "time point and time range operation",
+                "category": "tr&tp",
+                "code": "trtp-23"
             },
             (0, 0, -1, -1, -1, -1): {
                 "relation": "X < Y",
                 "description": "X is before Y",
-                "category": "time point operation",
+                "category": "tp",
+                "code": "tp-24"
             },
             (0, 0, 0, 0, 0, 0): {
                 "relation": "X = Y",
                 "description": "X equals Y",
-                "category": "time point operation",
+                "category": "tp",
+                "code": "tp-25"
             },
             (0, 0, 1, 1, 1, 1): {
                 "relation": "X > Y",
                 "description": "X is after Y",
-                "category": "time point operation",
-            },
+                "category": "tp",
+                "code": "tp-26"
+            }
         }
 
         allen_operator = [
@@ -332,6 +358,7 @@ class TKGQA_GENERATOR:
         allen_operator = tuple(allen_operator)
         logger.critical(f"allen_operator: {allen_operator}")
         logger.critical(f"ALLEN_OPERATOR_DICT: {ALLEN_OPERATOR_DICT[allen_operator]}")
+        return ALLEN_OPERATOR_DICT[allen_operator]
 
     def timestamp_retrieval(self):
         """
@@ -421,13 +448,11 @@ class TKGQA_GENERATOR:
             for second_index, second_spo in second_spo_df.iterrows():
                 if first_index == second_index:
                     continue
-                logger.info(f"first_spo: {first_spo}, second_spo: {second_spo}")
-                self.allen_temporal_relation(
+                # logger.info(f"first_spo: {first_spo}, second_spo: {second_spo}")
+                allen_temporal_rel = self.allen_temporal_relation(
                     [first_spo["start_time"], first_spo["end_time"]],
                     [second_spo["start_time"], second_spo["end_time"]],
                 )
-                break
-            break
 
 
 if __name__ == "__main__":
