@@ -1,9 +1,11 @@
-import psycopg2
 import json
-from tkgqa_generator.utils import get_logger
+from datetime import datetime
+
 import numpy as np
 import pandas as pd
-from datetime import datetime
+import psycopg2
+
+from tkgqa_generator.utils import get_logger
 
 logger = get_logger(__name__)
 
@@ -37,14 +39,15 @@ class TKGQA_GENERATOR:
         end_time
     """
 
-    def __init__(self,
-                 table_name: str,
-                 host: str,
-                 port: int,
-                 user: str,
-                 password: str,
-                 db_name: str = "tkgqa"
-                 ):
+    def __init__(
+            self,
+            table_name: str,
+            host: str,
+            port: int,
+            user: str,
+            password: str,
+            db_name: str = "tkgqa",
+    ):
         # setup the db connection
         self.host = host
         self.port = port
@@ -56,7 +59,7 @@ class TKGQA_GENERATOR:
             port=self.port,
             user=self.user,
             password=self.password,
-            dbname=self.db_name
+            dbname=self.db_name,
         )
         self.unified_kg_table = table_name
         # we also need to create a new table, we can call it
@@ -64,17 +67,19 @@ class TKGQA_GENERATOR:
         # within the table, you will have the field: measurement, type, statement(json)
         self.cursor = self.connection.cursor()
         # create the table if not exists
-        self.cursor.execute(f"""
+        self.cursor.execute(
+            f"""
             CREATE TABLE IF NOT EXISTS {self.unified_kg_table_statement} (
                 id SERIAL PRIMARY KEY,
                 measurement VARCHAR(255),
                 type VARCHAR(255),
                 statement JSONB
             )
-        """)
+        """
+        )
 
     @staticmethod
-    def allen_temporal_relation(start_time1, end_time1, start_time2, end_time2):
+    def allen_temporal_relation(time_range_a, time_range_b):
         """
         This function will return the allen temporal relation between two time ranges
 
@@ -95,6 +100,8 @@ class TKGQA_GENERATOR:
         :param end_time2:
         :return:
         """
+        start_time1, end_time1 = time_range_a
+        start_time2, end_time2 = time_range_b
         if start_time1 == "beginning of time":
             start_time1 = datetime.min.replace(year=1)
         if end_time1 == "end of time":
@@ -111,9 +118,220 @@ class TKGQA_GENERATOR:
         end_time2 = np.datetime64(end_time2)
 
         logger.info(
-            f"start_time1: {start_time1}, end_time1: {end_time1}, start_time2: {start_time2}, end_time2: {end_time2}")
+            f"start_time1: {start_time1}, end_time1: {end_time1}, start_time2: {start_time2}, end_time2: {end_time2}"
+        )
 
         # 13 for time range operation
+        time_range_a_datetime = [start_time1, end_time1]
+        time_range_b_datetime = [start_time2, end_time2]
+        # then we will do the operation for the time range, get the allen temporal relation
+        """
+        x_start <= x_end
+        y_start <= y_end
+        allen_operator = [
+            x_start - x_end,  # 0, or -1, which means a is a point or a range
+            y_start - y_end, # 0, or -1
+            x_start - y_start,
+            x_start - y_end,
+            x_end - y_start,
+            x_end - y_end,
+        ]
+        
+        After this do a operation for the allen_operator, if value = 0, keep it, < 0, set it to -1, > 0, set it to 1
+        
+        Then we will have:
+        13 for time range operation, which means x_start < x_end, y_start < y_end
+            - X <  Y => [-1, -1, -1, -1, -1, -1]
+            - X m  Y => [-1, -1, -1, -1,  0, -1]
+            - X o  Y => [-1, -1, -1, -1,  1, -1]
+            - X fi Y => [-1, -1, -1, -1,  1,  0]
+            - X di Y => [-1, -1, -1, -1,  1,  1]
+            - X s  Y => [-1, -1,  0, -1,  1, -1]
+            - X =  Y => [-1, -1,  0, -1,  1,  0]
+            - X si Y => [-1, -1,  0, -1,  1,  1]
+            - X d  Y => [-1, -1,  1, -1,  1, -1]
+            - X f  Y => [-1, -1,  1, -1,  1,  0]
+            - X oi Y => [-1, -1,  1, -1,  1,  1]
+            - X mi Y => [-1, -1,  1,  0,  1,  1]
+            - X >  Y => [-1, -1,  1,  1,  1,  1]
+            
+        10 for time point and time range operation
+        Amony the 10, 5 for X is a point, 5 for Y is a point
+        5 for X is a point, Y is a range, which means x_start = x_end, y_start < y_end
+            - X <  Y => [0, -1, -1, -1, -1, -1]
+            - X s  Y => [0, -1,  0, -1,  0, -1]
+            - X d  Y => [0, -1,  1, -1,  1, -1]
+            - X f  Y => [0, -1,  1,  0,  1,  0]
+            - X >  Y => [0, -1,  1,  1,  1,  1]
+        5 for X is a range, Y is a point, which means x_start < x_end, y_start = y_end
+            - X <  Y => [-1, 0, -1, -1, -1, -1]
+            - X fi Y => [-1, 0, -1，-1,  0,  0]
+            - X di Y => [-1, 0, -1, -1,  1,  1]
+            - X si Y => [-1, 0,  0,  0,  1,  1]
+            - X >  Y => [-1, 0,  1,  1,  1,  1]
+        
+        3 for time point operation, which means x_start = x_end, y_start = y_end
+            - X < Y => [0, 0, -1, -1, -1, -1]
+            - X = Y => [0, 0, 0, 0, 0, 0]
+            - X > Y => [0, 0, 1, 1, 1, 1]
+        """
+
+        ALLEN_OPERATOR_DICT = ALLEN_OPERATOR_DICT = {
+            (-1, -1, -1, -1, -1, -1): {
+                "relation": "X < Y",
+                "description": "X is before Y",
+                "category": "time range operation",
+            },
+            (-1, -1, -1, -1, 0, -1): {
+                "relation": "X m Y",
+                "description": "X meets Y",
+                "category": "time range operation",
+            },
+            (-1, -1, -1, -1, 1, -1): {
+                "relation": "X o Y",
+                "description": "X overlaps Y",
+                "category": "time range operation",
+            },
+            (-1, -1, -1, -1, 1, 0): {
+                "relation": "X fi Y",
+                "description": "X finishes Y",
+                "category": "time range operation",
+            },
+            (-1, -1, -1, -1, 1, 1): {
+                "relation": "X di Y",
+                "description": "X during Y",
+                "category": "time range operation",
+            },
+            (-1, -1, 0, -1, 1, -1): {
+                "relation": "X s Y",
+                "description": "X starts Y",
+                "category": "time range operation",
+            },
+            (-1, -1, 0, -1, 1, 0): {
+                "relation": "X = Y",
+                "description": "X equals Y",
+                "category": "time range operation",
+            },
+            (-1, -1, 0, -1, 1, 1): {
+                "relation": "X si Y",
+                "description": "X starts Y",
+                "category": "time range operation",
+            },
+            (-1, -1, 1, -1, 1, -1): {
+                "relation": "X d Y",
+                "description": "X during Y",
+                "category": "time range operation",
+            },
+            (-1, -1, 1, -1, 1, 0): {
+                "relation": "X f Y",
+                "description": "X finishes Y",
+                "category": "time range operation",
+            },
+            (-1, -1, 1, -1, 1, 1): {
+                "relation": "X oi Y",
+                "description": "X overlaps Y",
+                "category": "time range operation",
+            },
+            (-1, -1, 1, 0, 1, 1): {
+                "relation": "X mi Y",
+                "description": "X meets Y",
+                "category": "time range operation",
+            },
+            (-1, -1, 1, 1, 1, 1): {
+                "relation": "X > Y",
+                "description": "X is after Y",
+                "category": "time range operation",
+            },
+            (0, -1, -1, -1, -1, -1): {
+                "relation": "X < Y",
+                "description": "X is before Y",
+                "category": "time point and time range operation",
+            },
+            (0, -1, 0, -1, 0, -1): {
+                "relation": "X s Y",
+                "description": "X starts Y",
+                "category": "time point and time range operation",
+            },
+            (0, -1, 1, -1, 1, -1): {
+                "relation": "X d Y",
+                "description": "X during Y",
+                "category": "time point and time range operation",
+            },
+            (0, -1, 1, 0, 1, 0): {
+                "relation": "X f Y",
+                "description": "X finishes Y",
+                "category": "time point and time range operation",
+            },
+            (0, -1, 1, 1, 1, 1): {
+                "relation": "X > Y",
+                "description": "X is after Y",
+                "category": "time point and time range operation",
+            },
+            (-1, 0, -1, -1, -1, -1): {
+                "relation": "X < Y",
+                "description": "X is before Y",
+                "category": "time point and time range operation",
+            },
+            (-1, 0, -1, -1, 0, 0): {
+                "relation": "X fi Y",
+                "description": "X finishes Y",
+                "category": "time point and time range operation",
+            },
+            (-1, 0, -1, -1, 1, 1): {
+                "relation": "X di Y",
+                "description": "X during Y",
+                "category": "time point and time range operation",
+            },
+            (-1, 0, 0, 0, 1, 1): {
+                "relation": "X si Y",
+                "description": "X starts Y",
+                "category": "time point and time range operation",
+            },
+            (-1, 0, 1, 1, 1, 1): {
+                "relation": "X > Y",
+                "description": "X is after Y",
+                "category": "time point and time range operation",
+            },
+            (0, 0, -1, -1, -1, -1): {
+                "relation": "X < Y",
+                "description": "X is before Y",
+                "category": "time point operation",
+            },
+            (0, 0, 0, 0, 0, 0): {
+                "relation": "X = Y",
+                "description": "X equals Y",
+                "category": "time point operation",
+            },
+            (0, 0, 1, 1, 1, 1): {
+                "relation": "X > Y",
+                "description": "X is after Y",
+                "category": "time point operation",
+            },
+        }
+
+        allen_operator = [
+            time_range_a_datetime[0] - time_range_a_datetime[1],
+            time_range_b_datetime[0] - time_range_b_datetime[1],
+            time_range_a_datetime[0] - time_range_b_datetime[0],
+            time_range_a_datetime[0] - time_range_b_datetime[1],
+            time_range_a_datetime[1] - time_range_b_datetime[0],
+            time_range_a_datetime[1] - time_range_b_datetime[1],
+        ]
+
+        # do the operation for the allen_operator
+        for index, value in enumerate(allen_operator):
+            if value == 0:
+                allen_operator[index] = 0
+            elif value < 0:
+                allen_operator[index] = -1
+            else:
+                allen_operator[index] = 1
+
+        # logger.critical(f"allen_operator: {allen_operator}")
+        # get it to be a tuple
+        allen_operator = tuple(allen_operator)
+        logger.critical(f"allen_operator: {allen_operator}")
+        logger.critical(f"ALLEN_OPERATOR_DICT: {ALLEN_OPERATOR_DICT[allen_operator]}")
 
     def timestamp_retrieval(self):
         """
@@ -142,30 +360,30 @@ class TKGQA_GENERATOR:
                 "predicate": result[2],
                 "object": result[4],
                 "start_time": result[6],
-                "end_time": result[7]
+                "end_time": result[7],
             }
             statement = f"{result_dict['subject']} {result_dict['predicate']} {result_dict['object']} from {result_dict['start_time']} to {result_dict['end_time']}"
 
             result_dict = {
                 "statement": statement,
-                "subject": result_dict['subject'],
-                "predicate": result_dict['predicate'],
-                "object": result_dict['object'],
-                "start_time": result_dict['start_time'],
-                "end_time": result_dict['end_time']
+                "subject": result_dict["subject"],
+                "predicate": result_dict["predicate"],
+                "object": result_dict["object"],
+                "start_time": result_dict["start_time"],
+                "end_time": result_dict["end_time"],
             }
 
             # Serialize the statement dictionary to a JSON string
             json_statement = json.dumps(result_dict)
 
             # Store the statement
-            measurement = 'timestamp'
-            type_value = 'RE'
+            measurement = "timestamp"
+            type_value = "RE"
 
             # Execute the SQL command with the serialized JSON string
             self.cursor.execute(
                 f"INSERT INTO {self.unified_kg_table_statement} (measurement, type, statement) VALUES (%s, %s, %s)",
-                (measurement, type_value, json_statement)
+                (measurement, type_value, json_statement),
             )
         self.connection.commit()
 
@@ -195,7 +413,9 @@ class TKGQA_GENERATOR:
         Then we query the second one (they should be different)
         Then we generate the statement based on the two items
         """
-        first_spo_df = pd.read_sql_query(f"SELECT * FROM {self.unified_kg_table}", self.connection)
+        first_spo_df = pd.read_sql_query(
+            f"SELECT * FROM {self.unified_kg_table}", self.connection
+        )
         second_spo_df = first_spo_df.copy(deep=True)
         for first_index, first_spo in first_spo_df.iterrows():
             for second_index, second_spo in second_spo_df.iterrows():
@@ -203,10 +423,8 @@ class TKGQA_GENERATOR:
                     continue
                 logger.info(f"first_spo: {first_spo}, second_spo: {second_spo}")
                 self.allen_temporal_relation(
-                    first_spo['start_time'],
-                    first_spo['end_time'],
-                    second_spo['start_time'],
-                    second_spo['end_time']
+                    [first_spo["start_time"], first_spo["end_time"]],
+                    [second_spo["start_time"], second_spo["end_time"]],
                 )
                 break
             break
@@ -219,6 +437,6 @@ if __name__ == "__main__":
         port=5433,
         user="tkgqa",
         password="tkgqa",
-        db_name="tkgqa"
+        db_name="tkgqa",
     )
     generator.timestamp_2ra()
