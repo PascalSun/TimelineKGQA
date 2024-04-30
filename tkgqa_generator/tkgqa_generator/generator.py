@@ -172,8 +172,8 @@ class TKGQA_GENERATOR:
         
         3 for time point operation, which means x_start = x_end, y_start = y_end
             - X < Y => [0, 0, -1, -1, -1, -1]
-            - X = Y => [0, 0, 0, 0, 0, 0]
-            - X > Y => [0, 0, 1, 1, 1, 1]
+            - X = Y => [0, 0,  0,  0,  0,  0]
+            - X > Y => [0, 0,  1,  1,  1,  1]
         """
 
         ALLEN_OPERATOR_DICT = {
