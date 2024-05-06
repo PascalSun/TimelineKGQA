@@ -195,8 +195,8 @@ class ICEWSDataLoader:
                             predicate_json JSON DEFAULT '{}'::json,
                             object         TEXT,
                             object_json    JSON DEFAULT '{}'::json,
-                            start_time     DATE,
-                            end_time       DATE
+                            start_time     TEXT,
+                            end_time       TEXT
                         );
                     END IF;
                     TRUNCATE TABLE public.unified_kg_icews_actor;

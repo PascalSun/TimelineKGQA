@@ -453,6 +453,7 @@ class TKGQA_GENERATOR:
                     [first_spo["start_time"], first_spo["end_time"]],
                     [second_spo["start_time"], second_spo["end_time"]],
                 )
+                # save the statement
 
 
 if __name__ == "__main__":
