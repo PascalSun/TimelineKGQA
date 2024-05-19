@@ -3,6 +3,7 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
+from tkgqa_generator.openai_utils import paraphrase_question
 import psycopg2
 
 from tkgqa_generator.utils import get_logger
@@ -16,16 +17,15 @@ class TKGQAGenerator:
     - Timestamp
         - RE: Retrieval
         - RA: Reasoning
-            - 2RA
-            - 3RA-R
-            - 3RA-A
+            - 2RA-Allen
+            - 2RA-Set
+            - 2RA-Aggregation
 
     - Duration
         - RE: Retrieval
         - RA: Reasoning
-            - 2RA
-            - 3RA-R
-            - 3RA-A
+            - 2RA-Allen
+            - 2RA-Aggeration
 
 
     input will be a unified knowledge graph, it will be stored in a table
@@ -40,13 +40,13 @@ class TKGQAGenerator:
     """
 
     def __init__(
-        self,
-        table_name: str,
-        host: str,
-        port: int,
-        user: str,
-        password: str,
-        db_name: str = "tkgqa",
+            self,
+            table_name: str,
+            host: str,
+            port: int,
+            user: str,
+            password: str,
+            db_name: str = "tkgqa",
     ):
         # setup the db connection
         self.host = host
@@ -73,14 +73,70 @@ class TKGQAGenerator:
                 id SERIAL PRIMARY KEY,
                 measurement VARCHAR(255),
                 type VARCHAR(255),
-                statement JSONB
+                statement JSONB,
+                questions JSONB
             )
         """
         )
 
     @staticmethod
-    def allen_temporal_tr_relation(
-        time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
+    def retrieve_tr(s, p, o, start_time, end_time) -> dict:
+        """
+        This will try to generate four questions belong to RE type
+
+        The questions will be:
+        - ? p o during the time range from start_time to end_time?
+        - s p ? during the time range from start_time to end_time?
+        - s p o from ? to end_time?
+        - s p o from start_time to ?
+        - s p o from ? to ?
+
+        Args:
+            s (str): The subject
+            p (str): The predicate
+            o (str): The object
+            start_time (datetime): The start time
+            end_time (datetime): The end time
+
+        :return:
+            dict: The generated questions
+        """
+        questions = {
+            "?potstd": {
+                "q": f"? {p} {o} during the time range from {start_time} to {end_time}?",
+                "a": f"{s}",
+            },
+            "sp?tstd": {
+                "q": f"{s} {p} ? during the time range from {start_time} to {end_time}?",
+                "a": f"{o}",
+            },
+            "spo?td": {
+                "q": f"{s} {p} {o} from ? to {end_time}?",
+                "a": f"{start_time}",
+            },
+            "spots?": {
+                "q": f"{s} {p} {o} from {start_time} to ?",
+                "a": f"{end_time}",
+            },
+            "spo??": {
+                "q": f"{s} {p} {o} from ? to ?",
+                "a": f"{start_time} and {end_time}",
+            },
+        }
+        logger.info(f"questions: {questions}")
+        # we will need to feed the questions to LLM, generate proper question statement
+        for question_type, question_dict in questions.items():
+            question = question_dict["q"]
+            answer = question_dict["a"]
+            paraphrased_question = paraphrase_question(question)
+            logger.info(f"paraphrased_question: {paraphrased_question}")
+            question_dict["pq"] = paraphrased_question
+        logger.info(f"questions: {questions}")
+        return questions
+
+    @staticmethod
+    def allen_tr_relation(
+            time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
     ) -> dict:
         """
         This function will return the allen temporal relation between two time ranges
@@ -364,8 +420,8 @@ class TKGQAGenerator:
         return ALLEN_OPERATOR_DICT[allen_operator]
 
     @staticmethod
-    def allen_temporal_td_relation(
-        time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
+    def allen_td_relation(
+            time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
     ) -> dict:
         """
 
@@ -401,8 +457,8 @@ class TKGQAGenerator:
             }
 
     @staticmethod
-    def set_temporal_operator(
-        time_range_a, time_range_b: list = None, temporal_operator: str = None
+    def set_operator(
+            time_range_a, time_range_b: list = None, temporal_operator: str = None
     ) -> set:
         """
         This function will return the temporal operator between two time ranges
@@ -458,8 +514,8 @@ class TKGQAGenerator:
             )
 
     @staticmethod
-    def aggregate_tr_temporal_operator(
-        time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
+    def aggregate_tr_operator(
+            time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
     ) -> list:
         """
         For the time range, it will do the rank operation, sort it
@@ -517,8 +573,8 @@ class TKGQAGenerator:
         return rank_by_index
 
     @staticmethod
-    def aggregate_td_temporal_operator(
-        time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
+    def aggregate_td_operator(
+            time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
     ) -> list:
         """
         For the time range, it will do the rank operation, sort it
@@ -613,6 +669,13 @@ class TKGQAGenerator:
                 "start_time": result_dict["start_time"],
                 "end_time": result_dict["end_time"],
             }
+            questions = self.retrieve_tr(
+                s=result_dict["subject"],
+                p=result_dict["predicate"],
+                o=result_dict["object"],
+                start_time=result_dict["start_time"],
+                end_time=result_dict["end_time"],
+            )
 
             # Serialize the statement dictionary to a JSON string
             json_statement = json.dumps(result_dict)
@@ -623,9 +686,10 @@ class TKGQAGenerator:
 
             # Execute the SQL command with the serialized JSON string
             self.cursor.execute(
-                f"INSERT INTO {self.unified_kg_table_statement} (measurement, type, statement) VALUES (%s, %s, %s)",
-                (measurement, type_value, json_statement),
+                f"INSERT INTO {self.unified_kg_table_statement} (measurement, type, statement, questions) VALUES (%s, %s, %s, %s)",
+                (measurement, type_value, json_statement, json.dumps(questions)),
             )
+            break
         self.connection.commit()
 
         """
@@ -680,4 +744,5 @@ if __name__ == "__main__":
         password="tkgqa",
         db_name="tkgqa",
     )
-    generator.timestamp_2ra_allen()
+    generator.timestamp_retrieval()
+    # generator.timestamp_2ra_allen()

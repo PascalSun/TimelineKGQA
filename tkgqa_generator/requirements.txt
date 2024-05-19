@@ -9,3 +9,4 @@ plotly~=5.20.0
 transformers~=4.39.3
 sentence-transformers
 requests
+openai
