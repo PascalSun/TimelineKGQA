@@ -79,7 +79,9 @@ class TKGQAGenerator:
         )
 
     @staticmethod
-    def allen_temporal_relation(time_range_a, time_range_b):
+    def allen_temporal_tr_relation(
+        time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
+    ) -> dict:
         """
         This function will return the allen temporal relation between two time ranges
 
@@ -94,11 +96,12 @@ class TKGQAGenerator:
         We will need to convert it to a numerical value in np.inf
         Ohters will be converted to a numerical value in the timestamp
 
-        :param start_time1:
-        :param end_time1:
-        :param start_time2:
-        :param end_time2:
-        :return:
+        Args:
+            time_range_a (list[datetime, datetime]): The first time range
+            time_range_b (list[datetime, datetime]): The second time range
+
+        Returns:
+            dict: The allen temporal relation between the two time ranges
         """
         start_time1, end_time1 = time_range_a
         start_time2, end_time2 = time_range_b
@@ -361,6 +364,43 @@ class TKGQAGenerator:
         return ALLEN_OPERATOR_DICT[allen_operator]
 
     @staticmethod
+    def allen_temporal_td_relation(
+        time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
+    ) -> dict:
+        """
+
+        Args:
+            time_range_a (list[datetime, datetime]): The first time range
+            time_range_b (list[datetime, datetime]): The second time range
+
+        Returns:
+            dict: The allen temporal relation between the two time ranges
+        """
+        duration_a = abs(time_range_a[1] - time_range_a[0])
+        duration_b = abs(time_range_b[1] - time_range_b[0])
+        if duration_a < duration_b:
+            return {
+                "relation": "X < Y",
+                "description": "X is shorter Y",
+                "category": "td",
+                "code": "td-1",
+            }
+        elif duration_a == duration_b:
+            return {
+                "relation": "X = Y",
+                "description": "X equals Y",
+                "category": "td",
+                "code": "td-2",
+            }
+        else:
+            return {
+                "relation": "X > Y",
+                "description": "X is longer Y",
+                "category": "td",
+                "code": "td-3",
+            }
+
+    @staticmethod
     def set_temporal_operator(
         time_range_a, time_range_b: list = None, temporal_operator: str = None
     ) -> set:
@@ -477,7 +517,9 @@ class TKGQAGenerator:
         return rank_by_index
 
     @staticmethod
-    def aggregate_td_temporal_operator(time_ranges: list[[datetime, datetime]]) -> list:
+    def aggregate_td_temporal_operator(
+        time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
+    ) -> list:
         """
         For the time range, it will do the rank operation, sort it
 
@@ -485,6 +527,7 @@ class TKGQAGenerator:
 
         Args:
             time_ranges (list): The list of time ranges
+            agg_temporal_operator (str): The aggregation temporal operator
 
         Returns:
             list: the list of sorted index for the time range
@@ -507,12 +550,29 @@ class TKGQAGenerator:
         ```
         """
         # Create a list of indices paired with time ranges
-        indexed_time_ranges = list(enumerate(time_ranges))
-        indexed_time_ranges.sort(key=lambda x: abs(x[1][1] - x[1][0]))
-        rank_by_index = [0] * len(time_ranges)  # Pre-initialize a list of zeros
-        for index, (original_index, _) in enumerate(indexed_time_ranges):
-            rank_by_index[original_index] = index
-        return rank_by_index
+        if agg_temporal_operator == "ranking":
+            indexed_time_ranges = list(enumerate(time_ranges))
+
+            indexed_time_ranges.sort(key=lambda x: abs(x[1][1] - x[1][0]))
+            rank_by_index = [0] * len(time_ranges)  # Pre-initialize a list of zeros
+            for index, (original_index, _) in enumerate(indexed_time_ranges):
+                rank_by_index[original_index] = index
+            return rank_by_index
+        if agg_temporal_operator == "sum":
+            # total value of the time range
+            durations = [
+                abs(time_range[1] - time_range[0]) for time_range in time_ranges
+            ]
+            return sum(durations)
+        if agg_temporal_operator == "average":
+            # average value of the time range
+            durations = [
+                abs(time_range[1] - time_range[0]) for time_range in time_ranges
+            ]
+            return sum(durations) / len(durations)
+        raise ValueError(
+            "Unsupported aggregation temporal operator. Please use 'ranking', 'sum' or 'average'."
+        )
 
     def timestamp_retrieval(self):
         """
