@@ -10,7 +10,7 @@ from tkgqa_generator.utils import get_logger
 logger = get_logger(__name__)
 
 
-class TKGQA_GENERATOR:
+class TKGQAGenerator:
     """
     type of the statement we will have includes
     - Timestamp
@@ -40,13 +40,13 @@ class TKGQA_GENERATOR:
     """
 
     def __init__(
-            self,
-            table_name: str,
-            host: str,
-            port: int,
-            user: str,
-            password: str,
-            db_name: str = "tkgqa",
+        self,
+        table_name: str,
+        host: str,
+        port: int,
+        user: str,
+        password: str,
+        db_name: str = "tkgqa",
     ):
         # setup the db connection
         self.host = host
@@ -181,158 +181,158 @@ class TKGQA_GENERATOR:
                 "relation": "X < Y",
                 "description": "X is before Y",
                 "category": "tr",
-                "code": "tr-1"
+                "code": "tr-1",
             },
             (-1, -1, -1, -1, 0, -1): {
                 "relation": "X m Y",
                 "description": "X meets Y",
                 "category": "tr",
-                "code": "tr-2"
+                "code": "tr-2",
             },
             (-1, -1, -1, -1, 1, -1): {
                 "relation": "X o Y",
                 "description": "X overlaps Y",
                 "category": "tr",
-                "code": "tr-3"
+                "code": "tr-3",
             },
             (-1, -1, -1, -1, 1, 0): {
                 "relation": "X fi Y",
                 "description": "X finishes Y",
                 "category": "tr",
-                "code": "tr-4"
+                "code": "tr-4",
             },
             (-1, -1, -1, -1, 1, 1): {
                 "relation": "X di Y",
                 "description": "X during Y",
                 "category": "tr",
-                "code": "tr-5"
+                "code": "tr-5",
             },
             (-1, -1, 0, -1, 1, -1): {
                 "relation": "X s Y",
                 "description": "X starts Y",
                 "category": "tr",
-                "code": "tr-6"
+                "code": "tr-6",
             },
             (-1, -1, 0, -1, 1, 0): {
                 "relation": "X = Y",
                 "description": "X equals Y",
                 "category": "tr",
-                "code": "tr-7"
+                "code": "tr-7",
             },
             (-1, -1, 0, -1, 1, 1): {
                 "relation": "X si Y",
                 "description": "X starts Y",
                 "category": "tr",
-                "code": "tr-8"
+                "code": "tr-8",
             },
             (-1, -1, 1, -1, 1, -1): {
                 "relation": "X d Y",
                 "description": "X during Y",
                 "category": "tr",
-                "code": "tr-9"
+                "code": "tr-9",
             },
             (-1, -1, 1, -1, 1, 0): {
                 "relation": "X f Y",
                 "description": "X finishes Y",
                 "category": "tr",
-                "code": "tr-10"
+                "code": "tr-10",
             },
             (-1, -1, 1, -1, 1, 1): {
                 "relation": "X oi Y",
                 "description": "X overlaps Y",
                 "category": "tr",
-                "code": "tr-11"
+                "code": "tr-11",
             },
             (-1, -1, 1, 0, 1, 1): {
                 "relation": "X mi Y",
                 "description": "X meets Y",
                 "category": "tr",
-                "code": "tr-12"
+                "code": "tr-12",
             },
             (-1, -1, 1, 1, 1, 1): {
                 "relation": "X > Y",
                 "description": "X is after Y",
                 "category": "tr",
-                "code": "tr-13"
+                "code": "tr-13",
             },
             (0, -1, -1, -1, -1, -1): {
                 "relation": "X < Y",
                 "description": "X is before Y",
                 "category": "tp&tr",
-                "code": "tptr-14"
+                "code": "tptr-14",
             },
             (0, -1, 0, -1, 0, -1): {
                 "relation": "X s Y",
                 "description": "X starts Y",
                 "category": "tp&tr",
-                "code": "tptr-15"
+                "code": "tptr-15",
             },
             (0, -1, 1, -1, 1, -1): {
                 "relation": "X d Y",
                 "description": "X during Y",
                 "category": "tp&tr",
-                "code": "tptr-16"
+                "code": "tptr-16",
             },
             (0, -1, 1, 0, 1, 0): {
                 "relation": "X f Y",
                 "description": "X finishes Y",
                 "category": "tp&tr",
-                "code": "tptr-17"
+                "code": "tptr-17",
             },
             (0, -1, 1, 1, 1, 1): {
                 "relation": "X > Y",
                 "description": "X is after Y",
                 "category": "tp&tr",
-                "code": "tptr-18"
+                "code": "tptr-18",
             },
             (-1, 0, -1, -1, -1, -1): {
                 "relation": "X < Y",
                 "description": "X is before Y",
                 "category": "tr&tp",
-                "code": "trtp-19"
+                "code": "trtp-19",
             },
             (-1, 0, -1, -1, 0, 0): {
                 "relation": "X fi Y",
                 "description": "X finishes Y",
                 "category": "tr&tp",
-                "code": "trtp-20"
+                "code": "trtp-20",
             },
             (-1, 0, -1, -1, 1, 1): {
                 "relation": "X di Y",
                 "description": "X during Y",
                 "category": "tr&tp",
-                "code": "trtp-21"
+                "code": "trtp-21",
             },
             (-1, 0, 0, 0, 1, 1): {
                 "relation": "X si Y",
                 "description": "X starts Y",
                 "category": "tr&tp",
-                "code": "trtp-22"
+                "code": "trtp-22",
             },
             (-1, 0, 1, 1, 1, 1): {
                 "relation": "X > Y",
                 "description": "X is after Y",
                 "category": "tr&tp",
-                "code": "trtp-23"
+                "code": "trtp-23",
             },
             (0, 0, -1, -1, -1, -1): {
                 "relation": "X < Y",
                 "description": "X is before Y",
                 "category": "tp",
-                "code": "tp-24"
+                "code": "tp-24",
             },
             (0, 0, 0, 0, 0, 0): {
                 "relation": "X = Y",
                 "description": "X equals Y",
                 "category": "tp",
-                "code": "tp-25"
+                "code": "tp-25",
             },
             (0, 0, 1, 1, 1, 1): {
                 "relation": "X > Y",
                 "description": "X is after Y",
                 "category": "tp",
-                "code": "tp-26"
-            }
+                "code": "tp-26",
+            },
         }
 
         allen_operator = [
@@ -359,6 +359,160 @@ class TKGQA_GENERATOR:
         logger.critical(f"allen_operator: {allen_operator}")
         logger.critical(f"ALLEN_OPERATOR_DICT: {ALLEN_OPERATOR_DICT[allen_operator]}")
         return ALLEN_OPERATOR_DICT[allen_operator]
+
+    @staticmethod
+    def set_temporal_operator(
+        time_range_a, time_range_b: list = None, temporal_operator: str = None
+    ) -> set:
+        """
+        This function will return the temporal operator between two time ranges
+        The temporal operator can be:
+        - Intersection
+        - Union
+        - Complement
+
+        Args:
+            time_range_a (list): The first time range
+            time_range_b (list): The second time range
+            temporal_operator (str): The temporal operator
+
+        It is basically try to output a set of new time range.
+
+        Returns:
+            set: The new time range
+
+        """
+        if temporal_operator is None or temporal_operator not in [
+            "intersection",
+            "union",
+            "complement",
+        ]:
+            raise ValueError(
+                "temporal_operator should be one of the following: intersection, union, complement"
+            )
+        if temporal_operator == "intersection":
+            # use set do it directly
+            intersection = set(time_range_a) & set(time_range_b)
+            return intersection
+        elif temporal_operator == "union":
+            # use set do it directly
+            union = set(time_range_a) | set(time_range_b)
+            return union
+        elif temporal_operator == "complement":
+            """
+            This should operate on one time range
+            """
+            if time_range_b is not None:
+                raise ValueError(
+                    "time_range_b should be None when temporal_operator is complement"
+                )
+            # use set do it directly
+            universal_time_range = set(
+                [datetime.min.replace(year=1), datetime.max.replace(year=9999)]
+            )
+            complement = universal_time_range - set(time_range_a)
+            return complement
+        else:
+            raise ValueError(
+                "temporal_operator should be one of the following: intersection, union, complement"
+            )
+
+    @staticmethod
+    def aggregate_tr_temporal_operator(
+        time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
+    ) -> list:
+        """
+        For the time range, it will do the rank operation, sort it
+
+        Aggregation operator can be:
+        - ranking(min, max)
+            - ranking_start
+            - ranking_end
+
+        Args:
+            time_ranges (list): The list of time ranges
+            agg_temporal_operator (str): The aggregation temporal operator
+
+        Returns:
+            list: the list of sorted index for the time range
+
+        For example we have the time range:
+
+        ```
+        time_ranges = [
+            (datetime(2023, 5, 1, 12, 0), datetime(2023, 5, 1, 15, 0)),  # 3 hours
+            (datetime(2023, 5, 1, 9, 30), datetime(2023, 5, 1, 14, 0)),  # 4.5 hours
+            (datetime(2023, 5, 1, 8, 0), datetime(2023, 5, 1, 11, 30)),  # 3.5 hours
+            (datetime(2023, 5, 2, 9, 30), datetime(2023, 5, 2, 12, 0)),  # 2.5 hours
+            (datetime(2023, 5, 1, 10, 30), datetime(2023, 5, 1, 13, 0))  # 2.5 hours
+        ]
+
+        result_start = TKGQAGenerator.aggregate_tr_temporal_operator(time_ranges, "ranking_start")
+        [3,1,0,4,2]
+
+        result_end = TKGQAGenerator.aggregate_tr_temporal_operator(time_ranges, "ranking_end")
+        [2,4,3,0,1]
+        ```
+        """
+
+        # Create a list of indices paired with time ranges
+        indexed_time_ranges = list(enumerate(time_ranges))
+
+        if agg_temporal_operator == "ranking_start":
+            # Sort by start time, but maintain original indices
+            indexed_time_ranges.sort(key=lambda x: x[1][0])
+        elif agg_temporal_operator == "ranking_end":
+            # Sort by end time, but maintain original indices
+            indexed_time_ranges.sort(key=lambda x: x[1][1])
+        else:
+            raise ValueError(
+                "Unsupported aggregation temporal operator. Please use 'ranking_start' or 'ranking_end'."
+            )
+
+        # After sorting, create a new list that maps the original index to its new rank
+        rank_by_index = [0] * len(time_ranges)  # Pre-initialize a list of zeros
+        for rank, (original_index, _) in enumerate(indexed_time_ranges):
+            rank_by_index[original_index] = rank
+
+        return rank_by_index
+
+    @staticmethod
+    def aggregate_td_temporal_operator(time_ranges: list[[datetime, datetime]]) -> list:
+        """
+        For the time range, it will do the rank operation, sort it
+
+        First calculate the duration of the time range, then do the rank operation based on the duration
+
+        Args:
+            time_ranges (list): The list of time ranges
+
+        Returns:
+            list: the list of sorted index for the time range
+
+
+        Example:
+        ```
+        time_ranges = [
+            (datetime(2023, 5, 1, 12, 0), datetime(2023, 5, 1, 15, 0)),  # 3 hours
+            (datetime(2023, 5, 1, 9, 30), datetime(2023, 5, 1, 14, 0)),  # 4.5 hours
+            (datetime(2023, 5, 1, 8, 0), datetime(2023, 5, 1, 11, 30)),  # 3.5 hours
+            (datetime(2023, 5, 2, 9, 30), datetime(2023, 5, 2, 12, 0)),  # 2.5 hours
+            (datetime(2023, 5, 1, 10, 30), datetime(2023, 5, 1, 13, 0))  # 2.5 hours
+        ]
+        ```
+
+        The output will be:
+        ```
+        [2, 4, 3, 0, 1]
+        ```
+        """
+        # Create a list of indices paired with time ranges
+        indexed_time_ranges = list(enumerate(time_ranges))
+        indexed_time_ranges.sort(key=lambda x: abs(x[1][1] - x[1][0]))
+        rank_by_index = [0] * len(time_ranges)  # Pre-initialize a list of zeros
+        for index, (original_index, _) in enumerate(indexed_time_ranges):
+            rank_by_index[original_index] = index
+        return rank_by_index
 
     def timestamp_retrieval(self):
         """
@@ -424,7 +578,7 @@ class TKGQA_GENERATOR:
         We will try the second one first, and then mix the two methods, so we can have different opinions
         """
 
-    def timestamp_2ra(self):
+    def timestamp_2ra_allen(self):
         """
         This function will generate a timestamp 2 reasoning statement
         For example, we have two statement, we can ask which one happenend first
@@ -453,10 +607,12 @@ class TKGQA_GENERATOR:
                     [first_spo["start_time"], first_spo["end_time"]],
                     [second_spo["start_time"], second_spo["end_time"]],
                 )
+                logger.info(f"allen_temporal_rel: {allen_temporal_rel}")
+                return
 
 
 if __name__ == "__main__":
-    generator = TKGQA_GENERATOR(
+    generator = TKGQAGenerator(
         table_name="unified_kg_icews_actor",
         host="localhost",
         port=5433,
@@ -464,4 +620,4 @@ if __name__ == "__main__":
         password="tkgqa",
         db_name="tkgqa",
     )
-    generator.timestamp_2ra()
+    generator.timestamp_2ra_allen()
