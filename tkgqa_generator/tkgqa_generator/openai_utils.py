@@ -1,18 +1,21 @@
-from openai import OpenAI
-from tkgqa_generator.utils import get_logger
 import os
+
+from openai import OpenAI
+
+from tkgqa_generator.utils import get_logger
 
 logger = get_logger(__name__)
 
 client = OpenAI()
 
 
-def paraphrase_question(question: str,
-                        answer: str = None,
-                        statement: str = None,
-                        answer_type: str = None,
-                        model_name: str = "gpt-4o",
-                        ) -> str:
+def paraphrase_question(
+    question: str,
+    answer: str = None,
+    statement: str = None,
+    answer_type: str = None,
+    model_name: str = "gpt-4o",
+) -> str:
     """
     Paraphrases the given question using the OpenAI model specified.
 
@@ -39,20 +42,21 @@ def paraphrase_question(question: str,
                 {
                     "role": "system",
                     "content": """You are an expert on paraphrasing questions.
-                                  Especially the temporal related questions. Only return the paraphrased question, nothing else. 
-                                  The ??? is the missing part, and the main part the question is asking for,
-                                  it can be someone, some organisation or some time.
+                                  We take out one part of the element in the statement, and replace it by ???.
+                                  You job is paraphrasing this into a natural language question.
+                                  The missing part can be someone, some organisation or some time.
                                   Use diverse ways to represent the temporal aspect of the question.
-                                  """
+                                  Only return the paraphrased question, nothing else.
+                                  """,
                 },
                 {
                     "role": "user",
                     "content": prompt_text,
-                }
+                },
             ],
             max_tokens=100,
             temperature=0.3,
-            stop=["\n"]
+            stop=["\n"],
         )
         paraphrased_question = response.choices[0].message.content
         return paraphrased_question

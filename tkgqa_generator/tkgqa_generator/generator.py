@@ -3,9 +3,9 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
-from tkgqa_generator.openai_utils import paraphrase_question
 import psycopg2
 
+from tkgqa_generator.openai_utils import paraphrase_question
 from tkgqa_generator.utils import get_logger
 
 logger = get_logger(__name__)
@@ -40,13 +40,13 @@ class TKGQAGenerator:
     """
 
     def __init__(
-            self,
-            table_name: str,
-            host: str,
-            port: int,
-            user: str,
-            password: str,
-            db_name: str = "tkgqa",
+        self,
+        table_name: str,
+        host: str,
+        port: int,
+        user: str,
+        password: str,
+        db_name: str = "tkgqa",
     ):
         # setup the db connection
         self.host = host
@@ -64,6 +64,7 @@ class TKGQAGenerator:
         self.unified_kg_table = table_name
         # we also need to create a new table, we can call it
         self.unified_kg_table_statement = f"{self.unified_kg_table}_statement"
+        self.unified_kg_table_re = f"{self.unified_kg_table}_retrieval"
         # within the table, you will have the field: measurement, type, statement(json)
         self.cursor = self.connection.cursor()
         # create the table if not exists
@@ -76,6 +77,27 @@ class TKGQAGenerator:
                 type VARCHAR(255),
                 statement JSONB,
                 questions JSONB
+            )
+        """
+        )
+        # create a table to store retrieval questions
+        self.cursor.execute(
+            f"""
+            CREATE TABLE IF NOT EXISTS {self.unified_kg_table_re} (
+                id SERIAL PRIMARY KEY,
+                source_kg_id integer,
+                measurement VARCHAR(255),
+                type VARCHAR(255),
+                statement text,
+                question text,
+                paraphrased_question text,
+                answer text,
+                answer_type text,
+                s text,
+                p text,
+                o text,
+                start_time text,
+                end_time text
             )
         """
         )
@@ -117,12 +139,12 @@ class TKGQAGenerator:
             "spo?td": {
                 "q": f"{s} {p} {o} from ??? to {end_time}?",
                 "a": f"{start_time}",
-                "answer_type": "Time, mainly is a time.",
+                "answer_type": "Time, mainly is a timepoint.",
             },
             "spots?": {
                 "q": f"{s} {p} {o} from {start_time} to ???",
                 "a": f"{end_time}",
-                "answer_type": "Time, mainly is a time.",
+                "answer_type": "Time, mainly is a timepoint.",
             },
             "spo??": {
                 "q": f"{s} {p} {o} from ??? to ???",
@@ -130,10 +152,10 @@ class TKGQAGenerator:
                 "answer_type": "Time, mainly is a time range.",
             },
             "spo??d": {
-                "q": f"[How long]??? {s} {p} {o}",
+                "q": f"[How long/What's the duration/etc]??? for the statement {s} {p} {o}",
                 "a": f"{end_time} - {start_time}",
                 "answer_type": "Ask for duration",
-            }
+            },
         }
         logger.info(f"questions: {questions}")
         # we will need to feed the questions to LLM, generate proper question statement
@@ -141,10 +163,12 @@ class TKGQAGenerator:
             question = question_dict["q"]
             answer = question_dict["a"]
             # answer_type = question_dict["answer_type"]
-            paraphrased_question = paraphrase_question(question=question,
-                                                       answer=answer,
-                                                       statement=statement,
-                                                       answer_type=question_dict["answer_type"])
+            paraphrased_question = paraphrase_question(
+                question=question,
+                answer=answer,
+                statement=statement,
+                answer_type=question_dict["answer_type"],
+            )
             logger.info(f"paraphrased_question: {paraphrased_question}")
             question_dict["pq"] = paraphrased_question
         logger.info(f"questions: {questions}")
@@ -152,7 +176,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def allen_tr_relation(
-            time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
+        time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
     ) -> dict:
         """
         This function will return the allen temporal relation between two time ranges
@@ -211,9 +235,9 @@ class TKGQAGenerator:
             x_end - y_start,
             x_end - y_end,
         ]
-        
+
         After this do a operation for the allen_operator, if value = 0, keep it, < 0, set it to -1, > 0, set it to 1
-        
+
         Then we will have:
         13 for time range operation, which means x_start < x_end, y_start < y_end
             - X <  Y => [-1, -1, -1, -1, -1, -1]
@@ -229,7 +253,7 @@ class TKGQAGenerator:
             - X oi Y => [-1, -1,  1, -1,  1,  1]
             - X mi Y => [-1, -1,  1,  0,  1,  1]
             - X >  Y => [-1, -1,  1,  1,  1,  1]
-            
+
         10 for time point and time range operation
         Amony the 10, 5 for X is a point, 5 for Y is a point
         5 for X is a point, Y is a range, which means x_start = x_end, y_start < y_end
@@ -244,7 +268,7 @@ class TKGQAGenerator:
             - X di Y => [-1, 0, -1, -1,  1,  1]
             - X si Y => [-1, 0,  0,  0,  1,  1]
             - X >  Y => [-1, 0,  1,  1,  1,  1]
-        
+
         3 for time point operation, which means x_start = x_end, y_start = y_end
             - X < Y => [0, 0, -1, -1, -1, -1]
             - X = Y => [0, 0,  0,  0,  0,  0]
@@ -437,7 +461,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def allen_td_relation(
-            time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
+        time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
     ) -> dict:
         """
 
@@ -474,7 +498,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def set_operator(
-            time_range_a, time_range_b: list = None, temporal_operator: str = None
+        time_range_a, time_range_b: list = None, temporal_operator: str = None
     ) -> set:
         """
         This function will return the temporal operator between two time ranges
@@ -531,7 +555,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def aggregate_tr_operator(
-            time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
+        time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
     ) -> list:
         """
         For the time range, it will do the rank operation, sort it
@@ -590,7 +614,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def aggregate_td_operator(
-            time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
+        time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
     ) -> list:
         """
         For the time range, it will do the rank operation, sort it
@@ -665,7 +689,8 @@ class TKGQAGenerator:
         }
         """
         self.cursor.execute(
-            f"SELECT * FROM {self.unified_kg_table} WHERE id not in (SELECT source_kg_id FROM {self.unified_kg_table_statement})")
+            f"SELECT * FROM {self.unified_kg_table} WHERE id not in (SELECT source_kg_id FROM {self.unified_kg_table_statement})"
+        )
         results = self.cursor.fetchall()
         for result in results:
             # get result to dict, and extract the subject, predicate, object
@@ -694,7 +719,7 @@ class TKGQAGenerator:
                 o=result_dict["object"],
                 start_time=result_dict["start_time"],
                 end_time=result_dict["end_time"],
-                statement=statement
+                statement=statement,
             )
 
             # Serialize the statement dictionary to a JSON string
@@ -705,27 +730,70 @@ class TKGQAGenerator:
             type_value = "RE"
             logger.info(
                 "INSERT INTO %s (source_kg_id, measurement, type, statement, questions) VALUES (%s, %s, %s, %s, %s)",
-                self.unified_kg_table_statement, result_dict["source_kg_id"], measurement, type_value, json_statement,
-                json.dumps(questions)
+                self.unified_kg_table_statement,
+                result_dict["source_kg_id"],
+                measurement,
+                type_value,
+                json_statement,
+                json.dumps(questions),
             )
             sql_command = f"INSERT INTO {self.unified_kg_table_statement} (source_kg_id, measurement, type, statement, questions) VALUES (%s, %s, %s, %s, %s)"
 
             # Execute the SQL command with the serialized JSON string
             self.cursor.execute(
                 sql_command,
-                (result_dict["source_kg_id"], measurement, type_value, json_statement, json.dumps(questions))
+                (
+                    result_dict["source_kg_id"],
+                    measurement,
+                    type_value,
+                    json_statement,
+                    json.dumps(questions),
+                ),
             )
+
+            # insert each qa into the table, have a flat table
+            for question_type, question_dict in questions.items():
+                question = question_dict["q"]
+                answer = question_dict["a"]
+                paraphrased_question = question_dict["pq"]
+                answer_type = question_dict["answer_type"]
+                indiv_sql_command = """
+                    INSERT INTO {} (source_kg_id, measurement, type, statement, question, paraphrased_question, answer, answer_type, s, p, o, start_time, end_time)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """.format(
+                    self.unified_kg_table_re
+                )
+
+                data = (
+                    result_dict["source_kg_id"],
+                    measurement,
+                    type_value,
+                    statement,
+                    question,
+                    paraphrased_question,
+                    answer,
+                    answer_type,
+                    result_dict["subject"],
+                    result_dict["predicate"],
+                    result_dict["object"],
+                    result_dict["start_time"],
+                    result_dict["end_time"],
+                )
+
+                self.cursor.execute(indiv_sql_command, data)
+                self.connection.commit()
             break
         self.connection.commit()
 
         """
-        then is to generate the question and answer, it will be stored in another table
-        notes: tried public available ones, not work well.
-        so we have two ways to do this:
-        1. dump it to LLM, and generate the question and answer
-        2. Created it based on the template
-        
-        We will try the second one first, and then mix the two methods, so we can have different opinions
+                    then is to generate the question and answer, it will be stored in another table
+                    notes: tried public available ones, not work well.
+                    so we have two ways to do this:
+                    1. dump it to LLM, and generate the question and answer
+                    2. Created it based on the template
+
+                    We will
+                try the second one first, and then mix the two methods, so we can have different opinions
         """
 
     def timestamp_2ra_allen(self):
