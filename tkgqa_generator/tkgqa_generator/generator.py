@@ -71,6 +71,7 @@ class TKGQAGenerator:
             f"""
             CREATE TABLE IF NOT EXISTS {self.unified_kg_table_statement} (
                 id SERIAL PRIMARY KEY,
+                source_kg_id integer,
                 measurement VARCHAR(255),
                 type VARCHAR(255),
                 statement JSONB,
@@ -80,7 +81,7 @@ class TKGQAGenerator:
         )
 
     @staticmethod
-    def retrieve_tr(s, p, o, start_time, end_time) -> dict:
+    def retrieve_tr(s, p, o, start_time, end_time, statement=None) -> dict:
         """
         This will try to generate four questions belong to RE type
 
@@ -101,26 +102,32 @@ class TKGQAGenerator:
         :return:
             dict: The generated questions
         """
+        p = "affiliated with"
         questions = {
             "?potstd": {
                 "q": f"? {p} {o} during the time range from {start_time} to {end_time}?",
                 "a": f"{s}",
+                "answer_type": "Subject, mainly is a person.",
             },
             "sp?tstd": {
                 "q": f"{s} {p} ? during the time range from {start_time} to {end_time}?",
                 "a": f"{o}",
+                "answer_type": "Object, mainly is an organization.",
             },
             "spo?td": {
                 "q": f"{s} {p} {o} from ? to {end_time}?",
                 "a": f"{start_time}",
+                "answer_type": "Time, mainly is a time.",
             },
             "spots?": {
                 "q": f"{s} {p} {o} from {start_time} to ?",
                 "a": f"{end_time}",
+                "answer_type": "Time, mainly is a time.",
             },
             "spo??": {
                 "q": f"{s} {p} {o} from ? to ?",
                 "a": f"{start_time} and {end_time}",
+                "answer_type": "Time, mainly is a time range.",
             },
         }
         logger.info(f"questions: {questions}")
@@ -128,7 +135,11 @@ class TKGQAGenerator:
         for question_type, question_dict in questions.items():
             question = question_dict["q"]
             answer = question_dict["a"]
-            paraphrased_question = paraphrase_question(question)
+            # answer_type = question_dict["answer_type"]
+            paraphrased_question = paraphrase_question(question=question,
+                                                       answer=answer,
+                                                       statement=statement,
+                                                       answer_type=question_dict["answer_type"])
             logger.info(f"paraphrased_question: {paraphrased_question}")
             question_dict["pq"] = paraphrased_question
         logger.info(f"questions: {questions}")
@@ -648,7 +659,8 @@ class TKGQAGenerator:
             "end_time": "xxx"
         }
         """
-        self.cursor.execute(f"SELECT * FROM {self.unified_kg_table}")
+        self.cursor.execute(
+            f"SELECT * FROM {self.unified_kg_table} WHERE id not in (SELECT source_kg_id FROM {self.unified_kg_table_statement})")
         results = self.cursor.fetchall()
         for result in results:
             # get result to dict, and extract the subject, predicate, object
@@ -658,8 +670,9 @@ class TKGQAGenerator:
                 "object": result[4],
                 "start_time": result[6],
                 "end_time": result[7],
+                "source_kg_id": result[8],
             }
-            statement = f"{result_dict['subject']} {result_dict['predicate']} {result_dict['object']} from {result_dict['start_time']} to {result_dict['end_time']}"
+            statement = f"{result_dict['subject']} affiliated with {result_dict['object']} from {result_dict['start_time']} to {result_dict['end_time']}"
 
             result_dict = {
                 "statement": statement,
@@ -668,6 +681,7 @@ class TKGQAGenerator:
                 "object": result_dict["object"],
                 "start_time": result_dict["start_time"],
                 "end_time": result_dict["end_time"],
+                "source_kg_id": result_dict["source_kg_id"],
             }
             questions = self.retrieve_tr(
                 s=result_dict["subject"],
@@ -675,6 +689,7 @@ class TKGQAGenerator:
                 o=result_dict["object"],
                 start_time=result_dict["start_time"],
                 end_time=result_dict["end_time"],
+                statement=statement
             )
 
             # Serialize the statement dictionary to a JSON string
@@ -683,11 +698,17 @@ class TKGQAGenerator:
             # Store the statement
             measurement = "timestamp"
             type_value = "RE"
+            logger.info(
+                "INSERT INTO %s (source_kg_id, measurement, type, statement, questions) VALUES (%s, %s, %s, %s, %s)",
+                self.unified_kg_table_statement, result_dict["source_kg_id"], measurement, type_value, json_statement,
+                json.dumps(questions)
+            )
+            sql_command = f"INSERT INTO {self.unified_kg_table_statement} (source_kg_id, measurement, type, statement, questions) VALUES (%s, %s, %s, %s, %s)"
 
             # Execute the SQL command with the serialized JSON string
             self.cursor.execute(
-                f"INSERT INTO {self.unified_kg_table_statement} (measurement, type, statement, questions) VALUES (%s, %s, %s, %s)",
-                (measurement, type_value, json_statement, json.dumps(questions)),
+                sql_command,
+                (result_dict["source_kg_id"], measurement, type_value, json_statement, json.dumps(questions))
             )
             break
         self.connection.commit()

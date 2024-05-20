@@ -9,7 +9,9 @@ client = OpenAI()
 
 def paraphrase_question(question: str,
                         answer: str = None,
-                        model_name: str = "gpt-3.5-turbo",
+                        statement: str = None,
+                        answer_type: str = None,
+                        model_name: str = "gpt-4o",
                         ) -> str:
     """
     Paraphrases the given question using the OpenAI model specified.
@@ -23,10 +25,16 @@ def paraphrase_question(question: str,
         str: The paraphrased question.
     """
     prompt_text = f"Paraphrase the following question: '{question}'"
-    if answer:
-        prompt_text += f" Answer: '{answer}'"
+    # if answer:
+    #     prompt_text += f"To give you a bit more idea about what the question should be like, then the Answer to ? is '{answer}'"
 
     try:
+        # Some examples include:
+        # Who is affiliated with the organization during a given time.
+        # Which or what's the organization's name a specific guy is affiliated to.
+        # When/During/when is start time ...
+        # Etc.
+        # If there is a statement from beginning of time to the end of time, this will mean it is always true for the whole timeline.
         response = client.chat.completions.create(
             model=model_name,
             messages=[
@@ -34,14 +42,12 @@ def paraphrase_question(question: str,
                     "role": "system",
                     "content": """You are an expert on paraphrasing questions.
                                   Especially the temporal related questions. Only return the paraphrased question, nothing else. 
-                                  General domain of the questions and statements are: Someone affiliated with some organization during some time."""
+                                  The missing ? can be someone, some organisation or some time.
+                                  """
                 },
                 {
                     "role": "user",
-                    "content": f"""The raw statement with ? is '{question}'.
-                                    The answer to the question is '{answer}'.
-                                    Please paraphrase the question into natural language properly (which means use the proper who, where, when, etc).
-                                    """,
+                    "content": prompt_text,
                 }
             ],
             max_tokens=100,
