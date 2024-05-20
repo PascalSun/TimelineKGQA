@@ -25,8 +25,6 @@ def paraphrase_question(question: str,
         str: The paraphrased question.
     """
     prompt_text = f"Paraphrase the following question: '{question}'"
-    # if answer:
-    #     prompt_text += f"To give you a bit more idea about what the question should be like, then the Answer to ? is '{answer}'"
 
     try:
         # Some examples include:
@@ -42,7 +40,9 @@ def paraphrase_question(question: str,
                     "role": "system",
                     "content": """You are an expert on paraphrasing questions.
                                   Especially the temporal related questions. Only return the paraphrased question, nothing else. 
-                                  The missing ? can be someone, some organisation or some time.
+                                  The ??? is the missing part, and the main part the question is asking for,
+                                  it can be someone, some organisation or some time.
+                                  Use diverse ways to represent the temporal aspect of the question.
                                   """
                 },
                 {

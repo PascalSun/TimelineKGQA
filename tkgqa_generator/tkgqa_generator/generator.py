@@ -81,7 +81,7 @@ class TKGQAGenerator:
         )
 
     @staticmethod
-    def retrieve_tr(s, p, o, start_time, end_time, statement=None) -> dict:
+    def retrieve_tr_and_td(s, p, o, start_time, end_time, statement=None) -> dict:
         """
         This will try to generate four questions belong to RE type
 
@@ -105,30 +105,35 @@ class TKGQAGenerator:
         p = "affiliated with"
         questions = {
             "?potstd": {
-                "q": f"? {p} {o} during the time range from {start_time} to {end_time}?",
+                "q": f"??? {p} {o} during the time range from {start_time} to {end_time}?",
                 "a": f"{s}",
                 "answer_type": "Subject, mainly is a person.",
             },
             "sp?tstd": {
-                "q": f"{s} {p} ? during the time range from {start_time} to {end_time}?",
+                "q": f"{s} {p} ??? during the time range from {start_time} to {end_time}?",
                 "a": f"{o}",
                 "answer_type": "Object, mainly is an organization.",
             },
             "spo?td": {
-                "q": f"{s} {p} {o} from ? to {end_time}?",
+                "q": f"{s} {p} {o} from ??? to {end_time}?",
                 "a": f"{start_time}",
                 "answer_type": "Time, mainly is a time.",
             },
             "spots?": {
-                "q": f"{s} {p} {o} from {start_time} to ?",
+                "q": f"{s} {p} {o} from {start_time} to ???",
                 "a": f"{end_time}",
                 "answer_type": "Time, mainly is a time.",
             },
             "spo??": {
-                "q": f"{s} {p} {o} from ? to ?",
+                "q": f"{s} {p} {o} from ??? to ???",
                 "a": f"{start_time} and {end_time}",
                 "answer_type": "Time, mainly is a time range.",
             },
+            "spo??d": {
+                "q": f"[How long]??? {s} {p} {o}",
+                "a": f"{end_time} - {start_time}",
+                "answer_type": "Ask for duration",
+            }
         }
         logger.info(f"questions: {questions}")
         # we will need to feed the questions to LLM, generate proper question statement
@@ -683,7 +688,7 @@ class TKGQAGenerator:
                 "end_time": result_dict["end_time"],
                 "source_kg_id": result_dict["source_kg_id"],
             }
-            questions = self.retrieve_tr(
+            questions = self.retrieve_tr_and_td(
                 s=result_dict["subject"],
                 p=result_dict["predicate"],
                 o=result_dict["object"],
