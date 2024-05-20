@@ -189,6 +189,7 @@ class ICEWSDataLoader:
                     IF NOT EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'unified_kg_icews_actor') THEN
                         CREATE TABLE public.unified_kg_icews_actor
                         (
+                            id             SERIAL PRIMARY KEY,
                             subject        TEXT,
                             subject_json   JSON,
                             predicate      TEXT,
