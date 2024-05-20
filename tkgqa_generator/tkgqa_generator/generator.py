@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import psycopg2
 
-from tkgqa_generator.openai_utils import paraphrase_question
+from tkgqa_generator.openai_utils import paraphrase_retrieval_question
 from tkgqa_generator.utils import get_logger
 
 logger = get_logger(__name__)
@@ -101,78 +101,6 @@ class TKGQAGenerator:
             )
         """
         )
-
-    @staticmethod
-    def retrieve_tr_and_td(s, p, o, start_time, end_time, statement=None) -> dict:
-        """
-        This will try to generate four questions belong to RE type
-
-        The questions will be:
-        - ? p o during the time range from start_time to end_time?
-        - s p ? during the time range from start_time to end_time?
-        - s p o from ? to end_time?
-        - s p o from start_time to ?
-        - s p o from ? to ?
-
-        Args:
-            s (str): The subject
-            p (str): The predicate
-            o (str): The object
-            start_time (datetime): The start time
-            end_time (datetime): The end time
-
-        :return:
-            dict: The generated questions
-        """
-        p = "affiliated with"
-        questions = {
-            "?potstd": {
-                "q": f"??? {p} {o} during the time range from {start_time} to {end_time}?",
-                "a": f"{s}",
-                "answer_type": "Subject, mainly is a person.",
-            },
-            "sp?tstd": {
-                "q": f"{s} {p} ??? during the time range from {start_time} to {end_time}?",
-                "a": f"{o}",
-                "answer_type": "Object, mainly is an organization.",
-            },
-            "spo?td": {
-                "q": f"{s} {p} {o} from ??? to {end_time}?",
-                "a": f"{start_time}",
-                "answer_type": "Time, mainly is a timepoint.",
-            },
-            "spots?": {
-                "q": f"{s} {p} {o} from {start_time} to ???",
-                "a": f"{end_time}",
-                "answer_type": "Time, mainly is a timepoint.",
-            },
-            "spo??": {
-                "q": f"{s} {p} {o} from ??? to ???",
-                "a": f"{start_time} and {end_time}",
-                "answer_type": "Time, mainly is a time range.",
-            },
-            "spo??d": {
-                "q": f"[How long/What's the duration/etc]??? for the statement {s} {p} {o}",
-                "a": f"{end_time} - {start_time}",
-                "answer_type": "Ask for duration",
-            },
-        }
-        logger.info(f"questions: {questions}")
-        # we will need to feed the questions to LLM, generate proper question statement
-        for question_type, question_dict in questions.items():
-            question = question_dict["q"]
-            answer = question_dict["a"]
-            # answer_type = question_dict["answer_type"]
-            paraphrased_question = paraphrase_question(
-                question=question,
-                answer=answer,
-                statement=statement,
-                answer_type=question_dict["answer_type"],
-            )
-            logger.info(f"paraphrased_question: {paraphrased_question}")
-            question_dict["pq"] = paraphrased_question
-        logger.info(f"questions: {questions}")
-        return questions
 
     @staticmethod
     def allen_tr_relation(
@@ -670,7 +598,81 @@ class TKGQAGenerator:
             "Unsupported aggregation temporal operator. Please use 'ranking', 'sum' or 'average'."
         )
 
-    def timestamp_retrieval(self):
+    @staticmethod
+    def questions_retrieve_tr_and_td(
+        s, p, o, start_time, end_time, statement=None
+    ) -> dict:
+        """
+        This will try to generate four questions belong to RE type
+
+        The questions will be:
+        - ? p o during the time range from start_time to end_time?
+        - s p ? during the time range from start_time to end_time?
+        - s p o from ? to end_time?
+        - s p o from start_time to ?
+        - s p o from ? to ?
+
+        Args:
+            s (str): The subject
+            p (str): The predicate
+            o (str): The object
+            start_time (datetime): The start time
+            end_time (datetime): The end time
+
+        :return:
+            dict: The generated questions
+        """
+        p = "affiliated with"
+        questions = {
+            "?potstd": {
+                "q": f"??? {p} {o} during the time range from {start_time} to {end_time}?",
+                "a": f"{s}",
+                "answer_type": "Subject, mainly is a person.",
+            },
+            "sp?tstd": {
+                "q": f"{s} {p} ??? during the time range from {start_time} to {end_time}?",
+                "a": f"{o}",
+                "answer_type": "Object, mainly is an organization.",
+            },
+            "spo?td": {
+                "q": f"{s} {p} {o} from ??? to {end_time}?",
+                "a": f"{start_time}",
+                "answer_type": "Time, mainly is a timepoint.",
+            },
+            "spots?": {
+                "q": f"{s} {p} {o} from {start_time} to ???",
+                "a": f"{end_time}",
+                "answer_type": "Time, mainly is a timepoint.",
+            },
+            "spo??": {
+                "q": f"{s} {p} {o} from ??? to ???",
+                "a": f"{start_time} and {end_time}",
+                "answer_type": "Time, mainly is a time range.",
+            },
+            "spo??d": {
+                "q": f"[How long/What's the duration/etc]??? for the statement {s} {p} {o}",
+                "a": f"{end_time} - {start_time}",
+                "answer_type": "Ask for duration",
+            },
+        }
+        logger.info(f"questions: {questions}")
+        # we will need to feed the questions to LLM, generate proper question statement
+        for question_type, question_dict in questions.items():
+            question = question_dict["q"]
+            answer = question_dict["a"]
+            # answer_type = question_dict["answer_type"]
+            paraphrased_question = paraphrase_retrieval_question(
+                question=question,
+                answer=answer,
+                statement=statement,
+                answer_type=question_dict["answer_type"],
+            )
+            logger.info(f"paraphrased_question: {paraphrased_question}")
+            question_dict["pq"] = paraphrased_question
+        logger.info(f"questions: {questions}")
+        return questions
+
+    def retrieval(self):
         """
         This function will generate a timestamp retrieval statement
         the statement should also be annotated, and stored in the database
@@ -811,6 +813,12 @@ class TKGQAGenerator:
         So first step we will query from the unifed graph to grab our first SPO item
         Then we query the second one (they should be different)
         Then we generate the statement based on the two items
+
+        Under this category, in theory we have 6 types of questions, depending on what's missing.
+        There are two types of questions we focus on in this area. Both should ask for the allen temporal relations.
+
+        - Given two SPO, ask for allen temporal relation
+        - Given a SPO, a TR, ask for allen temporal relation
         """
         first_spo_df = pd.read_sql_query(
             f"SELECT * FROM {self.unified_kg_table}", self.connection
@@ -821,11 +829,17 @@ class TKGQAGenerator:
                 if first_index == second_index:
                     continue
                 # logger.info(f"first_spo: {first_spo}, second_spo: {second_spo}")
-                allen_temporal_rel = self.allen_temporal_relation(
+                allen_temporal_rel = self.allen_tr_relation(
                     [first_spo["start_time"], first_spo["end_time"]],
                     [second_spo["start_time"], second_spo["end_time"]],
                 )
                 logger.info(f"allen_temporal_rel: {allen_temporal_rel}")
+                logger.info(first_spo.to_dict())
+                logger.info(second_spo.to_dict())
+                statement_first_spo = f"{first_spo['subject']} {first_spo['predicate']} {first_spo['object']}"
+                statement_second_spo = f"{second_spo['subject']} {second_spo['predicate']} {second_spo['object']}"
+                question_statement = f"{statement_first_spo} ??? {statement_second_spo}"
+                logger.info(question_statement)
                 return
 
 
@@ -838,5 +852,27 @@ if __name__ == "__main__":
         password="tkgqa",
         db_name="tkgqa",
     )
-    generator.timestamp_retrieval()
-    # generator.timestamp_2ra_allen()
+    """
+    Question Types:
+    
+    - RE: Retrieval
+        - ? P O TS TE
+        - S P ? TS TE
+        - S P O ? TE
+        - S P O TS ?
+        - S P O ? ?
+        - S P O Duration?
+    
+    - RA: Reasoning
+        - TimeStamp
+            - 2RA-Allen (Before)
+            - 2RA-Set
+            - 2RA-Aggregation (Ranking)
+        - Duration
+            - 2RA-Allen (Longer)
+            - 2RA-Aggreagation (Ranking/Sum/Average)
+    """
+
+    # this will include all retrieval type questions include timestamp/duration
+    # generator.retrieval()
+    generator.timestamp_2ra_allen()

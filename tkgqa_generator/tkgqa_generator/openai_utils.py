@@ -9,12 +9,12 @@ logger = get_logger(__name__)
 client = OpenAI()
 
 
-def paraphrase_question(
+def paraphrase_retrieval_question(
     question: str,
     answer: str = None,
     statement: str = None,
     answer_type: str = None,
-    model_name: str = "gpt-4o",
+    model_name: str = "gpt-4o"
 ) -> str:
     """
     Paraphrases the given question using the OpenAI model specified.
@@ -55,7 +55,7 @@ def paraphrase_question(
                 },
             ],
             max_tokens=100,
-            temperature=0.3,
+            temperature=0.8,
             stop=["\n"],
         )
         paraphrased_question = response.choices[0].message.content
