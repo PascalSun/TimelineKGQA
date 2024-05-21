@@ -40,13 +40,13 @@ class TKGQAGenerator:
     """
 
     def __init__(
-        self,
-        table_name: str,
-        host: str,
-        port: int,
-        user: str,
-        password: str,
-        db_name: str = "tkgqa",
+            self,
+            table_name: str,
+            host: str,
+            port: int,
+            user: str,
+            password: str,
+            db_name: str = "tkgqa",
     ):
         # setup the db connection
         self.host = host
@@ -104,7 +104,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def allen_tr_relation(
-        time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
+            time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
     ) -> dict:
         """
         This function will return the allen temporal relation between two time ranges
@@ -206,7 +206,7 @@ class TKGQAGenerator:
         ALLEN_OPERATOR_DICT = {
             (-1, -1, -1, -1, -1, -1): {
                 "relation": "X < Y",
-                "description": "X is before Y",
+                "description": "X precedes Y",
                 "category": "tr",
                 "code": "tr-1",
             },
@@ -248,7 +248,7 @@ class TKGQAGenerator:
             },
             (-1, -1, 0, -1, 1, 1): {
                 "relation": "X si Y",
-                "description": "X starts Y",
+                "description": "X is started by Y",
                 "category": "tr",
                 "code": "tr-8",
             },
@@ -260,7 +260,7 @@ class TKGQAGenerator:
             },
             (-1, -1, 1, -1, 1, 0): {
                 "relation": "X f Y",
-                "description": "X finishes Y",
+                "description": "X finishes by Y",
                 "category": "tr",
                 "code": "tr-10",
             },
@@ -278,7 +278,7 @@ class TKGQAGenerator:
             },
             (-1, -1, 1, 1, 1, 1): {
                 "relation": "X > Y",
-                "description": "X is after Y",
+                "description": "X is preceded by Y",
                 "category": "tr",
                 "code": "tr-13",
             },
@@ -389,7 +389,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def allen_td_relation(
-        time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
+            time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
     ) -> dict:
         """
 
@@ -426,7 +426,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def set_operator(
-        time_range_a, time_range_b: list = None, temporal_operator: str = None
+            time_range_a, time_range_b: list = None, temporal_operator: str = None
     ) -> set:
         """
         This function will return the temporal operator between two time ranges
@@ -483,7 +483,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def aggregate_tr_operator(
-        time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
+            time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
     ) -> list:
         """
         For the time range, it will do the rank operation, sort it
@@ -542,7 +542,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def aggregate_td_operator(
-        time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
+            time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
     ) -> list:
         """
         For the time range, it will do the rank operation, sort it
@@ -600,7 +600,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def questions_retrieve_tr_and_td(
-        s, p, o, start_time, end_time, statement=None
+            s, p, o, start_time, end_time, statement=None
     ) -> dict:
         """
         This will try to generate four questions belong to RE type
@@ -817,8 +817,33 @@ class TKGQAGenerator:
         Under this category, in theory we have 6 types of questions, depending on what's missing.
         There are two types of questions we focus on in this area. Both should ask for the allen temporal relations.
 
+        Under this two categories
+
         - Given two SPO, ask for allen temporal relation
         - Given a SPO, a TR, ask for allen temporal relation
+
+        Question Examples we can have:
+
+        Ask for True or False: Given Scenerio, can A meet B?
+        Ask for Selections: Given Scenerio, which temporal relation between A and B? 13 option, or 7 options
+
+
+        If we are asking for S or O?
+        Ask for S?
+        Before A is the leader of ORGA, who is the leader of ORGA? (X before Y)
+        Who is starts the leader of ORGA, when B ends the leader of ORGA? (X starts Y)
+        A as the leader of ORGA meets the leader of ORGB, who is the guy? (X meets Y)
+        A finishes his term as the leader of ORGA, who finshes the term as the leader of ORGB at the same time as A. (X finishes Y)
+        During the time A is the leader of ORGA, who is the leader of ORGB? (X during Y)
+        A is the leader for a long time, who start as the leader of ORGB at the same time as A. (X starts Y)
+        A starts and ends his term as the leader of ORGA at the exact same time as B starts and ends his term as the leader of ORGB, who is the leader of ORGA? (X equals Y)
+
+        Ask for O?
+        Before A is the leader of ORGA, he is the leader of? (X before Y)
+
+        If we are asking for TR?
+        Before A is the leader of ORGA, B is the leader of ORGB, how long is B's term as the leader of ORGB? (X before Y)
+
         """
         first_spo_df = pd.read_sql_query(
             f"SELECT * FROM {self.unified_kg_table}", self.connection
@@ -841,6 +866,22 @@ class TKGQAGenerator:
                 question_statement = f"{statement_first_spo} ??? {statement_second_spo}"
                 logger.info(question_statement)
                 return
+
+    def timestamp_2ra_set(self):
+        """
+        We need to first define a question regarding the set
+
+        Ask for Set
+        During which range of time, A is the leader of ORGA and B is the leader of ORG? (Intersection)
+        Since when until when, A and B lead the ORGA in turns? (Union)
+        During which range of time, A is the leader of ORGA and B is not the leader of ORG? (Complement)
+
+        Ask for Ask for TC
+        - Given Set and SPO, ask for TC: In the first decade of 21st Century,
+            A
+
+        """
+        pass
 
 
 if __name__ == "__main__":
