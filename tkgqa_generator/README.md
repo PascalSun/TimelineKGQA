@@ -25,40 +25,16 @@ So we propose to represent the temporal information as the attribute of a SPO tr
 graph.
 This is similar to the event knowledge graph representation in the literature.
 
-## Temporal Logic
-
-![Temporal Logic](./docs/imgs/tc-logic.png)
-
-The temporal questions can be classified into two categories based on the measurements:
-
-- timestamp
-- duration
-
-From the logic perspective, we can decompose the temporal logic statements into two categories:
-
-- Information Retrieval (**RE**)
-- Reasoning (**RA**)
-    - 2RA: which does temporal logic operation for two **Temporal Conditions (TC)**
-    - 3RA: here we will compare three TCs
-        - 3RA-R: Do Intersection/Union/Complement over two TCs, and then compare with the third TC
-        - 3RA-A: Aggregate the three TCs and then compare with the fourth TC
-
-The most complex queries are from the 3RA-R and 3RA-A categories.
-
 ### Workflow
 
 The workflow of the temporal logic question answering pairs over knowledge graph is as follows:
 
 1. **Unified Knowledge Graph**: Transform the knowledge graph into a unified format, where **SPO** are nodes,
    and [start_time, end_time] are attributes.
-2. **Generate TRUE Temporal Logic Statement**:
-    - 1RE
-    - 2RA
-    - 3RA-R
-    - 3RA-A
-3. Generate QA pairs with templates
-
-![Workflow](./docs/imgs/experiment-design.png)
+2. Generate questions based on the template, then use LLM to get it more natural.
+    - **Simple**
+    - **Medium**
+    - **Complex**
 
 ## Datasets
 
@@ -218,4 +194,12 @@ So if we say Complex is 3 events and Timeline.
 - Timeline Recovery + Timeline Recovery + Temporal Constrainted Retrieval: When Bush is president of US and Putin is
   President of Russion, who is the president of China?
     - (General Information Retrieval => Timeline Recovery) And (General Information Retrieval => Timeline Recovery)
-      And (General Information Retrieval => Temporal Constraint Retrieval) => Timeline Operation => Answer the question 
+      And (General Information Retrieval => Temporal Constraint Retrieval) => Timeline Operation => Answer the question
+
+## key ability required
+
+- **General Information Retrieval**: Retrieve the general information from the knowledge graph based on the question
+- **Temporal Constrainted Retrieval**: Filter on general information retrieval, apply the temporal constraint
+- **Timeline Position Retrieval**: Based on general information retrieval, recover the timeline information
+- **Timeline Operation**: From numeric to semantic
+- **Temporal Semantic Operation**: From Semantic to Numeric
