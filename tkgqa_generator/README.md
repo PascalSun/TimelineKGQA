@@ -99,7 +99,7 @@ algorithms development.
 We are trying to decompose the question into the three key parts we mentioned above, so we can evaluate the ability of
 the models for this three key capabilities.
 
-![Question Classification](./docs/imgs/TimelineQA.png)
+![Question Classification](./docs/imgs/TimelineQA.jpg)
 
 #### Simple: Timeline and One Event Involved
 
