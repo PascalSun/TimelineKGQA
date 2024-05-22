@@ -1,3 +1,7 @@
+import pickle
+
+import pandas as pd
+
 from tkgqa_generator.constants import (
     DATA_DIR,
     DATA_ICEWS_DICTS_DATA_DIR,
@@ -6,8 +10,6 @@ from tkgqa_generator.constants import (
     DOC_DIR,
 )
 from tkgqa_generator.utils import API, get_logger, timer
-import pickle
-import pandas as pd
 
 logger = get_logger(__name__)
 

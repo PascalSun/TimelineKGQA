@@ -9,12 +9,11 @@ logger = get_logger(__name__)
 client = OpenAI()
 
 
-def paraphrase_retrieval_question(
+def paraphrase_simple_question(
     question: str,
     answer: str = None,
-    statement: str = None,
     answer_type: str = None,
-    model_name: str = "gpt-4o"
+    model_name: str = "gpt-4o",
 ) -> str:
     """
     Paraphrases the given question using the OpenAI model specified.
@@ -22,13 +21,13 @@ def paraphrase_retrieval_question(
     Args:
         question (str): The question to paraphrase.
         answer (str, optional): The answer to the question, which can help in generating a context-aware paraphrase.
+        answer_type (str, optional): The type of the answer, which can help in generating a context-aware paraphrase.
         model_name (str): The model to use for paraphrasing.
 
     Returns:
         str: The paraphrased question.
     """
     prompt_text = f"Paraphrase the following question: '{question}'"
-
     try:
         # Some examples include:
         # Who is affiliated with the organization during a given time.
