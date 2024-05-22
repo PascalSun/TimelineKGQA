@@ -93,7 +93,7 @@ def paraphrase_medium_question(
                 {
                     "role": "system",
                     "content": """You are an expert on paraphrasing questions.
-                                  We take out one part of the element in the statement, and replace it by ???.
+                                  ??? is the masked out answer
                                   You job is paraphrasing this into a natural language question.
                                   The missing part can be someone, some organisation or some time.
                                   Representive question types include:

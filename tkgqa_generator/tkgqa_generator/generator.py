@@ -437,7 +437,20 @@ class TKGQAGenerator:
         """
         - question_type:
             - timeline_recovery_temporal_constrainted_retrieval
+                - For this one, the logic/reasoning/math part will be like: **TimeRange** + Temporal Semantic Operation => "TimeRange**
+                - Then the interesting part will be the Timeline Operation, we have mentioned serveral types of operations below.
+                    - There are mostly from numeric to semantic perspective
+                    - Here is the reverse process: name it Temporal Semantic Operation
+                    - So this is trying to convert the temporal semantic representation to a numeric operation and then get a new operation.
             - timeline_recovery_timeline_recovery
+                - For the logic/reasoning/math side, it actually is **TimeRange** vs **TimeRange** => Timeline Operation
+                    - Get an way to ask about this comparision relations.
+                    - So the question will mainly be about whether this relation is True, or which relation it is.
+                    - For duration, we can ask about the duration of the two events, and then compare
+                    - Or we can compare the event ranking based on the time range
+            - there is another types: Three years before 2019,  who is the president of China? => It is a valid question, but nobody will in this way.
+                - It will be normally classied into **simple**: in 2016, who is the president of China?
+                - Or it will be something like: Three years before bush end the term, who is the president of China? => This will be classifed into **Medium**, and belong to the timeline_recovery_temporal_constrainted_retrieval
         - answer_type:
             - subject, object for timeline_recovery_temporal_constrainted_retrieval
                 - subject
@@ -491,6 +504,35 @@ class TKGQAGenerator:
         """
         Timeline Recovery => Temporal Constrainted Retrieval Questions 
         """
+        # NOTES: question here actually is not used, because we will replace it with the template.
+        # It is putting there to get the idea about the types of questions we are generating
+        """
+        The key part of this type is:
+        We need to cover as many temporal semantic operations as possible
+        - Before, After, During, this is the most common one and shown in the literature
+        - Starts from the same time, Ends at the same time, Meets, Overlap, this is another way to add the temporal condition (inspired by the allen logic)
+        - Above are from allen temporal logic and intersection/union
+        - We can also add the ranking ones, however, before/after is the same as first/last, under this category
+        - Then the rest is the one for duration, question like 3 years before, 3 years after, etc.
+        
+        So we have main two types of questions here:
+        - Relation: Before, After, During ｜ Starts from the same time, Ends at the same time, Meets, Overlap
+            - calculate the relation first, then generated based on template
+            - Before: Who is the president of US before the end of Bush's term?
+            - After: Who is the president of US after the start of Bush's term?
+            - Starts from the same time: Who and Bush start their term as father and President of US respectively at the same time?
+            - Ends at the same time: Who and Bush end their term as father and President of US respectively at the same time?
+            - Meets: ?
+            - During: Who is the president of US during Bush's term?
+            - Overlap: Bush as the president of US meets who when the guy become the father?
+        - Duration: 3 years before, 3 years after, 3 years after the end, etc.
+            - calculate the duration first, then generated based on template
+            - 3 years before: Who is the president of US 3 years before the end of Bush's term?
+            - 3 years after: Who is the president of US 3 years after the start of Bush's term?
+            - 3 years after the end: Who is the president of US 3 years after the end of Bush's term?
+            - 3 years after the start: Who is the president of US 3 years after the start of Bush's term?
+            - meets/during/overlap hard to get a time point, so not considered here.
+        """
         # ask for first subject
         medium_type_1_questions.append(
             {
@@ -524,7 +566,7 @@ class TKGQAGenerator:
         # ask for first object
         medium_type_1_questions.append(
             {
-                "question": f"{first_event_subject} ??? {first_event_object} [Timeline Operation on ({first_event_start_time}, {first_event_end_time}) vs ({second_event_start_time}, {second_event_end_time})] {second_event_subject} {second_event_predicate} {second_event_object}?",
+                "question": f"{first_event_subject} {first_event_predicate} ??? [Timeline Operation on ({first_event_start_time}, {first_event_end_time}) vs ({second_event_start_time}, {second_event_end_time})] {second_event_subject} {second_event_predicate} {second_event_object}?",
                 "answer": f"{first_event_object}",
                 "pharaphrased_question": None,
                 "events": [
@@ -539,7 +581,7 @@ class TKGQAGenerator:
         # ask for second object
         medium_type_1_questions.append(
             {
-                "question": f"{first_event_subject} {first_event_predicate} {first_event_object} [Timeline Operation on ({first_event_start_time}, {first_event_end_time}) vs ({second_event_start_time}, {second_event_end_time})] {second_event_subject} ??? {second_event_object}?",
+                "question": f"{first_event_subject} {first_event_predicate} {first_event_object} [Timeline Operation on ({first_event_start_time}, {first_event_end_time}) vs ({second_event_start_time}, {second_event_end_time})] {second_event_subject} {second_event_predicate} ??? ?",
                 "answer": f"{second_event_object}",
                 "pharaphrased_question": None,
                 "events": [
@@ -554,6 +596,13 @@ class TKGQAGenerator:
         questions += medium_type_1_questions
         """
         Timeline Recovery + Timeline Recovery Questions
+        
+        This one is mainly from numeric to temporal semantic
+        
+        - Infer a new time range: Union/Intersection
+        - Infer a temporal relation: Allen
+        - Infer a list of time ranges: Ranking (not considered here)
+        - Infer duration, and then compare
         """
         # timeline_recovery + timeline_recovery
         medium_type_2_questions = []
@@ -647,6 +696,15 @@ class TKGQAGenerator:
                 )
                 logger.info(f"paraphrased_question: {paraphrased_question}")
                 question_obj["pharaphrased_question"] = paraphrased_question
+
+    def complex_question_generation(self):
+        """
+        This is to generate the complex question, which will involve three events and timeline
+
+        For example, 3 years before Bush is president of US, who is the president of China?
+        [3 years] [Before] [Bush is president of US] [Who] [is the president of China]
+        """
+        pass
 
     @staticmethod
     def relation_allen_time_range(

@@ -31,14 +31,58 @@ QUESTION_TEMPLATES = {
     },
     "medium": {
         "timeline_recovery_temporal_constrainted_retrieval": {
-            "subject": [
-                "Who {first_event_predicate} {first_event_object} {temporal_relation} {second_event_subject} {second_event_predicate} {second_event_object}?",
-                "{first_event_subject} {first_event_predicate} {first_event_object} {temporal_relation} who {second_event_predicate} {second_event_object}?",
-            ],
-            "object": [
-                "{first_event_subject} {first_event_predicate} which/where {temporal_relation} {second_event_subject} {second_event_predicate} {second_event_object}?",
-                "Which/where {second_event_subject} {second_event_predicate} {second_event_object} {temporal_relation} {first_event_subject} {first_event_predicate} {first_event_object}?",
-            ],
+            "subject": {
+                "before": [
+                    "Who {first_event_predicate} {first_event_object} {temporal_relation} {second_event_subject} {second_event_predicate} {second_event_object}?",
+                    "{temporal_relation} {second_event_subject} {second_event_predicate} {second_event_object}, who {first_event_predicate} {first_event_object}?",
+                ],
+                "after": [
+                    "Who {second_event_predicate} {second_event_object} {temporal_relation} {first_event_subject} {first_event_predicate} {first_event_object}?",
+                    "{temporal_relation} {first_event_subject} {first_event_predicate} {first_event_object}, who {second_event_predicate} {second_event_object}?",
+                ],
+                "during": [
+                    "Who {first_event_predicate} {first_event_object} {temporal_relation} {second_event_subject} {second_event_predicate} {second_event_object}?",
+                    "{temporal_relation} {second_event_subject} {second_event_predicate} {second_event_object}, who {first_event_predicate} {first_event_object}?",
+                ],
+                "starts": [
+                    "Who starts {first_event_predicate} {first_event_object}, at the same time {second_event_subject} start {second_event_predicate} {second_event_object}?",
+                ],
+                "finishes": [
+                    "Who finishes {first_event_predicate} {first_event_object}, at the same time {second_event_subject} finish {second_event_predicate} {second_event_object}?",
+                ],
+                "duration_before": [
+                    "Who {first_event_predicate} {first_event_object} {temporal_relation} {second_event_subject} {second_event_predicate} {second_event_object}?",
+                ],
+                "duration_after": [
+                    "Who {second_event_predicate} {second_event_object} {temporal_relation} {first_event_subject} {first_event_predicate} {first_event_object}?",
+                ],
+            },
+            "object": {
+                "before": [
+                    "{temporal_relation} {second_event_subject} {second_event_predicate} {second_event_object}, which organisation {first_event_predicate} {first_event_object}?",
+                    "Which organisation {first_event_predicate} {first_event_object} {temporal_relation} {second_event_subject} {second_event_predicate} {second_event_object}?",
+                ],
+                "after": [
+                    "{temporal_relation} {first_event_subject} {first_event_predicate} {first_event_object}, which organisation {second_event_predicate} {second_event_object}?",
+                    "Which organisation {second_event_predicate} {second_event_object} {temporal_relation} {first_event_subject} {first_event_predicate} {first_event_object}?",
+                ],
+                "during": [
+                    "{temporal_relation} {second_event_subject} {second_event_predicate} {second_event_object}, which organisation {first_event_predicate} {first_event_object}?",
+                    "Which organisation {first_event_predicate} {first_event_object} {temporal_relation} {second_event_subject} {second_event_predicate} {second_event_object}?",
+                ],
+                "starts": [
+                    "{temporal_relation} {second_event_subject} {second_event_predicate} {second_event_object}, which organisation starts {first_event_predicate} {first_event_object}?",
+                ],
+                "finishes": [
+                    "{temporal_relation} {second_event_subject} {second_event_predicate} {second_event_object}, which organisation finishes {first_event_predicate} {first_event_object}?",
+                ],
+                "duration_before": [
+                    "{temporal_relation} {second_event_subject} {second_event_predicate} {second_event_object}, which organisation {first_event_predicate} {first_event_object}?",
+                ],
+                "duration_after": [
+                    "{temporal_relation} {first_event_subject} {first_event_predicate} {first_event_object}, which organisation {second_event_predicate} {second_event_object}?",
+                ],
+            },
         },
         "timeline_recovery_timeline_recovery": {
             # because it is the time range, then we should also ask about the duration
