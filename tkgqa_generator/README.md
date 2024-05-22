@@ -66,13 +66,13 @@ Normally we have several types:
 - **Timeline Position Retrieval**:
     - When Bush starts his term as president of US?
         - First: **General Information Retrieval**  => [(Bush, start, president of US), (Bush, term, president of US)]
-        - Second: **Timeline Position Retrieval
-          ** => [(Bush, start, president of US, 2000, 2000), (Bush, term, president of US, 2000, 2008)]
+        - Second: **Timeline Position Retrieval** => [(Bush, start, president of US, 2000, 2000),
+          (Bush, term, president of US, 2000, 2008)]
         - Third: Answer the question based on the timeline information
 - **Temporal Constrainted Retrieval**:
     - In 2009, who is the president of US?
-        - First: **General Information Retrieval
-          **  => [(Bush, president of US), (Obama, president of US), (Trump, president of US)]
+        - First: **General Information Retrieval**  => [(Bush, president of US),
+          (Obama, president of US), (Trump, president of US)]
         - Second: **Temporal Constraint Retrieval** => [(Obama, president of US, 2009, 2016)]
         - Third: Answer the question based on the temporal constraint information
 
@@ -98,6 +98,8 @@ algorithms development.
 
 We are trying to decompose the question into the three key parts we mentioned above, so we can evaluate the ability of
 the models for this three key capabilities.
+
+![Question Classification](./docs/imgs/TimelineQA.png)
 
 #### Simple: Timeline and One Event Involved
 
