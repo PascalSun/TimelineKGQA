@@ -6,7 +6,10 @@ import numpy as np
 import pandas as pd
 import psycopg2
 
-from tkgqa_generator.openai_utils import paraphrase_simple_question
+from tkgqa_generator.openai_utils import (
+    paraphrase_medium_question,
+    paraphrase_simple_question,
+)
 from tkgqa_generator.templates import QUESTION_TEMPLATES
 from tkgqa_generator.utils import get_logger
 
@@ -147,8 +150,506 @@ class TKGQAGenerator:
         """
         )
 
+    def simple_question_generation(self):
+        """
+        ## Types of Questions
+        This is used to generate the simple question, we will have two types of questions.
+
+        For each type of questions, based on the answer or the question focus, we can further divide them into
+        - Timeline Recovery
+            - Start TimePoint
+            - End TimePoint
+            - Time Range
+            - Duration
+        - Temporal Constrainted Retrieval (Ignore predicate for now)
+            - Subject
+            - Object
+
+        Simple: Timeline and One Event Involved
+        - Timeline Recovery: When Bush starts his term as president of US?
+            - General Information Retrieval => Timeline Recovery => Answer the question
+            - Question Focus can be: Timestamp Start, Timestamp End, Duration, Timestamp Start and End
+        - Temporal Constrainted Retrieval: In 2009, who is the president of US?
+            - General Information Retrieval => Temporal Constraint Retrieval => Answer the question
+            - Question Focus can be: Subject, Object, Predicate. Can be more complex if we want mask out more elements
+
+
+        ## Templates
+        To generate the questions, We can try to feed into the LLM, and generate the questions.
+        However, the diversity of the questions is not guaranteed, so we can use the template to generate the questions.
+        Then use LLM to pharaphrase the questions.
+
+        Template examples:
+        - Timeline Recovery
+            - Start TimePoint: When did {subject} start the term as {object}?
+            - End TimePoint: When did {subject} end the term as {object}?
+            - Time Range: When did {subject} serve as {object}?
+            - Duration: How long did {subject} serve as {object}?
+        - Temporal Constrainted Retrieval
+            - Subject:
+                - Who is afficiated to {subject} from {timestamp start} to {timestamp end}?
+                - Who is afficiated to {subject} in {timestamp}?
+            - Object:
+                - {subject} is afficiated to which organisation from {timestamp start} to {timestamp end}?
+                - {subject} is afficiated to which organisation during {temporal representation}?
+
+        ## Process
+        - Extract {subject}, {predicate}, {object}, {start_time}, {end_time} from the unified graph
+        - Generate the questions based on the template for each type
+        - Use LLM to paraphrase the questions
+
+        Output format will be:
+        - {question}
+        - {answer}
+        - {paraphrased_question}
+        - subject, predicate, object, start_time, end_time
+        - {question_level} => Simple
+        - {question_type} => Timeline Recovery, Temporal Constrainted Retrieval
+        - {answer_type} => Subject, Object | Timestamp Start, Timestamp End, Duration, Timestamp Start and End
+        """
+        # get records not yet generated questions
+        self.cursor.execute(
+            f"SELECT * FROM {self.unified_kg_table} WHERE id not in (SELECT source_kg_id FROM {self.unified_kg_table_questions})"
+        )
+        events_df = pd.DataFrame(self.cursor.fetchall())
+        # set the column names
+        events_df.columns = [desc[0] for desc in self.cursor.description]
+
+        for index, event in events_df.iterrows():
+            logger.info(f"event: {event}")
+            questions = self.simple_question_generation_individual(
+                subject=event["subject"],
+                predicate=event["predicate"],
+                object=event["object"],
+                start_time=event["start_time"],
+                end_time=event["end_time"],
+                template_based=True,
+            )
+
+            # insert each qa into the table, have a flat table
+            for question_obj in questions:
+                indiv_sql_command = """
+                    INSERT INTO {} (source_kg_id, 
+                                    question, 
+                                    answer, 
+                                    paraphrased_question,
+                                    events,
+                                    question_level,
+                                    question_type,
+                                    answer_type
+                                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """.format(
+                    self.unified_kg_table_questions
+                )
+
+                question_obj["source_kg_id"] = event["id"]
+                # get dict to tuple, sequence should be the same as the sql command
+                data = (
+                    question_obj["source_kg_id"],
+                    question_obj["question"],
+                    question_obj["answer"],
+                    question_obj["pharaphrased_question"],
+                    question_obj["events"],
+                    question_obj["question_level"],
+                    question_obj["question_type"],
+                    question_obj["answer_type"],
+                )
+                logger.info(f"question: {question_obj['pharaphrased_question']}")
+                self.cursor.execute(indiv_sql_command, data)
+                self.connection.commit()
+            break
+        self.connection.commit()
+
     @staticmethod
-    def allen_tr_relation(
+    def simple_question_generation_individual(
+        subject: str,
+        predicate: str,
+        object: str,
+        start_time: str,
+        end_time: str,
+        template_based: bool = False,
+        pharaphrased: bool = False,
+    ) -> dict:
+        """
+        This will try to generate four questions belong to RE type
+
+        The questions will be:
+        - ? p o during the time range from start_time to end_time?
+        - s p ? during the time range from start_time to end_time?
+        - s p o from ? to end_time?
+        - s p o from start_time to ?
+        - s p o from ? to ?
+        - [How long/What's the duration/etc] ? for the statement s p o
+
+        Args:
+            subject (str): The subject
+            predicate (str): The predicate
+            object (str): The object
+            start_time (str): The start time
+            end_time (str): The end time
+            template_based (bool): Whether use the template based question generation
+            pharaphrased (bool): Whether do the paraphrase for the question, if set to False,
+                    then the paraphrased_question will be the same as the question
+
+        Returns:
+            dict: The generated questions
+                - question
+                - answer
+                - paraphrased_question
+                - events
+                - question_level: Simple
+                - question_type: The type of the question
+                - answer_type: The type of the answer
+        """
+
+        questions = [
+            {
+                "question": f"??? {predicate} {object} during the time range from {start_time} to {end_time}?",
+                "answer": f"{subject}",
+                "pharaphrased_question": None,
+                "events": [f"{subject}|{predicate}|{object}|{start_time}|{end_time}"],
+                "question_level": "simple",
+                "question_type": "temporal_constrainted_retrieval",
+                "answer_type": "subject",
+            },
+            {
+                "question": f"{subject} {predicate} ??? during the time range from {start_time} to {end_time}?",
+                "answer": f"{object}",
+                "pharaphrased_question": None,
+                "events": [f"{subject}|{predicate}|{object}|{start_time}|{end_time}"],
+                "question_level": "simple",
+                "question_type": "temporal_constrainted_retrieval",
+                "answer_type": "object",
+            },
+            {
+                "question": f"{subject} {predicate} {object} from ??? to {end_time}?",
+                "answer": f"{start_time}",
+                "pharaphrased_question": None,
+                "events": [f"{subject}|{predicate}|{object}|{start_time}|{end_time}"],
+                "question_level": "simple",
+                "question_type": "timeline_recovery",
+                "answer_type": "timestamp_start",
+            },
+            {
+                "question": f"{subject} {predicate} {object} from {start_time} to ???",
+                "answer": f"{end_time}",
+                "pharaphrased_question": None,
+                "events": [f"{subject}|{predicate}|{object}|{start_time}|{end_time}"],
+                "question_level": "simple",
+                "question_type": "timeline_recovery",
+                "answer_type": "timestamp_end",
+            },
+            {
+                "question": f"{subject} {predicate} {object} from ??? to ???",
+                "answer": f"{start_time} and {end_time}",
+                "pharaphrased_question": None,
+                "events": [f"{subject}|{predicate}|{object}|{start_time}|{end_time}"],
+                "question_level": "simple",
+                "question_type": "timeline_recovery",
+                "answer_type": "timestamp_range",
+            },
+            {
+                "question": f"[How long/What's the duration/etc] ??? for the statement {subject} {predicate} {object}",
+                "answer": f"{end_time} - {start_time}",
+                "pharaphrased_question": None,
+                "events": [f"{subject}|{predicate}|{object}|{start_time}|{end_time}"],
+                "question_level": "simple",
+                "question_type": "timeline_recovery",
+                "answer_type": "duration",
+            },
+        ]
+        if template_based:
+            # we will random pick one from the template
+            for question_draft in questions:
+                this_type_templates = QUESTION_TEMPLATES[
+                    question_draft["question_level"]
+                ][question_draft["question_type"]][question_draft["answer_type"]]
+                logger.info(f"this_type_templates: {this_type_templates}")
+                random_pick_template = random.choice(this_type_templates)
+                # replace {subject}, {predicate}, {object}, {start_time}, {end_time} with the real value
+                question_draft["question"] = random_pick_template.format(
+                    subject=subject,
+                    predicate=predicate,
+                    object=object,
+                    start_time=start_time,
+                    end_time=end_time,
+                )
+
+        if pharaphrased:
+            for question_obj in questions:
+                paraphrased_question = paraphrase_simple_question(
+                    question=question_obj["question"]
+                )
+                logger.info(f"paraphrased_question: {paraphrased_question}")
+                question_obj["pharaphrased_question"] = paraphrased_question
+        else:
+            for question_obj in questions:
+                question_obj["pharaphrased_question"] = question_obj["question"]
+        return questions
+
+    def medium_question_generation(self):
+        """
+        This will involve mainly two types of questions
+
+        **Timeline Recovery => Temporal Constrainted Retrieval**
+        **Timeline Recovery + Timeline Recovery**
+
+        - question_level: medium
+        - question_type:
+            - timeline_recovery_temporal_constrainted_retrieval
+            - timeline_recovery_timeline_recovery
+        - answer_type:
+            - entity:
+                - subject:
+                - object
+            - temporal related
+                - Infer a new time range: Union/Intersection
+                - Infer a temporal relation: Allen
+                - Infer a list of time ranges: Ranking
+
+        """
+        self.cursor.execute(f"SELECT * FROM {self.unified_kg_table}")
+        first_event_df = pd.DataFrame(self.cursor.fetchall())
+        first_event_df.columns = [desc[0] for desc in self.cursor.description]
+        second_event_df = first_event_df.copy(deep=True)
+        for first_index, first_event in first_event_df.iterrows():
+            for second_index, second_event in second_event_df.iterrows():
+                if first_index == second_index:
+                    continue
+                # logger.info(f"first_spo: {first_spo}, second_spo: {second_spo}")
+                # TODO: can try to filter the events to make sure it make more sense in the final question
+                self.medium_question_generation_individual(
+                    first_event=first_event.to_dict(),
+                    second_event=second_event.to_dict(),
+                    template_based=True,
+                    pharaphrased=True,
+                )
+                return
+
+    def medium_question_generation_individual(
+        self,
+        first_event: dict,
+        second_event: dict,
+        template_based: bool = True,
+        pharaphrased: bool = True,
+    ) -> dict:
+        """
+        - question_type:
+            - timeline_recovery_temporal_constrainted_retrieval
+            - timeline_recovery_timeline_recovery
+        - answer_type:
+            - subject, object for timeline_recovery_temporal_constrainted_retrieval
+                - subject
+                - object
+            - temporal related for timeline_recovery_timeline_recovery
+                - Infer a new time range: Union/Intersection
+                - Infer a temporal relation: Allen
+                - Infer a list of time ranges: Ranking
+                - Infer duration, and then compare
+
+        Process:
+
+        The quality of the question is not guaranteed by LLM directly if we just mask out the answer.
+        So we will use the template to generate the questions, then use LLM to paraphrase the questions.
+
+        Args:
+            first_event (dict): The first event
+            second_event (dict): The second event
+            template_based (bool): Whether use the template based question generation
+            pharaphrased (bool): Whether do the paraphrase for the question, if set to False,
+                    then the paraphrased_question will be the same as the question
+
+        Returns:
+            dict: The generated questions
+                - question
+                - answer
+                - paraphrased_question
+                - events
+                - question_level: Medium
+                - question_type: The type of the question
+                - answer_type: The type of the answer
+        """
+        first_event_subject = first_event["subject"]
+        first_event_predicate = first_event["predicate"]
+        first_event_object = first_event["object"]
+        first_event_start_time = first_event["start_time"]
+        first_event_end_time = first_event["end_time"]
+
+        second_event_subject = second_event["subject"]
+        second_event_predicate = second_event["predicate"]
+        second_event_object = second_event["object"]
+        second_event_start_time = second_event["start_time"]
+        second_event_end_time = second_event["end_time"]
+
+        # first generate
+        # timeline_recovery => temporal_constrainted_retrieval
+        # this will ask for the subject or object in one of the event
+
+        medium_type_1_questions = []
+        questions = []
+        """
+        Timeline Recovery => Temporal Constrainted Retrieval Questions 
+        """
+        # ask for first subject
+        medium_type_1_questions.append(
+            {
+                "question": f"??? {first_event_predicate} {first_event_object} [Timeline Operation on ({first_event_start_time}, {first_event_end_time}) vs ({second_event_start_time}, {second_event_end_time})] {second_event_subject} {second_event_predicate} {second_event_object}?",
+                "answer": f"{first_event_subject}",
+                "pharaphrased_question": None,
+                "events": [
+                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|{first_event_start_time}|{first_event_end_time}",
+                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|{second_event_start_time}|{second_event_end_time}",
+                ],
+                "question_level": "medium",
+                "question_type": "timeline_recovery_temporal_constrainted_retrieval",
+                "answer_type": "subject",
+            }
+        )
+        # ask for second subject
+        medium_type_1_questions.append(
+            {
+                "question": f"{first_event_subject} {first_event_predicate} {first_event_object} [Timeline Operation on ({first_event_start_time}, {first_event_end_time}) vs ({second_event_start_time}, {second_event_end_time})] ??? {second_event_predicate} {second_event_object}?",
+                "answer": f"{second_event_subject}",
+                "pharaphrased_question": None,
+                "events": [
+                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|{first_event_start_time}|{first_event_end_time}",
+                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|{second_event_start_time}|{second_event_end_time}",
+                ],
+                "question_level": "medium",
+                "question_type": "timeline_recovery_temporal_constrainted_retrieval",
+                "answer_type": "subject",
+            }
+        )
+        # ask for first object
+        medium_type_1_questions.append(
+            {
+                "question": f"{first_event_subject} ??? {first_event_object} [Timeline Operation on ({first_event_start_time}, {first_event_end_time}) vs ({second_event_start_time}, {second_event_end_time})] {second_event_subject} {second_event_predicate} {second_event_object}?",
+                "answer": f"{first_event_object}",
+                "pharaphrased_question": None,
+                "events": [
+                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|{first_event_start_time}|{first_event_end_time}",
+                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|{second_event_start_time}|{second_event_end_time}",
+                ],
+                "question_level": "medium",
+                "question_type": "timeline_recovery_temporal_constrainted_retrieval",
+                "answer_type": "object",
+            }
+        )
+        # ask for second object
+        medium_type_1_questions.append(
+            {
+                "question": f"{first_event_subject} {first_event_predicate} {first_event_object} [Timeline Operation on ({first_event_start_time}, {first_event_end_time}) vs ({second_event_start_time}, {second_event_end_time})] {second_event_subject} ??? {second_event_object}?",
+                "answer": f"{second_event_object}",
+                "pharaphrased_question": None,
+                "events": [
+                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|{first_event_start_time}|{first_event_end_time}",
+                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|{second_event_start_time}|{second_event_end_time}",
+                ],
+                "question_level": "medium",
+                "question_type": "timeline_recovery_temporal_constrainted_retrieval",
+                "answer_type": "object",
+            }
+        )
+        questions += medium_type_1_questions
+        """
+        Timeline Recovery + Timeline Recovery Questions
+        """
+        # timeline_recovery + timeline_recovery
+        medium_type_2_questions = []
+        # ask for union/intersection of the time range
+
+        medium_type_2_questions = [
+            {
+                "question": f"{first_event_subject} {first_event_predicate} {first_event_object} ???[Timeline Operation on ({first_event_start_time}, {first_event_end_time}) vs ({second_event_start_time}, {second_event_end_time})]??? {second_event_subject} {second_event_predicate} {second_event_object}?",
+                "answer": f"Union/Intersection of the time range",
+                "pharaphrased_question": None,
+                "events": [
+                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|{first_event_start_time}|{first_event_end_time}",
+                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|{second_event_start_time}|{second_event_end_time}",
+                ],
+                "question_level": "medium",
+                "question_type": "timeline_recovery_timeline_recovery",
+                "answer_type": "relation_union_or_intersection",
+            },
+            {
+                "question": f"{first_event_subject} {first_event_predicate} {first_event_object} ???[Timeline Operation on ({first_event_start_time}, {first_event_end_time}) vs ({second_event_start_time}, {second_event_end_time})]??? {second_event_subject} {second_event_predicate} {second_event_object}?",
+                "answer": f"Temporal Relation",
+                "pharaphrased_question": None,
+                "events": [
+                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|{first_event_start_time}|{first_event_end_time}",
+                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|{second_event_start_time}|{second_event_end_time}",
+                ],
+                "question_level": "medium",
+                "question_type": "timeline_recovery_timeline_recovery",
+                "answer_type": "relation_allen",
+            },
+            {
+                "question": f"{first_event_subject} {first_event_predicate} {first_event_object} ???[Timeline Operation on ({first_event_start_time}, {first_event_end_time}) vs ({second_event_start_time}, {second_event_end_time})]??? {second_event_subject} {second_event_predicate} {second_event_object}?",
+                "answer": f"List of Time Ranges",
+                "pharaphrased_question": None,
+                "events": [
+                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|{first_event_start_time}|{first_event_end_time}",
+                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|{second_event_start_time}|{second_event_end_time}",
+                ],
+                "question_level": "medium",
+                "question_type": "timeline_recovery_timeline_recovery",
+                "answer_type": "relation_ordinal",
+            },
+            {
+                "question": f"{first_event_subject} {first_event_predicate} {first_event_object} ???[Timeline Operation on ({first_event_start_time}, {first_event_end_time}) vs ({second_event_start_time}, {second_event_end_time})]??? {second_event_subject} {second_event_predicate} {second_event_object}?",
+                "answer": f"Duration",
+                "pharaphrased_question": None,
+                "events": [
+                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|{first_event_start_time}|{first_event_end_time}",
+                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|{second_event_start_time}|{second_event_end_time}",
+                ],
+                "question_level": "medium",
+                "question_type": "timeline_recovery_timeline_recovery",
+                "answer_type": "relation_duration",
+            },
+        ]
+        questions += medium_type_2_questions
+
+        if template_based:
+            for question_draft in questions:
+                this_type_templates = QUESTION_TEMPLATES[
+                    question_draft["question_level"]
+                ][question_draft["question_type"]][question_draft["answer_type"]]
+
+                # TODO: can use different relations, which will lead to different types of templates
+                random_pick_template = random.choice(this_type_templates)
+                # replace {subject}, {predicate}, {object}, {start_time}, {end_time} with the real value
+                temporal_relation = self.relation_allen_time_range(
+                    time_range_a=[
+                        first_event_start_time,
+                        first_event_end_time,
+                    ],
+                    time_range_b=[
+                        second_event_start_time,
+                        second_event_end_time,
+                    ],
+                )["description"]
+                question_draft["question"] = random_pick_template.format(
+                    first_event_subject=first_event_subject,
+                    first_event_predicate=first_event_predicate,
+                    first_event_object=first_event_object,
+                    temporal_relation=temporal_relation,
+                    second_event_subject=second_event_subject,
+                    second_event_predicate=second_event_predicate,
+                    second_event_object=second_event_object,
+                )
+
+        if pharaphrased:
+            for question_obj in questions:
+                paraphrased_question = paraphrase_medium_question(
+                    question=question_obj["question"],
+                )
+                logger.info(f"paraphrased_question: {paraphrased_question}")
+                question_obj["pharaphrased_question"] = paraphrased_question
+
+    @staticmethod
+    def relation_allen_time_range(
         time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
     ) -> dict:
         """
@@ -189,7 +690,7 @@ class TKGQAGenerator:
         start_time2 = np.datetime64(start_time2)
         end_time2 = np.datetime64(end_time2)
 
-        logger.info(
+        logger.debug(
             f"start_time1: {start_time1}, end_time1: {end_time1}, start_time2: {start_time2}, end_time2: {end_time2}"
         )
 
@@ -428,12 +929,12 @@ class TKGQAGenerator:
         # logger.critical(f"allen_operator: {allen_operator}")
         # get it to be a tuple
         allen_operator = tuple(allen_operator)
-        logger.critical(f"allen_operator: {allen_operator}")
-        logger.critical(f"ALLEN_OPERATOR_DICT: {ALLEN_OPERATOR_DICT[allen_operator]}")
+        logger.debug(f"allen_operator: {allen_operator}")
+        logger.debug(f"ALLEN_OPERATOR_DICT: {ALLEN_OPERATOR_DICT[allen_operator]}")
         return ALLEN_OPERATOR_DICT[allen_operator]
 
     @staticmethod
-    def allen_td_relation(
+    def relation_allen_time_duration(
         time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
     ) -> dict:
         """
@@ -470,8 +971,8 @@ class TKGQAGenerator:
             }
 
     @staticmethod
-    def temporal_operator(
-        time_range_a, time_range_b: list = None, temporal_operator: str = None
+    def relation_union_or_intersection(
+        time_range_a, time_range_b, temporal_operator: str = None
     ) -> set:
         """
         This function will return the temporal operator between two time ranges
@@ -507,27 +1008,13 @@ class TKGQAGenerator:
             # use set do it directly
             union = set(time_range_a) | set(time_range_b)
             return union
-        elif temporal_operator == "complement":
-            """
-            This should operate on one time range
-            """
-            if time_range_b is not None:
-                raise ValueError(
-                    "time_range_b should be None when temporal_operator is complement"
-                )
-            # use set do it directly
-            universal_time_range = set(
-                [datetime.min.replace(year=1), datetime.max.replace(year=9999)]
-            )
-            complement = universal_time_range - set(time_range_a)
-            return complement
         else:
             raise ValueError(
                 "temporal_operator should be one of the following: intersection, union, complement"
             )
 
     @staticmethod
-    def aggregate_tr_operator(
+    def relation_ordinal_time_range(
         time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
     ) -> list:
         """
@@ -586,7 +1073,7 @@ class TKGQAGenerator:
         return rank_by_index
 
     @staticmethod
-    def aggregate_td_operator(
+    def relation_duration(
         time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
     ) -> list:
         """
@@ -642,305 +1129,6 @@ class TKGQAGenerator:
         raise ValueError(
             "Unsupported aggregation temporal operator. Please use 'ranking', 'sum' or 'average'."
         )
-
-    @staticmethod
-    def simple_question_generation_individual(
-        subject: str,
-        predicate: str,
-        object: str,
-        start_time: str,
-        end_time: str,
-        template_based: bool = False,
-        pharaphrased: bool = False,
-    ) -> dict:
-        """
-        This will try to generate four questions belong to RE type
-
-        The questions will be:
-        - ? p o during the time range from start_time to end_time?
-        - s p ? during the time range from start_time to end_time?
-        - s p o from ? to end_time?
-        - s p o from start_time to ?
-        - s p o from ? to ?
-        - [How long/What's the duration/etc] ? for the statement s p o
-
-        Args:
-            subject (str): The subject
-            predicate (str): The predicate
-            object (str): The object
-            start_time (str): The start time
-            end_time (str): The end time
-            template_based (bool): Whether use the template based question generation
-            pharaphrased (bool): Whether do the paraphrase for the question, if set to False,
-                    then the paraphrased_question will be the same as the question
-
-        Returns:
-            dict: The generated questions
-                - question
-                - answer
-                - paraphrased_question
-                - events
-                - question_level: Simple
-                - question_type: The type of the question
-                - answer_type: The type of the answer
-        """
-
-        questions = [
-            {
-                "question": f"??? {predicate} {object} during the time range from {start_time} to {end_time}?",
-                "answer": f"{subject}",
-                "pharaphrased_question": None,
-                "events": [f"{subject}|{predicate}|{object}|{start_time}|{end_time}"],
-                "question_level": "simple",
-                "question_type": "temporal_constrainted_retrieval",
-                "answer_type": "subject",
-            },
-            {
-                "question": f"{subject} {predicate} ??? during the time range from {start_time} to {end_time}?",
-                "answer": f"{object}",
-                "pharaphrased_question": None,
-                "events": [f"{subject}|{predicate}|{object}|{start_time}|{end_time}"],
-                "question_level": "simple",
-                "question_type": "temporal_constrainted_retrieval",
-                "answer_type": "object",
-            },
-            {
-                "question": f"{subject} {predicate} {object} from ??? to {end_time}?",
-                "answer": f"{start_time}",
-                "pharaphrased_question": None,
-                "events": [f"{subject}|{predicate}|{object}|{start_time}|{end_time}"],
-                "question_level": "simple",
-                "question_type": "timeline_recovery",
-                "answer_type": "timestamp_start",
-            },
-            {
-                "question": f"{subject} {predicate} {object} from {start_time} to ???",
-                "answer": f"{end_time}",
-                "pharaphrased_question": None,
-                "events": [f"{subject}|{predicate}|{object}|{start_time}|{end_time}"],
-                "question_level": "simple",
-                "question_type": "timeline_recovery",
-                "answer_type": "timestamp_end",
-            },
-            {
-                "question": f"{subject} {predicate} {object} from ??? to ???",
-                "answer": f"{start_time} and {end_time}",
-                "pharaphrased_question": None,
-                "events": [f"{subject}|{predicate}|{object}|{start_time}|{end_time}"],
-                "question_level": "simple",
-                "question_type": "timeline_recovery",
-                "answer_type": "timestamp_range",
-            },
-            {
-                "question": f"[How long/What's the duration/etc] ??? for the statement {subject} {predicate} {object}",
-                "answer": f"{end_time} - {start_time}",
-                "pharaphrased_question": None,
-                "events": [f"{subject}|{predicate}|{object}|{start_time}|{end_time}"],
-                "question_level": "simple",
-                "question_type": "timeline_recovery",
-                "answer_type": "duration",
-            },
-        ]
-        if template_based:
-            # we will random pick one from the template
-            for question_draft in questions:
-                this_type_templates = QUESTION_TEMPLATES[
-                    question_draft["question_level"]
-                ][question_draft["question_type"]][question_draft["answer_type"]]
-                logger.info(f"this_type_templates: {this_type_templates}")
-                random_pick_template = random.choice(this_type_templates)
-                # replace {subject}, {predicate}, {object}, {start_time}, {end_time} with the real value
-                question_draft["question"] = random_pick_template.format(
-                    subject=subject,
-                    predicate=predicate,
-                    object=object,
-                    start_time=start_time,
-                    end_time=end_time,
-                )
-
-        if pharaphrased:
-            for question_obj in questions:
-                paraphrased_question = paraphrase_simple_question(
-                    question=question_obj["question"],
-                    answer=question_obj["answer"],
-                    answer_type=question_obj["answer_type"],
-                )
-                logger.info(f"paraphrased_question: {paraphrased_question}")
-                question_obj["pharaphrased_question"] = paraphrased_question
-        else:
-            for question_obj in questions:
-                question_obj["pharaphrased_question"] = question_obj["question"]
-        return questions
-
-    def simple_question_generation(self):
-        """
-        ## Types of Questions
-        This is used to generate the simple question, we will have two types of questions.
-
-        For each type of questions, based on the answer or the question focus, we can further divide them into
-        - Timeline Recovery
-            - Start TimePoint
-            - End TimePoint
-            - Time Range
-            - Duration
-        - Temporal Constrainted Retrieval (Ignore predicate for now)
-            - Subject
-            - Object
-
-        Simple: Timeline and One Event Involved
-        - Timeline Recovery: When Bush starts his term as president of US?
-            - General Information Retrieval => Timeline Recovery => Answer the question
-            - Question Focus can be: Timestamp Start, Timestamp End, Duration, Timestamp Start and End
-        - Temporal Constrainted Retrieval: In 2009, who is the president of US?
-            - General Information Retrieval => Temporal Constraint Retrieval => Answer the question
-            - Question Focus can be: Subject, Object, Predicate. Can be more complex if we want mask out more elements
-
-
-        ## Templates
-        To generate the questions, We can try to feed into the LLM, and generate the questions.
-        However, the diversity of the questions is not guaranteed, so we can use the template to generate the questions.
-        Then use LLM to pharaphrase the questions.
-
-        Template examples:
-        - Timeline Recovery
-            - Start TimePoint: When did {subject} start the term as {object}?
-            - End TimePoint: When did {subject} end the term as {object}?
-            - Time Range: When did {subject} serve as {object}?
-            - Duration: How long did {subject} serve as {object}?
-        - Temporal Constrainted Retrieval
-            - Subject:
-                - Who is afficiated to {subject} from {timestamp start} to {timestamp end}?
-                - Who is afficiated to {subject} in {timestamp}?
-            - Object:
-                - {subject} is afficiated to which organisation from {timestamp start} to {timestamp end}?
-                - {subject} is afficiated to which organisation during {temporal representation}?
-
-        ## Process
-        - Extract {subject}, {predicate}, {object}, {start_time}, {end_time} from the unified graph
-        - Generate the questions based on the template for each type
-        - Use LLM to paraphrase the questions
-
-        Output format will be:
-        - {question}
-        - {answer}
-        - {paraphrased_question}
-        - subject, predicate, object, start_time, end_time
-        - {question_level} => Simple
-        - {question_type} => Timeline Recovery, Temporal Constrainted Retrieval
-        - {answer_type} => Subject, Object | Timestamp Start, Timestamp End, Duration, Timestamp Start and End
-        """
-        # get records not yet generated questions
-        self.cursor.execute(
-            f"SELECT * FROM {self.unified_kg_table} WHERE id not in (SELECT source_kg_id FROM {self.unified_kg_table_questions})"
-        )
-        events_df = pd.DataFrame(self.cursor.fetchall())
-        # set the column names
-        events_df.columns = [desc[0] for desc in self.cursor.description]
-
-        for index, event in events_df.iterrows():
-            logger.info(f"event: {event}")
-            questions = self.simple_question_generation_individual(
-                subject=event["subject"],
-                predicate=event["predicate"],
-                object=event["object"],
-                start_time=event["start_time"],
-                end_time=event["end_time"],
-                template_based=True,
-            )
-
-            # insert each qa into the table, have a flat table
-            for question_obj in questions:
-                indiv_sql_command = """
-                    INSERT INTO {} (source_kg_id, 
-                                    question, 
-                                    answer, 
-                                    paraphrased_question,
-                                    events,
-                                    question_level,
-                                    question_type,
-                                    answer_type
-                                    )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                """.format(
-                    self.unified_kg_table_questions
-                )
-
-                question_obj["source_kg_id"] = event["id"]
-                # get dict to tuple, sequence should be the same as the sql command
-                data = (
-                    question_obj["source_kg_id"],
-                    question_obj["question"],
-                    question_obj["answer"],
-                    question_obj["pharaphrased_question"],
-                    question_obj["events"],
-                    question_obj["question_level"],
-                    question_obj["question_type"],
-                    question_obj["answer_type"],
-                )
-                logger.info(f"question: {question_obj['pharaphrased_question']}")
-                self.cursor.execute(indiv_sql_command, data)
-                self.connection.commit()
-            break
-        self.connection.commit()
-
-    def medium_question_generation(self):
-        """
-        This will involve mainly two types of questions
-
-        **Timeline Recovery => Temporal Constrainted Retrieval**
-        **Timeline Recovery + Timeline Recovery**
-
-        - question_level: medium
-        - question_type:
-            - timeline_recovery_temporal_constrainted_retrieval
-            - timeline_recovery_timeline_recovery
-        - answer_type:
-            - subject, object
-            - temporal related
-                - Infer a new time range: Union/Intersection
-                - Infer a temporal relation: Allen
-                - Infer a list of time ranges: Ranking
-
-        """
-        first_event_df = pd.read_sql_query(
-            f"SELECT * FROM {self.unified_kg_table}", self.connection
-        )
-        #
-        first_event_df.columns = [desc[0] for desc in self.cursor.description]
-        second_event_df = first_event_df.copy(deep=True)
-        for first_index, first_event in first_spo_df.iterrows():
-            for second_index, second_event in second_event_df.iterrows():
-                if first_index == second_index:
-                    continue
-                # logger.info(f"first_spo: {first_spo}, second_spo: {second_spo}")
-                allen_temporal_rel = self.allen_tr_relation(
-                    [first_spo["start_time"], first_spo["end_time"]],
-                    [second_spo["start_time"], second_spo["end_time"]],
-                )
-                logger.info(f"allen_temporal_rel: {allen_temporal_rel}")
-                logger.info(first_spo.to_dict())
-                logger.info(second_spo.to_dict())
-                statement_first_spo = f"{first_spo['subject']} {first_spo['predicate']} {first_spo['object']}"
-                statement_second_spo = f"{second_spo['subject']} {second_spo['predicate']} {second_spo['object']}"
-                question_statement = f"{statement_first_spo} ??? {statement_second_spo}"
-                logger.info(question_statement)
-                return
-
-    def timestamp_2ra_set(self):
-        """
-        We need to first define a question regarding the set
-
-        Ask for Set
-        During which range of time, A is the leader of ORGA and B is the leader of ORG? (Intersection)
-        Since when until when, A and B lead the ORGA in turns? (Union)
-        During which range of time, A is the leader of ORGA and B is not the leader of ORG? (Complement)
-
-        Ask for Ask for TC
-        - Given Set and SPO, ask for TC: In the first decade of 21st Century,
-            A
-
-        """
-        pass
 
 
 if __name__ == "__main__":
