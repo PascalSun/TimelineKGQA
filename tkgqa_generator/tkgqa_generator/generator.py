@@ -13,20 +13,83 @@ logger = get_logger(__name__)
 
 class TKGQAGenerator:
     """
-    type of the statement we will have includes
-    - Timestamp
-        - RE: Retrieval
-        - RA: Reasoning
-            - 2RA-Allen
-            - 2RA-Set
-            - 2RA-Aggregation
+    # How human handle the temporal information and answer the temporal questions?
 
-    - Duration
-        - RE: Retrieval
-        - RA: Reasoning
-            - 2RA-Allen
-            - 2RA-Aggeration
+    ## Information Indexing
+    When we see something, for example, an accident happen near our home in today morning.
+    We need to first index this event into our brain.
+    As we live in a three dimension space together with a time dimension,
+    when we want to store this in our memory, (we will treat our memory as a N dimension space)
+    - Index the spatial dimensions: is this close to my home or close to one of the point of interest in my mind
+    - Index the temporal dimension: Temporal have several aspects
+        - Treat temporal as Straight Homogenous(Objective) Timeline: Exact date when it happen, for example, [2023-05-01 10:00:00, 2023-05-01 10:30:00]
+        - Treat temporal as Cycle Homogenous(Objective) sTimeline: Monday, First day of Month, Spring, 21st Century, etc. (You can aslo cycle the timeline based on your own requirement)
+        - Treat temporal as Straight Hoterogenous(Subjective) Timeline: If you sleep during night, it will be fast for you in the 8 hours, however, if someone is working overnight, time will be slow for him.
+        - Treat temporal as Cycle Hoterogenous(Subjective) Timeline: Life has different turning points for everyone, until they reach the end of their life.
+    - Then index the information part: What happen, who is involved, what is the impact, etc.
 
+    So in summary, we can say that in our mind, if we treat the event as embedding,
+    part of the embedding will represent the temporal dimension information,
+    part of the embedding will represent the spatial dimension information,
+    the rest of the embedding will represent the general information part.
+    This will help us to retrieve the information when we need it.
+
+    ## Information Retrieval
+    So when we try to retrieval the information, espeically the temporal part of the information.
+    Normally we have several types:
+
+    - Timeline Recovery: When Bush starts his term as president of US?
+        - First: **General Information Retrieval** [(Bush, start, president of US), (Bush, term, president of US)]
+        - Second: **Timeline Recovery Retrieval** [(Bush, start, president of US, 2000, 2000), (Bush, term, president of US, 2000, 2008)]
+        - Third: Answer the question based on the timeline information
+    - Temporal Constrainted Retrieval: In 2009, who is the president of US?
+        - First: **General Information Retrieval** [(Bush, president of US), (Obama, president of US), (Trump, president of US)]
+        - Second: **Temporal Constraint Retrieval** [(Obama, president of US, 2009, 2016)]
+        - Third: Answer the question based on the temporal constraint information
+
+    Three key things here:
+    - **General Information Retrieval**: Retrieve the general information from the knowledge graph based on the question
+    - **Temporal Constrainted Retrieval**: Filter on general information retrieval, apply the temporal constraint
+    - **Timeline Recovery Retrieval**: Based on general information retrieval, recover the timeline information
+
+    ## Temporal Questions
+    We can try to classify the temporal questions from quite a few perspectives:
+    - Based on Answer: Entity, Temporal
+    - Based on Temporal Relations in Question: Before, After, During , etc or First, Last, etc.
+    - Based on Temporal Representation Type: Point, Range, Duration, etc.
+    - Based on Complexity of Question: Simple (direct retrieval), Complex (Multiple hops with the three key things we mention above)
+
+    There is still no agreement or clear classification here, most of them stays in the first two.
+    However, it is obvious that they have overlaps, so will not be the best way to advance the temporal embedding algorithms development.
+
+    We are trying to decompose the question into the three key parts we mentioned above, so we can evaluate the ability of the models for this three key capabilities.
+
+    ### Simple: Timeline and One Event Involved
+    - Timeline Recovery: When Bush starts his term as president of US?
+        - General Information Retrieval => Timeline Recovery => Answer the question
+        - Question Focus can be: Timestamp Start, Timestamp End, Duration, Timestamp Start and End
+    - Temporal Constrainted Retrieval: In 2009, who is the president of US?
+        - General Information Retrieval => Temporal Constraint Retrieval => Answer the question
+        - Question Focus can be: Subject, Object, Predicate. Can be more complex if we want mask out more elements
+
+    ### Medium: Timeline and Two Events Involved
+    - Timeline Recovery + Timeline Recovery: Is Bush president of US when 911 happen?
+        - (General Information Retrieval => Timeline Recovery) And (General Information Retrieval => Timeline Recovery) => Timeline Operation => Answer the question
+        - Question Focus can be: A new Time Range, A temporal relation (Before, After, During, etc.), A list of Time Range (Ranking), or Comparison of Duration
+    - Timeline Recovery + Temporal Constrainted Retrieval: When Bush is president of US, who is the president of China?
+        - (General Information Retrieval => Timeline Recovery) => Temporal Constraint Retrieval => Answer the question
+        - This is same as above, Question Focus can be: Subject, Object
+
+    ### Complex: Timeline and Multiple Events Involved
+    In general, question focus (answer type) will only be two types when we extend from Medium Level
+    - Timeline Operation
+    - (Subject, Predicate, Object)
+
+    So if we say Complex is 3 events and Timeline.
+
+    - Timeline Recovery + Timeline Recovery + Timeline Recovery: When Bush is president of US and Putin is President of Russion, is Hu the president of China?
+        - (General Information Retrieval => Timeline Recovery) And (General Information Retrieval => Timeline Recovery) And (General Information Retrieval => Timeline Recovery) => Timeline Operation => Answer the question
+    - Timeline Recovery + Timeline Recovery + Temporal Constrainted Retrieval: When Bush is president of US and Putin is President of Russion, who is the president of China?
 
     input will be a unified knowledge graph, it will be stored in a table
         subject
@@ -40,13 +103,13 @@ class TKGQAGenerator:
     """
 
     def __init__(
-        self,
-        table_name: str,
-        host: str,
-        port: int,
-        user: str,
-        password: str,
-        db_name: str = "tkgqa",
+            self,
+            table_name: str,
+            host: str,
+            port: int,
+            user: str,
+            password: str,
+            db_name: str = "tkgqa",
     ):
         # setup the db connection
         self.host = host
@@ -104,7 +167,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def allen_tr_relation(
-        time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
+            time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
     ) -> dict:
         """
         This function will return the allen temporal relation between two time ranges
@@ -206,7 +269,7 @@ class TKGQAGenerator:
         ALLEN_OPERATOR_DICT = {
             (-1, -1, -1, -1, -1, -1): {
                 "relation": "X < Y",
-                "description": "X is before Y",
+                "description": "X precedes Y",
                 "category": "tr",
                 "code": "tr-1",
             },
@@ -248,7 +311,7 @@ class TKGQAGenerator:
             },
             (-1, -1, 0, -1, 1, 1): {
                 "relation": "X si Y",
-                "description": "X starts Y",
+                "description": "X is started by Y",
                 "category": "tr",
                 "code": "tr-8",
             },
@@ -260,7 +323,7 @@ class TKGQAGenerator:
             },
             (-1, -1, 1, -1, 1, 0): {
                 "relation": "X f Y",
-                "description": "X finishes Y",
+                "description": "X finishes by Y",
                 "category": "tr",
                 "code": "tr-10",
             },
@@ -278,7 +341,7 @@ class TKGQAGenerator:
             },
             (-1, -1, 1, 1, 1, 1): {
                 "relation": "X > Y",
-                "description": "X is after Y",
+                "description": "X is preceded by Y",
                 "category": "tr",
                 "code": "tr-13",
             },
@@ -389,7 +452,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def allen_td_relation(
-        time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
+            time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
     ) -> dict:
         """
 
@@ -425,8 +488,8 @@ class TKGQAGenerator:
             }
 
     @staticmethod
-    def set_operator(
-        time_range_a, time_range_b: list = None, temporal_operator: str = None
+    def temporal_operator(
+            time_range_a, time_range_b: list = None, temporal_operator: str = None
     ) -> set:
         """
         This function will return the temporal operator between two time ranges
@@ -483,7 +546,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def aggregate_tr_operator(
-        time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
+            time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
     ) -> list:
         """
         For the time range, it will do the rank operation, sort it
@@ -542,7 +605,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def aggregate_td_operator(
-        time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
+            time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
     ) -> list:
         """
         For the time range, it will do the rank operation, sort it
@@ -600,7 +663,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def questions_retrieve_tr_and_td(
-        s, p, o, start_time, end_time, statement=None
+            s, p, o, start_time, end_time, statement=None
     ) -> dict:
         """
         This will try to generate four questions belong to RE type
@@ -817,8 +880,33 @@ class TKGQAGenerator:
         Under this category, in theory we have 6 types of questions, depending on what's missing.
         There are two types of questions we focus on in this area. Both should ask for the allen temporal relations.
 
+        Under this two categories
+
         - Given two SPO, ask for allen temporal relation
         - Given a SPO, a TR, ask for allen temporal relation
+
+        Question Examples we can have:
+
+        Ask for True or False: Given Scenerio, can A meet B?
+        Ask for Selections: Given Scenerio, which temporal relation between A and B? 13 option, or 7 options
+
+
+        If we are asking for S or O?
+        Ask for S?
+        Before A is the leader of ORGA, who is the leader of ORGA? (X before Y)
+        Who is starts the leader of ORGA, when B ends the leader of ORGA? (X starts Y)
+        A as the leader of ORGA meets the leader of ORGB, who is the guy? (X meets Y)
+        A finishes his term as the leader of ORGA, who finshes the term as the leader of ORGB at the same time as A. (X finishes Y)
+        During the time A is the leader of ORGA, who is the leader of ORGB? (X during Y)
+        A is the leader for a long time, who start as the leader of ORGB at the same time as A. (X starts Y)
+        A starts and ends his term as the leader of ORGA at the exact same time as B starts and ends his term as the leader of ORGB, who is the leader of ORGA? (X equals Y)
+
+        Ask for O?
+        Before A is the leader of ORGA, he is the leader of? (X before Y)
+
+        If we are asking for TR?
+        Before A is the leader of ORGA, B is the leader of ORGB, how long is B's term as the leader of ORGB? (X before Y)
+
         """
         first_spo_df = pd.read_sql_query(
             f"SELECT * FROM {self.unified_kg_table}", self.connection
@@ -841,6 +929,22 @@ class TKGQAGenerator:
                 question_statement = f"{statement_first_spo} ??? {statement_second_spo}"
                 logger.info(question_statement)
                 return
+
+    def timestamp_2ra_set(self):
+        """
+        We need to first define a question regarding the set
+
+        Ask for Set
+        During which range of time, A is the leader of ORGA and B is the leader of ORG? (Intersection)
+        Since when until when, A and B lead the ORGA in turns? (Union)
+        During which range of time, A is the leader of ORGA and B is not the leader of ORG? (Complement)
+
+        Ask for Ask for TC
+        - Given Set and SPO, ask for TC: In the first decade of 21st Century,
+            A
+
+        """
+        pass
 
 
 if __name__ == "__main__":
