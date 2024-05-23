@@ -199,7 +199,7 @@ QUESTION_TEMPLATES = {
                 "average": [
                     "What is the average duration of {first_event_subject} {first_event_predicate} {first_event_object} and {second_event_subject} {second_event_predicate} {second_event_object}?",
                 ],
-            }
+            },
         },
     },
 }
