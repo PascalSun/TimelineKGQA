@@ -18,7 +18,7 @@ logger = get_logger(__name__)
 
 class TKGQAGenerator:
     """
-    # How human handle the temporal information and answer the temporal questions?
+    **How human handle the temporal information and answer the temporal questions?**
 
     ## Information Indexing
     When we see something, for example, an accident happen near our home in today morning.
@@ -393,8 +393,10 @@ class TKGQAGenerator:
         """
         This will involve mainly two types of questions
 
-        **Timeline Recovery => Temporal Constrainted Retrieval**
-        **Timeline Recovery + Timeline Recovery**
+        - **Timeline Recovery => Temporal Constrainted Retrieval**
+        - **Timeline Recovery + Timeline Recovery**
+
+        ---
 
         - question_level: medium
         - question_type:
@@ -407,7 +409,8 @@ class TKGQAGenerator:
             - temporal related
                 - Infer a new time range: Union/Intersection
                 - Infer a temporal relation: Allen
-                - Infer a list of time ranges: Ranking
+                - Infer duration, and then compare
+                - Note: Ranking will be the same as Allen, so it will be in **Complex** level
 
         """
         self.cursor.execute(f"SELECT * FROM {self.unified_kg_table}")
@@ -481,6 +484,24 @@ class TKGQAGenerator:
         pharaphrased: bool = True,
     ) -> dict:
         """
+
+        Args:
+            first_event (dict): The first event
+            second_event (dict): The second event
+            template_based (bool): Whether use the template based question generation
+            pharaphrased (bool): Whether do the paraphrase for the question, if set to False,
+                    then the paraphrased_question will be the same as the question
+
+        Returns:
+            dict: The generated questions
+                - question
+                - answer
+                - paraphrased_question
+                - events
+                - question_level: Medium
+                - question_type: The type of the question
+                - answer_type: The type of the answer
+
         - question_type:
             - timeline_recovery_temporal_constrainted_retrieval
                 - For this one, the logic/reasoning/math part will be like: **TimeRange** + Temporal Semantic Operation => "TimeRange**
@@ -513,22 +534,6 @@ class TKGQAGenerator:
         The quality of the question is not guaranteed by LLM directly if we just mask out the answer.
         So we will use the template to generate the questions, then use LLM to paraphrase the questions.
 
-        Args:
-            first_event (dict): The first event
-            second_event (dict): The second event
-            template_based (bool): Whether use the template based question generation
-            pharaphrased (bool): Whether do the paraphrase for the question, if set to False,
-                    then the paraphrased_question will be the same as the question
-
-        Returns:
-            dict: The generated questions
-                - question
-                - answer
-                - paraphrased_question
-                - events
-                - question_level: Medium
-                - question_type: The type of the question
-                - answer_type: The type of the answer
         """
         first_event_subject = first_event["subject"]
         first_event_predicate = first_event["predicate"]
@@ -1646,18 +1651,17 @@ if __name__ == "__main__":
     Question Types:
     
     - Simple: Timeline and One Event Involved
-        - ? P O TS TE
-        - S P ? TS TE
-        - S P O ? TE
-        - S P O TS ?
-        - S P O ? ?
-        - S P O Duration?
-    
+        - Ask for the timeline
+            - Timeline Position Retrieval 
+        - Ask for the event    
+            - Temporal Constrainted Retrieval
     - Medium: Timeline and Two Events Involved
         - Timeline Recover => Temporal Constrainted Retrieval
         - Timeline Recover + Timeline Recover
+    - Complex: Timeline and Three Events Involved
+        - Timeline Recover + Timeline Recover + Timeline Recover
+        - Timeline Recover + Timeline Recover + Timeline Recover + Timeline Recover
     """
 
-    # this will include all retrieval type questions include timestamp/duration
     # generator.simple_question_generation()
     generator.medium_question_generation()
