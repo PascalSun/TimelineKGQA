@@ -164,19 +164,19 @@ QUESTION_TEMPLATES = {
             # However, it is still possible to have specific format for specific relationship question, even it is true/false question.
             # We will do choice and random for now, consider this later.
             "relation_allen": {
-                "X < Y": [],
-                "X m Y": [],
-                "X o Y": [],
-                "X fi Y": [],
-                "X di Y": [],
-                "X s Y": [],
-                "X = Y": [],
-                "X si Y": [],
-                "X d Y": [],
-                "X f Y": [],
-                "X oi Y": [],
-                "X mi Y": [],
-                "X > Y": [],
+                # "X < Y": [],
+                # "X m Y": [],
+                # "X o Y": [],
+                # "X fi Y": [],
+                # "X di Y": [],
+                # "X s Y": [],
+                # "X = Y": [],
+                # "X si Y": [],
+                # "X d Y": [],
+                # "X f Y": [],
+                # "X oi Y": [],
+                # "X mi Y": [],
+                # "X > Y": [],
                 "choice": [
                     "What's the temporal relation between {first_event_subject} {first_event_predicate} {first_event_object} and {second_event_subject} {second_event_predicate} {second_event_object}?",
                 ],
@@ -184,11 +184,22 @@ QUESTION_TEMPLATES = {
                     "Is the temporal relation between {first_event_subject} {first_event_predicate} {first_event_object} {temporal_relation} {second_event_subject} {second_event_predicate} {second_event_object}?",
                 ],
             },
-            "relation_duration": [
-                "Is {first_event_subject} {first_event_predicate} {first_event_object} longer than {second_event_subject} {second_event_predicate} {second_event_object}?",
-                "Which event took longer, {first_event_subject} {first_event_predicate} {first_event_object} or {second_event_subject} {second_event_predicate} {second_event_object}?",
-                "In total, how long did {first_event_subject} {first_event_predicate} {first_event_object} and {second_event_subject} {second_event_predicate} {second_event_object}?",
-            ],
+            "relation_duration": {
+                # duration for the intersection of the two events
+                "duration": [
+                    "What is the duration of {first_event_subject} {first_event_predicate} {first_event_object} jointly when {second_event_subject} {second_event_predicate} {second_event_object}?",
+                ],
+                "duration_compare": [
+                    "Is the duration of {first_event_subject} {first_event_predicate} {first_event_object} {temporal_relation} the duration of {second_event_subject} {second_event_predicate} {second_event_object}?",
+                ],
+                # This is actually for union
+                "sum": [
+                    "How long is the total duration of {first_event_subject} {first_event_predicate} {first_event_object} and {second_event_subject} {second_event_predicate} {second_event_object}?",
+                ],
+                "average": [
+                    "What is the average duration of {first_event_subject} {first_event_predicate} {first_event_object} and {second_event_subject} {second_event_predicate} {second_event_object}?",
+                ],
+            }
         },
     },
 }

@@ -108,13 +108,13 @@ class TKGQAGenerator:
     """
 
     def __init__(
-        self,
-        table_name: str,
-        host: str,
-        port: int,
-        user: str,
-        password: str,
-        db_name: str = "tkgqa",
+            self,
+            table_name: str,
+            host: str,
+            port: int,
+            user: str,
+            password: str,
+            db_name: str = "tkgqa",
     ):
         # setup the db connection
         self.host = host
@@ -264,13 +264,13 @@ class TKGQAGenerator:
 
     @staticmethod
     def simple_question_generation_individual(
-        subject: str,
-        predicate: str,
-        object: str,
-        start_time: str,
-        end_time: str,
-        template_based: bool = False,
-        pharaphrased: bool = False,
+            subject: str,
+            predicate: str,
+            object: str,
+            start_time: str,
+            end_time: str,
+            template_based: bool = False,
+            pharaphrased: bool = False,
     ) -> dict:
         """
         This will try to generate four questions belong to RE type
@@ -434,8 +434,6 @@ class TKGQAGenerator:
                     template_based=True,
                     pharaphrased=True,
                 )
-                # TODO: change this
-
                 for question_obj in questions:
                     indiv_sql_command = """
                     INSERT INTO {} (source_kg_id,
@@ -473,14 +471,14 @@ class TKGQAGenerator:
                         logger.error(f"Error: {e}")
                         logger.info(data)
 
-                return
+                # return
 
     def medium_question_generation_individual(
-        self,
-        first_event: dict,
-        second_event: dict,
-        template_based: bool = True,
-        pharaphrased: bool = True,
+            self,
+            first_event: dict,
+            second_event: dict,
+            template_based: bool = True,
+            pharaphrased: bool = True,
     ) -> dict:
         """
         - question_type:
@@ -686,6 +684,8 @@ class TKGQAGenerator:
                 "question_type": "timeline_recovery_timeline_recovery",
                 "answer_type": "relation_allen",
                 "temporal_relation": None,
+                # under this, random choose choices question or yes/no question
+                # for yes/no question, we randomly generate yes or no answer questions.
             },
             {
                 "question": f"{first_event_subject} {first_event_predicate} {first_event_object} ???[Timeline Operation on ({first_event_start_time}, {first_event_end_time}) vs ({second_event_start_time}, {second_event_end_time})]??? {second_event_subject} {second_event_predicate} {second_event_object}?",
@@ -710,8 +710,8 @@ class TKGQAGenerator:
                 ][question_draft["question_type"]][question_draft["answer_type"]]
 
                 if (
-                    question_draft["answer_type"] == "subject"
-                    or question_draft["answer_type"] == "object"
+                        question_draft["answer_type"] == "subject"
+                        or question_draft["answer_type"] == "object"
                 ):
                     """
                     Handle the Medium Type 1 Questions here: Both a and b
@@ -789,8 +789,8 @@ class TKGQAGenerator:
                     Handle in theory four types of questions here
                     """
                     if (
-                        question_draft["answer_type"]
-                        == "relation_union_or_intersection"
+                            question_draft["answer_type"]
+                            == "relation_union_or_intersection"
                     ):
                         temporal_relation = question_draft["temporal_relation"]
                         random_pick_template = random.choice(
@@ -830,6 +830,7 @@ class TKGQAGenerator:
                                 second_event_end_time_dt,
                             ],
                         )
+                        question_draft["temporal_relation"] = temporal_allen_relation["relation"]
                         # random select from [choices, true_false]
                         question_format = random.choice(["choice", "true_false"])
                         if question_format == "choice":
@@ -846,6 +847,7 @@ class TKGQAGenerator:
                                 second_event_object=second_event_object,
                             )
                             question_draft["answer"] = temporal_answer
+
                         else:
                             random_pick_template = random.choice(
                                 this_type_templates["true_false"]
@@ -860,7 +862,6 @@ class TKGQAGenerator:
                                         - {temporal_allen_relation["relation"]}
                                     )
                                 )
-                            logger.info(random_pick_template)
                             question_draft["question"] = random_pick_template.format(
                                 first_event_subject=first_event_subject,
                                 first_event_predicate=first_event_predicate,
@@ -872,26 +873,114 @@ class TKGQAGenerator:
                             )
                             question_draft["answer"] = random_yes_no_answer
                     elif question_draft["answer_type"] == "relation_duration":
-                        temporal_allen_duration = self.relation_allen_time_duration(
-                            time_range_a=[
-                                first_event_start_time_dt,
-                                first_event_end_time_dt,
-                            ],
-                            time_range_b=[
-                                second_event_start_time_dt,
-                                second_event_end_time_dt,
-                            ],
+                        """There are four types in this category
+                        - duration => which is the intersection of the two time range
+                        - duration_compare => longer shorter equal
+                        - sum => total duration of the two time range, which is actually the union
+                        - average => average duration of the two time range
+                        """
+                        temporal_relation = random.choice(
+                            [
+                                "duration",
+                                "duration_compare",
+                                "sum",
+                                "average",
+                            ]
                         )
-                        logger.info(temporal_allen_duration)
+                        random_pick_template = random.choice(
+                            this_type_templates[temporal_relation]
+                        )
+                        question_draft["temporal_relation"] = temporal_relation
+                        if temporal_relation == "duration":
+                            temporal_answer = self.relation_union_or_intersection(
+                                time_range_a=[
+                                    first_event_start_time_dt,
+                                    first_event_end_time_dt,
+                                ],
+                                time_range_b=[
+                                    second_event_start_time_dt,
+                                    second_event_end_time_dt,
+                                ],
+                                temporal_operator="intersection",
+                            )
+                            question_draft["question"] = random_pick_template.format(
+                                first_event_subject=first_event_subject,
+                                first_event_predicate=first_event_predicate,
+                                first_event_object=first_event_object,
+                                second_event_subject=second_event_subject,
+                                second_event_predicate=second_event_predicate,
+                                second_event_object=second_event_object,
+                            )
+                        elif temporal_relation == "duration_compare":
+                            temporal_relation_duration = self.relation_allen_time_duration(
+                                time_range_a=[
+                                    first_event_start_time_dt,
+                                    first_event_end_time_dt,
+                                ],
+                                time_range_b=[
+                                    second_event_start_time_dt,
+                                    second_event_end_time_dt,
+                                ],
+                            )
+                            temporal_answer = temporal_relation_duration["semantic"]
+                            question_draft["question"] = random_pick_template.format(
+                                first_event_subject=first_event_subject,
+                                first_event_predicate=first_event_predicate,
+                                first_event_object=first_event_object,
+                                temporal_relation=temporal_answer,
+                                second_event_subject=second_event_subject,
+                                second_event_predicate=second_event_predicate,
+                                second_event_object=second_event_object,
+                            )
+                        elif temporal_relation == "sum":
+                            temporal_answer = self.util_average_duration_calculation(
+                                time_ranges=[[
+                                    first_event_start_time_dt,
+                                    first_event_end_time_dt,
+                                ], [
+                                    second_event_start_time_dt,
+                                    second_event_end_time_dt,
+                                ]],
+                                temporal_operator="sum",
+                            )
+                            question_draft["question"] = random_pick_template.format(
+                                first_event_subject=first_event_subject,
+                                first_event_predicate=first_event_predicate,
+                                first_event_object=first_event_object,
+                                second_event_subject=second_event_subject,
+                                second_event_predicate=second_event_predicate,
+                                second_event_object=second_event_object,
+                            )
+                        elif temporal_relation == "average":
+                            temporal_answer = self.util_average_duration_calculation(
+                                time_ranges=[[
+                                    first_event_start_time_dt,
+                                    first_event_end_time_dt,
+                                ], [
+                                    second_event_start_time_dt,
+                                    second_event_end_time_dt,
+                                ]],
+                                temporal_operator="average",
+                            )
+                            question_draft["question"] = random_pick_template.format(
+                                first_event_subject=first_event_subject,
+                                first_event_predicate=first_event_predicate,
+                                first_event_object=first_event_object,
+                                second_event_subject=second_event_subject,
+                                second_event_predicate=second_event_predicate,
+                                second_event_object=second_event_object,
+                            )
+                        question_draft["answer"] = temporal_answer
+                        question_draft["temporal_relation"] = temporal_relation
 
-        questions += medium_type_1_b_questions
-        if pharaphrased:
-            for question_obj in questions:
-                paraphrased_question = paraphrase_medium_question(
-                    question=question_obj["question"],
-                )
-                logger.info(f"paraphrased_question: {paraphrased_question}")
-                question_obj["pharaphrased_question"] = paraphrased_question
+        # questions += medium_type_1_b_questions
+        # if pharaphrased:
+        #     for question_obj in questions:
+        #         paraphrased_question = paraphrase_medium_question(
+        #             question=question_obj["question"],
+        #         )
+        #         logger.info(f"paraphrased_question: {paraphrased_question}")
+        #         question_obj["pharaphrased_question"] = paraphrased_question
 
         return questions
 
@@ -906,7 +995,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def relation_allen_time_range(
-        time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
+            time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
     ) -> dict:
         """
         This function will return the allen temporal relation between two time ranges
@@ -1203,7 +1292,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def relation_allen_time_duration(
-        time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
+            time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
     ) -> dict:
         """
 
@@ -1243,9 +1332,9 @@ class TKGQAGenerator:
 
     @staticmethod
     def relation_union_or_intersection(
-        time_range_a: list[datetime, datetime],
-        time_range_b: list[datetime, datetime],
-        temporal_operator: str = None,
+            time_range_a: list[datetime, datetime],
+            time_range_b: list[datetime, datetime],
+            temporal_operator: str = None,
     ) -> str:
         """
         This function will return the temporal operator between two time ranges
@@ -1295,7 +1384,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def relation_ordinal_time_range(
-        time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
+            time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
     ) -> list:
         """
         For the time range, it will do the rank operation, sort it
@@ -1354,7 +1443,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def relation_duration(
-        time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
+            time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
     ) -> list:
         """
         For the time range, it will do the rank operation, sort it
@@ -1412,9 +1501,9 @@ class TKGQAGenerator:
 
     @staticmethod
     def relation_duration_calculation(
-        time_range_a: list[datetime, datetime],
-        time_range_b: list[datetime, datetime],
-        temporal_operator: str = None,
+            time_range_a: list[datetime, datetime],
+            time_range_b: list[datetime, datetime],
+            temporal_operator: str = None,
     ) -> timedelta:
         """
         We will calculate the time difference between two time ranges
@@ -1449,7 +1538,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def util_str_to_datetime(
-        time_range_a: list[str, str], time_range_b: list[str, str]
+            time_range_a: list[str, str], time_range_b: list[str, str]
     ):
         """
         Convert the string to datetime
@@ -1472,6 +1561,50 @@ class TKGQAGenerator:
         start_time2 = np.datetime64(start_time2)
         end_time2 = np.datetime64(end_time2)
         return start_time1, end_time1, start_time2, end_time2
+
+    def util_average_duration_calculation(
+            self, time_ranges: list[[datetime, datetime]], temporal_operator: str = None
+    ):
+        try:
+            if temporal_operator == "average":
+                durations = [
+                    abs(time_range[1] - time_range[0]) for time_range in time_ranges
+                ]
+                average_d = sum(durations) / len(durations)
+                return self.utils_format_np_datetime(average_d)
+
+            if temporal_operator == "sum":
+                durations = [
+                    abs(time_range[1] - time_range[0]) for time_range in time_ranges
+                ]
+                total = sum(durations)
+                return self.utils_format_np_datetime(total)
+            return None
+        except Exception as e:
+            logger.error(f"Error in util_average_duration_calculation: {e}")
+            return None
+
+    @staticmethod
+    def utils_format_np_datetime(np_date_delta):
+        td = timedelta(seconds=np_date_delta / (
+            np.timedelta64(1, 's')
+        ))
+        days = td.days
+        seconds = td.seconds
+        microseconds = td.microseconds
+
+        # Compute hours, minutes, and remaining seconds
+        hours, remainder = divmod(seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+
+        # also get how many years
+        years = days // 365
+        if years > 2000:
+            return "forever"
+        months = (days % 365) // 30
+        days = (days % 365) % 30
+        human_readable_format = f"{years} years, {months} months, {days} days, {hours} hours, {minutes} minutes, {seconds} seconds"
+        return human_readable_format
 
     @property
     def allen_relations(self):
