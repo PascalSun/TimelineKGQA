@@ -13,3 +13,9 @@ plugins:
           rendering:
             show_source: true
             show_source_link: true
+
+markdown_extensions:
+  - attr_list
+  - pymdownx.superfences
+  - pymdownx.tabbed
+  - pymdownx.extra

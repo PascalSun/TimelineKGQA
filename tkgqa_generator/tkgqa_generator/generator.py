@@ -108,13 +108,13 @@ class TKGQAGenerator:
     """
 
     def __init__(
-        self,
-        table_name: str,
-        host: str,
-        port: int,
-        user: str,
-        password: str,
-        db_name: str = "tkgqa",
+            self,
+            table_name: str,
+            host: str,
+            port: int,
+            user: str,
+            password: str,
+            db_name: str = "tkgqa",
     ):
         # setup the db connection
         self.host = host
@@ -264,13 +264,13 @@ class TKGQAGenerator:
 
     @staticmethod
     def simple_question_generation_individual(
-        subject: str,
-        predicate: str,
-        object: str,
-        start_time: str,
-        end_time: str,
-        template_based: bool = False,
-        pharaphrased: bool = False,
+            subject: str,
+            predicate: str,
+            object: str,
+            start_time: str,
+            end_time: str,
+            template_based: bool = False,
+            pharaphrased: bool = False,
     ) -> dict:
         """
         This will try to generate four questions belong to RE type
@@ -413,7 +413,13 @@ class TKGQAGenerator:
                 - Note: Ranking will be the same as Allen, so it will be in **Complex** level
 
         """
-        self.cursor.execute(f"SELECT * FROM {self.unified_kg_table}")
+        logger.info(
+            f"SELECT * FROM {self.unified_kg_table} WHERE id not in (SELECT source_kg_id FROM {self.unified_kg_table_questions})"
+        )
+        self.cursor.execute(
+            f"SELECT * FROM {self.unified_kg_table} WHERE id not in (SELECT source_kg_id FROM {self.unified_kg_table_questions})"
+        )
+
         first_event_df = pd.DataFrame(self.cursor.fetchall())
         first_event_df.columns = [desc[0] for desc in self.cursor.description]
         second_event_df = first_event_df.copy(deep=True)
@@ -424,11 +430,12 @@ class TKGQAGenerator:
 
                 source_kg_id = first_event["id"] * 1000000 + second_event["id"]
                 # check is this inthe datebase, if yes, then contine
-                self.cursor.execute(
-                    f"SELECT * FROM {self.unified_kg_table_questions} WHERE source_kg_id = {source_kg_id}"
-                )
-                if self.cursor.fetchone():
-                    continue
+                # self.cursor.execute(
+                #     f"SELECT * FROM {self.unified_kg_table_questions} WHERE source_kg_id = {source_kg_id}"
+                # )
+                # logger.info(f"SELECT * FROM {self.unified_kg_table_questions} WHERE source_kg_id = {source_kg_id}")
+                # if self.cursor.fetchone():
+                #     continue
                 # logger.info(f"first_spo: {first_spo}, second_spo: {second_spo}")
                 # TODO: can try to filter the events to make sure it make more sense in the final question
                 questions = self.medium_question_generation_individual(
@@ -477,11 +484,11 @@ class TKGQAGenerator:
                 # return
 
     def medium_question_generation_individual(
-        self,
-        first_event: dict,
-        second_event: dict,
-        template_based: bool = True,
-        pharaphrased: bool = True,
+            self,
+            first_event: dict,
+            second_event: dict,
+            template_based: bool = True,
+            pharaphrased: bool = True,
     ) -> dict:
         """
 
@@ -715,8 +722,8 @@ class TKGQAGenerator:
                 ][question_draft["question_type"]][question_draft["answer_type"]]
 
                 if (
-                    question_draft["answer_type"] == "subject"
-                    or question_draft["answer_type"] == "object"
+                        question_draft["answer_type"] == "subject"
+                        or question_draft["answer_type"] == "object"
                 ):
                     """
                     Handle the Medium Type 1 Questions here: Both a and b
@@ -794,8 +801,8 @@ class TKGQAGenerator:
                     Handle in theory four types of questions here
                     """
                     if (
-                        question_draft["answer_type"]
-                        == "relation_union_or_intersection"
+                            question_draft["answer_type"]
+                            == "relation_union_or_intersection"
                     ):
                         temporal_relation = question_draft["temporal_relation"]
                         random_pick_template = random.choice(
@@ -1010,7 +1017,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def relation_allen_time_range(
-        time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
+            time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
     ) -> dict:
         """
         This function will return the allen temporal relation between two time ranges
@@ -1307,7 +1314,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def relation_allen_time_duration(
-        time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
+            time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
     ) -> dict:
         """
 
@@ -1347,9 +1354,9 @@ class TKGQAGenerator:
 
     @staticmethod
     def relation_union_or_intersection(
-        time_range_a: list[datetime, datetime],
-        time_range_b: list[datetime, datetime],
-        temporal_operator: str = None,
+            time_range_a: list[datetime, datetime],
+            time_range_b: list[datetime, datetime],
+            temporal_operator: str = None,
     ) -> str:
         """
         This function will return the temporal operator between two time ranges
@@ -1399,7 +1406,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def relation_ordinal_time_range(
-        time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
+            time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
     ) -> list:
         """
         For the time range, it will do the rank operation, sort it
@@ -1458,7 +1465,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def relation_duration(
-        time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
+            time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
     ) -> list:
         """
         For the time range, it will do the rank operation, sort it
@@ -1516,9 +1523,9 @@ class TKGQAGenerator:
 
     @staticmethod
     def relation_duration_calculation(
-        time_range_a: list[datetime, datetime],
-        time_range_b: list[datetime, datetime],
-        temporal_operator: str = None,
+            time_range_a: list[datetime, datetime],
+            time_range_b: list[datetime, datetime],
+            temporal_operator: str = None,
     ) -> timedelta:
         """
         We will calculate the time difference between two time ranges
@@ -1553,7 +1560,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def util_str_to_datetime(
-        time_range_a: list[str, str], time_range_b: list[str, str]
+            time_range_a: list[str, str], time_range_b: list[str, str]
     ):
         """
         Convert the string to datetime
@@ -1578,7 +1585,7 @@ class TKGQAGenerator:
         return start_time1, end_time1, start_time2, end_time2
 
     def util_average_duration_calculation(
-        self, time_ranges: list[[datetime, datetime]], temporal_operator: str = None
+            self, time_ranges: list[[datetime, datetime]], temporal_operator: str = None
     ):
         try:
             if temporal_operator == "average":
