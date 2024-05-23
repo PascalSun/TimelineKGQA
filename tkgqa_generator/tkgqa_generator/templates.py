@@ -151,18 +151,39 @@ QUESTION_TEMPLATES = {
         },
         "timeline_recovery_timeline_recovery": {
             # because it is the time range, then we should also ask about the duration
-            "relation_union_or_intersection": [
-                "How long when {first_event_subject} {first_event_predicate} {first_event_object} and {second_event_subject} {second_event_predicate} {second_event_object} at the same time?",
-                "From when to when {first_event_subject} {first_event_predicate} {first_event_object} and {second_event_subject} {second_event_predicate} {second_event_object} at the same time?",
-            ],
-            "relation_allen": [
-                "When {first_event_subject} {first_event_predicate} {first_event_object}, {second_event_subject} {second_event_predicate} {second_event_object}?",
-                "At what time {first_event_subject} {first_event_predicate} {first_event_object}, {second_event_subject} {second_event_predicate} {second_event_object}?",
-            ],
-            "relation_ordinal": [
-                "What is the order of {first_event_subject} {first_event_predicate} {first_event_object} and {second_event_subject} {second_event_predicate} {second_event_object}?",
-                "Which event happened first, {first_event_subject} {first_event_predicate} {first_event_object} or {second_event_subject} {second_event_predicate} {second_event_object}?",
-            ],
+            "relation_union_or_intersection": {
+                "intersection": [
+                    "From when to when, {first_event_subject} {first_event_predicate} {first_event_object}, at the same time, {second_event_subject} {second_event_predicate} {second_event_object}?"
+                ],
+                "union": [
+                    "From when to when, {first_event_subject} {first_event_predicate} {first_event_object} or {second_event_subject} {second_event_predicate} {second_event_object}?"
+                    # From when to when, bush and obama are president? this type of question, this should be able to handled by the LLM when first_event_subject and second_event_subject are the same
+                ],
+            },
+            # we are looking for the allen temporal relation between the two events, so the question normally is asked for relation directly, or true/false question.
+            # However, it is still possible to have specific format for specific relationship question, even it is true/false question.
+            # We will do choice and random for now, consider this later.
+            "relation_allen": {
+                "X < Y": [],
+                "X m Y": [],
+                "X o Y": [],
+                "X fi Y": [],
+                "X di Y": [],
+                "X s Y": [],
+                "X = Y": [],
+                "X si Y": [],
+                "X d Y": [],
+                "X f Y": [],
+                "X oi Y": [],
+                "X mi Y": [],
+                "X > Y": [],
+                "choice": [
+                    "What's the temporal relation between {first_event_subject} {first_event_predicate} {first_event_object} and {second_event_subject} {second_event_predicate} {second_event_object}?",
+                ],
+                "true_false": [
+                    "Is the temporal relation between {first_event_subject} {first_event_predicate} {first_event_object} {temporal_relation} {second_event_subject} {second_event_predicate} {second_event_object}?",
+                ],
+            },
             "relation_duration": [
                 "Is {first_event_subject} {first_event_predicate} {first_event_object} longer than {second_event_subject} {second_event_predicate} {second_event_object}?",
                 "Which event took longer, {first_event_subject} {first_event_predicate} {first_event_object} or {second_event_subject} {second_event_predicate} {second_event_object}?",

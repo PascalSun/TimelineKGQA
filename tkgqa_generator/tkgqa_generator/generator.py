@@ -139,14 +139,14 @@ class TKGQAGenerator:
             CREATE TABLE IF NOT EXISTS {self.unified_kg_table_questions} (
                 id SERIAL PRIMARY KEY,
                 source_kg_id INTEGER,
-                question VARCHAR(255),
-                answer VARCHAR(255),
-                paraphrased_question VARCHAR(255),
-                events VARCHAR(255)[],
-                question_level VARCHAR(255),
-                question_type VARCHAR(255),
-                answer_type VARCHAR(255),
-                temporal_relation VARCHAR(255) DEFAULT NULL
+                question VARCHAR(1024),
+                answer VARCHAR(1024),
+                paraphrased_question VARCHAR(1024),
+                events VARCHAR(1024)[],
+                question_level VARCHAR(1024),
+                question_type VARCHAR(1024),
+                answer_type VARCHAR(1024),
+                temporal_relation VARCHAR(1024) DEFAULT NULL
             );
         """
         )
@@ -466,9 +466,12 @@ class TKGQAGenerator:
                         question_obj["answer_type"],
                         question_obj["temporal_relation"],
                     )
-                    logger.info(f"question: {question_obj['pharaphrased_question']}")
-                    self.cursor.execute(indiv_sql_command, data)
-                    self.connection.commit()
+                    try:
+                        self.cursor.execute(indiv_sql_command, data)
+                        self.connection.commit()
+                    except Exception as e:
+                        logger.error(f"Error: {e}")
+                        logger.info(data)
 
                 return
 
@@ -540,6 +543,16 @@ class TKGQAGenerator:
         second_event_object = second_event["object"]
         second_event_start_time = second_event["start_time"]
         second_event_end_time = second_event["end_time"]
+
+        (
+            first_event_start_time_dt,
+            first_event_end_time_dt,
+            second_event_start_time_dt,
+            second_event_end_time_dt,
+        ) = self.util_str_to_datetime(
+            [first_event_start_time, first_event_end_time],
+            [second_event_start_time, second_event_end_time],
+        )
 
         # first generate
         # timeline_recovery => temporal_constrainted_retrieval
@@ -646,7 +659,20 @@ class TKGQAGenerator:
                 "question_level": "medium",
                 "question_type": "timeline_recovery_timeline_recovery",
                 "answer_type": "relation_union_or_intersection",
-                "temporal_relation": None,
+                "temporal_relation": "intersection",
+            },
+            {
+                "question": f"{first_event_subject} {first_event_predicate} {first_event_object} ???[Timeline Operation on ({first_event_start_time}, {first_event_end_time}) vs ({second_event_start_time}, {second_event_end_time})]??? {second_event_subject} {second_event_predicate} {second_event_object}?",
+                "answer": f"Union/Intersection of the time range",
+                "pharaphrased_question": None,
+                "events": [
+                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|{first_event_start_time}|{first_event_end_time}",
+                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|{second_event_start_time}|{second_event_end_time}",
+                ],
+                "question_level": "medium",
+                "question_type": "timeline_recovery_timeline_recovery",
+                "answer_type": "relation_union_or_intersection",
+                "temporal_relation": "union",
             },
             {
                 "question": f"{first_event_subject} {first_event_predicate} {first_event_object} ???[Timeline Operation on ({first_event_start_time}, {first_event_end_time}) vs ({second_event_start_time}, {second_event_end_time})]??? {second_event_subject} {second_event_predicate} {second_event_object}?",
@@ -659,19 +685,6 @@ class TKGQAGenerator:
                 "question_level": "medium",
                 "question_type": "timeline_recovery_timeline_recovery",
                 "answer_type": "relation_allen",
-                "temporal_relation": None,
-            },
-            {
-                "question": f"{first_event_subject} {first_event_predicate} {first_event_object} ???[Timeline Operation on ({first_event_start_time}, {first_event_end_time}) vs ({second_event_start_time}, {second_event_end_time})]??? {second_event_subject} {second_event_predicate} {second_event_object}?",
-                "answer": f"List of Time Ranges",
-                "pharaphrased_question": None,
-                "events": [
-                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|{first_event_start_time}|{first_event_end_time}",
-                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|{second_event_start_time}|{second_event_end_time}",
-                ],
-                "question_level": "medium",
-                "question_type": "timeline_recovery_timeline_recovery",
-                "answer_type": "relation_ordinal",
                 "temporal_relation": None,
             },
             {
@@ -695,24 +708,27 @@ class TKGQAGenerator:
                 this_type_templates = QUESTION_TEMPLATES[
                     question_draft["question_level"]
                 ][question_draft["question_type"]][question_draft["answer_type"]]
-                # first calculate the relations, then based on relations to select the template
+
                 if (
                     question_draft["answer_type"] == "subject"
                     or question_draft["answer_type"] == "object"
                 ):
+                    """
+                    Handle the Medium Type 1 Questions here: Both a and b
+                    First calculate the relations, then based on relations to select the template
+                    """
                     temporal_relation = self.relation_allen_time_range(
                         time_range_a=[
-                            first_event_start_time,
-                            first_event_end_time,
+                            first_event_start_time_dt,
+                            first_event_end_time_dt,
                         ],
                         time_range_b=[
-                            second_event_start_time,
-                            second_event_end_time,
+                            second_event_start_time_dt,
+                            second_event_end_time_dt,
                         ],
                     )
                     temporal_relation_semantic = temporal_relation.get("semantic")
                     question_draft["temporal_relation"] = temporal_relation["relation"]
-                    logger.info(f"temporal_relation: {temporal_relation}")
                     random_pick_template = random.choice(
                         this_type_templates[temporal_relation_semantic]
                     )
@@ -768,6 +784,105 @@ class TKGQAGenerator:
                             f"duration_{temporal_relation_semantic}"
                         )
                         medium_type_1_b_questions.append(duration_question_draft)
+                else:
+                    """
+                    Handle in theory four types of questions here
+                    """
+                    if (
+                        question_draft["answer_type"]
+                        == "relation_union_or_intersection"
+                    ):
+                        temporal_relation = question_draft["temporal_relation"]
+                        random_pick_template = random.choice(
+                            this_type_templates[temporal_relation]
+                        )
+                        temporal_answer = self.relation_union_or_intersection(
+                            time_range_a=[
+                                first_event_start_time_dt,
+                                first_event_end_time_dt,
+                            ],
+                            time_range_b=[
+                                second_event_start_time_dt,
+                                second_event_end_time_dt,
+                            ],
+                            temporal_operator=temporal_relation,
+                        )
+
+                        question_draft["question"] = random_pick_template.format(
+                            first_event_subject=first_event_subject,
+                            first_event_predicate=first_event_predicate,
+                            first_event_object=first_event_object,
+                            second_event_subject=second_event_subject,
+                            second_event_predicate=second_event_predicate,
+                            second_event_object=second_event_object,
+                        )
+                        if temporal_answer is None:
+                            temporal_answer = "No Answer"
+                        question_draft["answer"] = temporal_answer
+                    elif question_draft["answer_type"] == "relation_allen":
+                        temporal_allen_relation = self.relation_allen_time_range(
+                            time_range_a=[
+                                first_event_start_time_dt,
+                                first_event_end_time_dt,
+                            ],
+                            time_range_b=[
+                                second_event_start_time_dt,
+                                second_event_end_time_dt,
+                            ],
+                        )
+                        # random select from [choices, true_false]
+                        question_format = random.choice(["choice", "true_false"])
+                        if question_format == "choice":
+                            random_pick_template = random.choice(
+                                this_type_templates["choice"]
+                            )
+                            temporal_answer = temporal_allen_relation["relation"]
+                            question_draft["question"] = random_pick_template.format(
+                                first_event_subject=first_event_subject,
+                                first_event_predicate=first_event_predicate,
+                                first_event_object=first_event_object,
+                                second_event_subject=second_event_subject,
+                                second_event_predicate=second_event_predicate,
+                                second_event_object=second_event_object,
+                            )
+                            question_draft["answer"] = temporal_answer
+                        else:
+                            random_pick_template = random.choice(
+                                this_type_templates["true_false"]
+                            )
+                            random_yes_no_answer = random.choice(["True", "False"])
+                            if random_yes_no_answer == "True":
+                                temporal_relation = temporal_allen_relation["relation"]
+                            else:
+                                temporal_relation = random.choice(
+                                    list(
+                                        set(self.allen_relations)
+                                        - {temporal_allen_relation["relation"]}
+                                    )
+                                )
+                            logger.info(random_pick_template)
+                            question_draft["question"] = random_pick_template.format(
+                                first_event_subject=first_event_subject,
+                                first_event_predicate=first_event_predicate,
+                                first_event_object=first_event_object,
+                                second_event_subject=second_event_subject,
+                                second_event_predicate=second_event_predicate,
+                                second_event_object=second_event_object,
+                                temporal_relation=temporal_relation,
+                            )
+                            question_draft["answer"] = random_yes_no_answer
+                    elif question_draft["answer_type"] == "relation_duration":
+                        temporal_allen_duration = self.relation_allen_time_duration(
+                            time_range_a=[
+                                first_event_start_time_dt,
+                                first_event_end_time_dt,
+                            ],
+                            time_range_b=[
+                                second_event_start_time_dt,
+                                second_event_end_time_dt,
+                            ],
+                        )
+                        logger.info(temporal_allen_duration)
 
         questions += medium_type_1_b_questions
         if pharaphrased:
@@ -816,20 +931,6 @@ class TKGQAGenerator:
         """
         start_time1, end_time1 = time_range_a
         start_time2, end_time2 = time_range_b
-        if start_time1 == "beginning of time":
-            start_time1 = datetime.min.replace(year=1)
-        if end_time1 == "end of time":
-            end_time1 = datetime.max.replace(year=9999)
-        if start_time2 == "beginning of time":
-            start_time2 = datetime.min.replace(year=1)
-        if end_time2 == "end of time":
-            end_time2 = datetime.max.replace(year=9999)
-
-        # convert the time to numerical value, format is like this: 1939-04-25
-        start_time1 = np.datetime64(start_time1)
-        end_time1 = np.datetime64(end_time1)
-        start_time2 = np.datetime64(start_time2)
-        end_time2 = np.datetime64(end_time2)
 
         logger.debug(
             f"start_time1: {start_time1}, end_time1: {end_time1}, start_time2: {start_time2}, end_time2: {end_time2}"
@@ -1142,8 +1243,10 @@ class TKGQAGenerator:
 
     @staticmethod
     def relation_union_or_intersection(
-        time_range_a, time_range_b, temporal_operator: str = None
-    ) -> set:
+        time_range_a: list[datetime, datetime],
+        time_range_b: list[datetime, datetime],
+        temporal_operator: str = None,
+    ) -> str:
         """
         This function will return the temporal operator between two time ranges
         The temporal operator can be:
@@ -1165,23 +1268,30 @@ class TKGQAGenerator:
         if temporal_operator is None or temporal_operator not in [
             "intersection",
             "union",
-            "complement",
         ]:
             raise ValueError(
                 "temporal_operator should be one of the following: intersection, union, complement"
             )
+        start_a, end_a = time_range_a
+        start_b, end_b = time_range_b
+
         if temporal_operator == "intersection":
-            # use set do it directly
-            intersection = set(time_range_a) & set(time_range_b)
-            return intersection
+            start = max(start_a, start_b)
+            end = min(end_a, end_b)
+            if start < end:
+                result = (start, end)
+            else:
+                return None
         elif temporal_operator == "union":
-            # use set do it directly
-            union = set(time_range_a) | set(time_range_b)
-            return union
-        else:
-            raise ValueError(
-                "temporal_operator should be one of the following: intersection, union, complement"
-            )
+            if start_a > end_b or start_b > end_a:
+                return None  # No overlap, no union # ALERT
+            start = min(start_a, start_b)
+            end = max(end_a, end_b)
+            result = (start, end)
+
+        result_str = f"({result[0]}, {result[1]})"
+
+        return result_str
 
     @staticmethod
     def relation_ordinal_time_range(
@@ -1336,6 +1446,50 @@ class TKGQAGenerator:
         if temporal_operator == "duration_after":
             return abs(time_range_b[1] - time_range_a[0])
         return None
+
+    @staticmethod
+    def util_str_to_datetime(
+        time_range_a: list[str, str], time_range_b: list[str, str]
+    ):
+        """
+        Convert the string to datetime
+
+        """
+        start_time1, end_time1 = time_range_a
+        start_time2, end_time2 = time_range_b
+        if start_time1 == "beginning of time":
+            start_time1 = datetime.min.replace(year=1)
+        if end_time1 == "end of time":
+            end_time1 = datetime.max.replace(year=9999)
+        if start_time2 == "beginning of time":
+            start_time2 = datetime.min.replace(year=1)
+        if end_time2 == "end of time":
+            end_time2 = datetime.max.replace(year=9999)
+
+        # convert the time to numerical value, format is like this: 1939-04-25
+        start_time1 = np.datetime64(start_time1)
+        end_time1 = np.datetime64(end_time1)
+        start_time2 = np.datetime64(start_time2)
+        end_time2 = np.datetime64(end_time2)
+        return start_time1, end_time1, start_time2, end_time2
+
+    @property
+    def allen_relations(self):
+        return [
+            "X < Y",
+            "X m Y",
+            "X o Y",
+            "X fi Y",
+            "X di Y",
+            "X s Y",
+            "X = Y",
+            "X si Y",
+            "X d Y",
+            "X f Y",
+            "X oi Y",
+            "X mi Y",
+            "X > Y",
+        ]
 
 
 if __name__ == "__main__":
