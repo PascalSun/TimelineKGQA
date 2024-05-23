@@ -665,29 +665,38 @@ class TKGQAGenerator:
                 this_type_templates = QUESTION_TEMPLATES[
                     question_draft["question_level"]
                 ][question_draft["question_type"]][question_draft["answer_type"]]
+                # first calculate the relations, then based on relations to select the template
+                if (
+                    question_draft["answer_type"] == "subject"
+                    or question_draft["answer_type"] == "object"
+                ):
+                    temporal_relation = self.relation_allen_time_range(
+                        time_range_a=[
+                            first_event_start_time,
+                            first_event_end_time,
+                        ],
+                        time_range_b=[
+                            second_event_start_time,
+                            second_event_end_time,
+                        ],
+                    )
+                    temporal_relation_semantic = temporal_relation.get("semantic")
+                    logger.info(f"temporal_relation: {temporal_relation}")
+                    random_pick_template = random.choice(
+                        this_type_templates[temporal_relation_semantic]
+                    )
 
-                # TODO: can use different relations, which will lead to different types of templates
-                random_pick_template = random.choice(this_type_templates)
-                # replace {subject}, {predicate}, {object}, {start_time}, {end_time} with the real value
-                temporal_relation = self.relation_allen_time_range(
-                    time_range_a=[
-                        first_event_start_time,
-                        first_event_end_time,
-                    ],
-                    time_range_b=[
-                        second_event_start_time,
-                        second_event_end_time,
-                    ],
-                )["description"]
-                question_draft["question"] = random_pick_template.format(
-                    first_event_subject=first_event_subject,
-                    first_event_predicate=first_event_predicate,
-                    first_event_object=first_event_object,
-                    temporal_relation=temporal_relation,
-                    second_event_subject=second_event_subject,
-                    second_event_predicate=second_event_predicate,
-                    second_event_object=second_event_object,
-                )
+                    question_draft["question"] = random_pick_template.format(
+                        first_event_subject=first_event_subject,
+                        first_event_predicate=first_event_predicate,
+                        first_event_object=first_event_object,
+                        temporal_relation=temporal_relation,
+                        second_event_subject=second_event_subject,
+                        second_event_predicate=second_event_predicate,
+                        second_event_object=second_event_object,
+                    )
+                    # this will generate the basic temporal relation questions.
+                    # TODO: we also need to generate the one duration_before, duration_after
 
         if pharaphrased:
             for question_obj in questions:
@@ -813,6 +822,7 @@ class TKGQAGenerator:
                 "description": "X precedes Y",
                 "category": "tr",
                 "code": "tr-1",
+                "semantic": "before",
             },
             (-1, -1, -1, -1, 0, -1): {
                 "relation": "X m Y",
@@ -837,6 +847,7 @@ class TKGQAGenerator:
                 "description": "X during Y",
                 "category": "tr",
                 "code": "tr-5",
+                "semantic": "during",
             },
             (-1, -1, 0, -1, 1, -1): {
                 "relation": "X s Y",

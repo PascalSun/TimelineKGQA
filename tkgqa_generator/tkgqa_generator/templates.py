@@ -33,16 +33,27 @@ QUESTION_TEMPLATES = {
         "timeline_recovery_temporal_constrainted_retrieval": {
             "subject": {
                 "before": [
-                    "Who {first_event_predicate} {first_event_object} {temporal_relation} {second_event_subject} {second_event_predicate} {second_event_object}?",
-                    "{temporal_relation} {second_event_subject} {second_event_predicate} {second_event_object}, who {first_event_predicate} {first_event_object}?",
+                    "Who/Which Organisation {first_event_predicate} {first_event_object} before {second_event_subject} {second_event_predicate} {second_event_object}?",
+                    "Before {second_event_subject} {second_event_predicate} {second_event_object}, Who/Which Organisation {first_event_predicate} {first_event_object}?",
+                    "Early than {second_event_subject} {second_event_predicate} {second_event_object}, Who/Which Organisation {first_event_predicate} {first_event_object}?",
+                    "Prior to {second_event_subject} {second_event_predicate} {second_event_object}, Who/Which Organisation {first_event_predicate} {first_event_object}?",
+                    "Who/Which Organisation {first_event_predicate} {first_event_object} ahead of {second_event_subject} {second_event_predicate} {second_event_object}?",
+                    "Who/Which Organisation {first_event_predicate} {first_event_object} preceding {second_event_subject} {second_event_predicate} {second_event_object}?",
+                    "Who/Which Organisation {first_event_predicate} {first_event_object} earlier than {second_event_subject} {second_event_predicate} {second_event_object}?",
+                    "Who/Which Organisation {first_event_predicate} {first_event_object} in advance of {second_event_subject} {second_event_predicate} {second_event_object}?",
                 ],
                 "after": [
                     "Who {second_event_predicate} {second_event_object} {temporal_relation} {first_event_subject} {first_event_predicate} {first_event_object}?",
                     "{temporal_relation} {first_event_subject} {first_event_predicate} {first_event_object}, who {second_event_predicate} {second_event_object}?",
                 ],
                 "during": [
-                    "Who {first_event_predicate} {first_event_object} {temporal_relation} {second_event_subject} {second_event_predicate} {second_event_object}?",
-                    "{temporal_relation} {second_event_subject} {second_event_predicate} {second_event_object}, who {first_event_predicate} {first_event_object}?",
+                    "Who {first_event_predicate} {first_event_object} during {second_event_subject} {second_event_predicate} {second_event_object}?",
+                    "during {second_event_subject} {second_event_predicate} {second_event_object}, who {first_event_predicate} {first_event_object}?",
+                    "Who {first_event_predicate} {first_event_object} while {second_event_subject} {second_event_predicate} {second_event_object}?",
+                    "while {second_event_subject} {second_event_predicate} {second_event_object}, who {first_event_predicate} {first_event_object}?",
+                    "Who {first_event_predicate} {first_event_object} in the course of {second_event_subject} {second_event_predicate} {second_event_object}?",
+                    "In the midst of {second_event_subject} {second_event_predicate} {second_event_object}, who {first_event_predicate} {first_event_object}?",
+                    "Who {first_event_predicate} {first_event_object} at the same time {second_event_subject} {second_event_predicate} {second_event_object}?",
                 ],
                 "starts": [
                     "Who starts {first_event_predicate} {first_event_object}, at the same time {second_event_subject} start {second_event_predicate} {second_event_object}?",
@@ -67,8 +78,11 @@ QUESTION_TEMPLATES = {
                     "Which organisation {second_event_predicate} {second_event_object} {temporal_relation} {first_event_subject} {first_event_predicate} {first_event_object}?",
                 ],
                 "during": [
-                    "{temporal_relation} {second_event_subject} {second_event_predicate} {second_event_object}, which organisation {first_event_predicate} {first_event_object}?",
-                    "Which organisation {first_event_predicate} {first_event_object} {temporal_relation} {second_event_subject} {second_event_predicate} {second_event_object}?",
+                    "During {second_event_subject} {second_event_predicate} {second_event_object}, which organisation is {first_event_predicate}ed {first_event_object}?",
+                    "Which organisation is {first_event_predicate}ed {first_event_object} while {second_event_subject} {second_event_predicate} {second_event_object}?",
+                    "Which organisation is {first_event_predicate}ed {first_event_object} during the period when {second_event_subject} {second_event_predicate} {second_event_object}?",
+                    "While {second_event_subject} {second_event_predicate} {second_event_object}, which organisation is {first_event_predicate}ed {first_event_object}?",
+                    "Which organisation is {first_event_predicate}ed {first_event_object} in the course of {second_event_subject} {second_event_predicate} {second_event_object}?",
                 ],
                 "starts": [
                     "{temporal_relation} {second_event_subject} {second_event_predicate} {second_event_object}, which organisation starts {first_event_predicate} {first_event_object}?",
