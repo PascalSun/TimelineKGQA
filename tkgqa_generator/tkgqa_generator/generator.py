@@ -1,3 +1,4 @@
+import copy
 import json
 import random
 from datetime import datetime, timedelta
@@ -413,37 +414,37 @@ class TKGQAGenerator:
                 - Note: Ranking will be the same as Allen, so it will be in **Complex** level
 
         """
-        logger.info(
-            f"SELECT * FROM {self.unified_kg_table} WHERE id not in (SELECT source_kg_id FROM {self.unified_kg_table_questions})"
-        )
-        self.cursor.execute(
-            f"SELECT * FROM {self.unified_kg_table} WHERE id not in (SELECT source_kg_id FROM {self.unified_kg_table_questions})"
-        )
-
+        # get all questions
+        self.cursor.execute(f"SELECT * FROM {self.unified_kg_table_questions}")
+        # get it into the dataframe
+        questions_df = pd.DataFrame(self.cursor.fetchall())
+        questions_df.columns = [desc[0] for desc in self.cursor.description]
+        logger.info(questions_df)
+        # TODO: can try to filter the events to make sure it make more sense in the final question
+        self.cursor.execute(f"SELECT * FROM {self.unified_kg_table}")
         first_event_df = pd.DataFrame(self.cursor.fetchall())
         first_event_df.columns = [desc[0] for desc in self.cursor.description]
         second_event_df = first_event_df.copy(deep=True)
+
+        insert_values_list = []
         for first_index, first_event in first_event_df.iterrows():
             for second_index, second_event in second_event_df.iterrows():
                 if first_index == second_index:
                     continue
 
                 source_kg_id = first_event["id"] * 1000000 + second_event["id"]
-                # check is this inthe datebase, if yes, then contine
-                # self.cursor.execute(
-                #     f"SELECT * FROM {self.unified_kg_table_questions} WHERE source_kg_id = {source_kg_id}"
-                # )
-                # logger.info(f"SELECT * FROM {self.unified_kg_table_questions} WHERE source_kg_id = {source_kg_id}")
-                # if self.cursor.fetchone():
-                #     continue
-                # logger.info(f"first_spo: {first_spo}, second_spo: {second_spo}")
-                # TODO: can try to filter the events to make sure it make more sense in the final question
+                logger.info(f"Generating question for source_kg_id: {source_kg_id}")
+                # check is this in the df already
+                if source_kg_id in questions_df["source_kg_id"].values:
+                    continue
+
                 questions = self.medium_question_generation_individual(
                     first_event=first_event.to_dict(),
                     second_event=second_event.to_dict(),
                     template_based=True,
-                    pharaphrased=True,
+                    pharaphrased=False,
                 )
+
                 for question_obj in questions:
                     indiv_sql_command = """
                     INSERT INTO {} (source_kg_id,
@@ -474,21 +475,48 @@ class TKGQAGenerator:
                         question_obj["answer_type"],
                         question_obj["temporal_relation"],
                     )
-                    try:
-                        self.cursor.execute(indiv_sql_command, data)
-                        self.connection.commit()
-                    except Exception as e:
-                        logger.error(f"Error: {e}")
-                        logger.info(data)
+                    insert_values_list.append(data)
+                    # try:
+                    #     self.cursor.execute(indiv_sql_command, data)
+                    #     # self.connection.commit()
+                    # except Exception as e:
+                    #     logger.error(f"Error: {e}")
+                    #     logger.info(data)
+        values_str = ",\n".join(
+            ["(%s, %s, %s, %s, %s, %s, %s, %s, %s)"] * len(insert_values_list)
+        )
+        # Final bulk insert command
+        bulk_insert_command = f"""
+        INSERT INTO {self.unified_kg_table_questions} (source_kg_id,
+                                                      question,
+                                                      answer,
+                                                      paraphrased_question,
+                                                      events,
+                                                      question_level,
+                                                      question_type,
+                                                      answer_type,
+                                                      temporal_relation
+                                                      )
+        VALUES {values_str}
+        """
 
-                # return
+        # Flatten the list of values tuples into a single tuple for execution
+        flat_values = [item for sublist in values_list for item in sublist]
+
+        # Execute the bulk insert command
+        try:
+            self.cursor.execute(bulk_insert_command, flat_values)
+            self.connection.commit()
+        except Exception as e:
+            logger.error(f"Error: {e}")
+            logger.info(flat_values)
 
     def medium_question_generation_individual(
             self,
             first_event: dict,
             second_event: dict,
             template_based: bool = True,
-            pharaphrased: bool = True,
+            pharaphrased: bool = False,
     ) -> dict:
         """
 
@@ -770,17 +798,17 @@ class TKGQAGenerator:
                         # NOTE: It can be extended further later to calculate first_start - second_start
                         duration = self.relation_duration_calculation(
                             time_range_a=[
-                                first_event_start_time,
-                                first_event_end_time,
+                                first_event_start_time_dt,
+                                first_event_end_time_dt,
                             ],
                             time_range_b=[
-                                second_event_start_time,
-                                second_event_end_time,
+                                second_event_start_time_dt,
+                                second_event_end_time_dt,
                             ],
                             temporal_operator=f"duration_{temporal_relation_semantic}",
                         )
                         # copy a new question draft
-                        duration_question_draft = question_draft.copy(deep=True)
+                        duration_question_draft = copy.deepcopy(question_draft)
                         duration_question_draft["question"] = (
                             random_pick_template.format(
                                 first_event_subject=first_event_subject,
@@ -995,7 +1023,7 @@ class TKGQAGenerator:
                         question_draft["answer"] = temporal_answer
                         question_draft["temporal_relation"] = temporal_relation
 
-        # questions += medium_type_1_b_questions
+        questions += medium_type_1_b_questions
         # if pharaphrased:
         #     for question_obj in questions:
         #         paraphrased_question = paraphrase_medium_question(
@@ -1012,6 +1040,87 @@ class TKGQAGenerator:
 
         - Type 1: Before Bush, after Kennedy, who is the president of US?
         - Type 2: Who is the first president of US among Bush, Kennedy, and Obama?
+        """
+        # get all questions
+        self.cursor.execute(f"SELECT * FROM {self.unified_kg_table_questions}")
+        # get it into the dataframe
+        questions_df = pd.DataFrame(self.cursor.fetchall())
+        questions_df.columns = [desc[0] for desc in self.cursor.description]
+        logger.info(questions_df)
+        # TODO: can try to filter the events to make sure it make more sense in the final question
+        self.cursor.execute(f"SELECT * FROM {self.unified_kg_table}")
+        first_event_df = pd.DataFrame(self.cursor.fetchall())
+        first_event_df.columns = [desc[0] for desc in self.cursor.description]
+        second_event_df = first_event_df.copy(deep=True)
+        third_event_df = first_event_df.copy(deep=True)
+
+        # next step is to construct three events
+        for first_index, first_event in first_event_df.iterrows():
+            for second_index, second_event in second_event_df.iterrows():
+                if first_index == second_index:
+                    continue
+                for third_index, third_event in third_event_df.iterrows():
+                    if first_index == third_index or second_index == third_index:
+                        continue
+
+                    source_kg_id = (
+                            first_event["id"] * 1000000 * 1000000
+                            + second_event["id"] * 1000000
+                            + third_event["id"]
+                    )
+                    if source_kg_id in questions_df["source_kg_id"].values:
+                        continue
+                    logger.info(f"Generating question for source_kg_id: {source_kg_id}")
+
+                    self.complex_question_generation_individual(
+                        first_event=first_event.to_dict(),
+                        second_event=second_event.to_dict(),
+                        third_event=third_event.to_dict(),
+                        template_based=True,
+                        pharaphrased=False,
+                    )
+
+    def complex_question_generation_individual(
+            self,
+            first_event: dict,
+            second_event: dict,
+            third_event: dict,
+            template_based: bool = True,
+            pharaphrased: bool = True,
+    ) -> dict:
+        """
+        Args:
+            first_event (dict): The first event
+            second_event (dict): The second event
+            third_event (dict): The third event
+            template_based (bool): Whether use the template based question generation
+            pharaphrased (bool): Whether do the paraphrase for the question, if set to False,
+                    then the paraphrased_question will be the same as the question
+
+        Returns:
+            dict: The generated questions
+                - question
+                - answer
+                - paraphrased_question
+                - events
+                - question_level: Complex
+                - question_type: The type of the question
+                - answer_type: The type of the answer
+
+
+        - question_type:
+            - timeline_position_retrievel *2 + temporal constrainted retrieval
+            - timeline_position_retrievel *3
+        - answer_type:
+            - type1:
+                - subject
+                - object
+            - type2:
+                - Infer a new time range: Union/Intersection
+                - Infer a temporal relation: Allen
+                - Infer a list of time ranges: Ranking
+                - Infer duration, and then compare
+
         """
         pass
 
