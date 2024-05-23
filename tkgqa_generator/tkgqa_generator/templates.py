@@ -55,46 +55,97 @@ QUESTION_TEMPLATES = {
                     "In the midst of {second_event_subject} {second_event_predicate} {second_event_object}, who {first_event_predicate} {first_event_object}?",
                     "Who {first_event_predicate} {first_event_object} at the same time {second_event_subject} {second_event_predicate} {second_event_object}?",
                 ],
+                "meets": [
+                    # This means first end time = second start time
+                    "When {second_event_subject} starts {second_event_predicate} {second_event_object}, who ends {first_event_predicate} {first_event_object}?",
+                    "Who ends {first_event_predicate} {first_event_object} when {second_event_subject} starts {second_event_predicate} {second_event_object}?",
+                ],
+                "metby": [
+                    # This means first start time = second end time
+                    "When {second_event_subject} ends {second_event_predicate} {second_event_object}, who starts {first_event_predicate} {first_event_object}?",
+                    "Who starts {first_event_predicate} {first_event_object} when {second_event_subject} ends {second_event_predicate} {second_event_object}?",
+                ],
                 "starts": [
+                    # This means first and second start at the same time, however, the end time of the first event is before the end time of the second event
                     "Who starts {first_event_predicate} {first_event_object}, at the same time {second_event_subject} start {second_event_predicate} {second_event_object}?",
+                    "At the same time {second_event_subject} start {second_event_predicate} {second_event_object}, who starts {first_event_predicate} {first_event_object}?",
+                ],
+                "startedby": [
+                    # This means first and second start at the same time, however, the end time of the first event is after the end time of the second event
+                    "Who starts {first_event_predicate} {first_event_object}, at the same time {second_event_subject} start {second_event_predicate} {second_event_object}?",
+                    "At the same time {second_event_subject} start {second_event_predicate} {second_event_object}, who starts {first_event_predicate} {first_event_object}?",
                 ],
                 "finishes": [
+                    # This means first and second finish at the same time, however, the start time of the first event is after the start time of the second event
                     "Who finishes {first_event_predicate} {first_event_object}, at the same time {second_event_subject} finish {second_event_predicate} {second_event_object}?",
+                    "At the same time {second_event_subject} finish {second_event_predicate} {second_event_object}, who finishes {first_event_predicate} {first_event_object}?",
+                ],
+                "finishedby": [
+                    # This means first and second finish at the same time, however, the start time of the first event is before the start time of the second event
+                    "Who finishes {first_event_predicate} {first_event_object}, at the same time {second_event_subject} finish {second_event_predicate} {second_event_object}?",
+                    "At the same time {second_event_subject} finish {second_event_predicate} {second_event_object}, who finishes {first_event_predicate} {first_event_object}?",
+                ],
+                "equal": [
+                    # This means first and second start and end at the same time
+                    "Who {first_event_predicate} {first_event_object}, at the same time {second_event_subject} {second_event_predicate} {second_event_object}?",
+                    "Who {first_event_predicate} {first_event_object} at the same start and end time {second_event_subject} start and end {second_event_predicate} {second_event_object}?",
                 ],
                 "duration_before": [
                     "Who {first_event_predicate} {first_event_object} {temporal_relation} {second_event_subject} {second_event_predicate} {second_event_object}?",
                 ],
                 "duration_after": [
-                    "Who {second_event_predicate} {second_event_object} {temporal_relation} {first_event_subject} {first_event_predicate} {first_event_object}?",
+                    "Who {first_event_predicate} {first_event_object} {temporal_relation} {second_event_subject} {second_event_predicate} {second_event_object}?",
                 ],
             },
             "object": {
                 "before": [
-                    "{temporal_relation} {second_event_subject} {second_event_predicate} {second_event_object}, which organisation {first_event_predicate} {first_event_object}?",
-                    "Which organisation {first_event_predicate} {first_event_object} {temporal_relation} {second_event_subject} {second_event_predicate} {second_event_object}?",
+                    "Before {second_event_subject} {second_event_predicate} {second_event_object}, which organisation is {first_event_predicate} by {first_event_subject}?",
+                    "Which organisation is {first_event_predicate}ed by {first_event_subject} before {second_event_subject} {second_event_predicate} {second_event_object}?",
                 ],
                 "after": [
-                    "{temporal_relation} {first_event_subject} {first_event_predicate} {first_event_object}, which organisation {second_event_predicate} {second_event_object}?",
-                    "Which organisation {second_event_predicate} {second_event_object} {temporal_relation} {first_event_subject} {first_event_predicate} {first_event_object}?",
+                    "{first_event_subject} {first_event_predicate} which ORGANISATION after {second_event_subject} {second_event_predicate} {second_event_object}?",
+                    "Which organisation is {first_event_predicate}ed by {first_event_subject} after {second_event_subject} {second_event_predicate} {second_event_object}?",
                 ],
                 "during": [
-                    "During {second_event_subject} {second_event_predicate} {second_event_object}, which organisation is {first_event_predicate}ed {first_event_object}?",
-                    "Which organisation is {first_event_predicate}ed {first_event_object} while {second_event_subject} {second_event_predicate} {second_event_object}?",
-                    "Which organisation is {first_event_predicate}ed {first_event_object} during the period when {second_event_subject} {second_event_predicate} {second_event_object}?",
-                    "While {second_event_subject} {second_event_predicate} {second_event_object}, which organisation is {first_event_predicate}ed {first_event_object}?",
-                    "Which organisation is {first_event_predicate}ed {first_event_object} in the course of {second_event_subject} {second_event_predicate} {second_event_object}?",
+                    "During {second_event_subject} {second_event_predicate} {second_event_object}, which organisation is {first_event_predicate}ed by {first_event_subject}?",
+                    "Which organisation is {first_event_predicate}ed {first_event_subject} while {second_event_subject} {second_event_predicate} {second_event_object}?",
+                    "Which organisation is {first_event_predicate}ed {first_event_subject} during the period when {second_event_subject} {second_event_predicate} {second_event_object}?",
+                    "While {second_event_subject} {second_event_predicate} {second_event_object}, which organisation is {first_event_predicate}ed {first_event_subject}?",
+                    "Which organisation is {first_event_predicate}ed {first_event_subject} in the course of {second_event_subject} {second_event_predicate} {second_event_object}?",
+                ],
+                "meets": [
+                    # This means first end time = second start time, this question is asking for the first object
+                    "{second_event_subject} starts {second_event_predicate} {second_event_object} at the same time {first_event_subject} ends {first_event_predicate} with which Organisation?",
+                ],
+                "metby": [
+                    # This means first start time = second end time, this question is asking for the first object
+                    "{second_event_subject} ends {second_event_predicate} {second_event_object} at the same time {first_event_subject} starts {first_event_predicate} with which Organisation?",
                 ],
                 "starts": [
-                    "{temporal_relation} {second_event_subject} {second_event_predicate} {second_event_object}, which organisation starts {first_event_predicate} {first_event_object}?",
+                    # This means first and second start at the same time, however, the end time of the first event is before the end time of the second event
+                    "At the same time {second_event_subject} start {second_event_predicate} {second_event_object}, in which organisation {first_event_subject} starts {first_event_predicate}",
+                ],
+                "startedby": [
+                    # This means first and second start at the same time, however, the end time of the first event is after the end time of the second event
+                    "At the same time {second_event_subject} start {second_event_predicate} {second_event_object}, in which organisation {first_event_subject} starts {first_event_predicate}",
                 ],
                 "finishes": [
-                    "{temporal_relation} {second_event_subject} {second_event_predicate} {second_event_object}, which organisation finishes {first_event_predicate} {first_event_object}?",
+                    # This means first and second finish at the same time, however, the start time of the first event is after the start time of the second event
+                    "At the same time {second_event_subject} finish {second_event_predicate} {second_event_object}, in which organisation {first_event_subject} finishes {first_event_predicate}",
+                ],
+                "finishedby": [
+                    # This means first and second finish at the same time, however, the start time of the first event is before the start time of the second event
+                    "At the same time {second_event_subject} finish {second_event_predicate} {second_event_object}, in which organisation {first_event_subject} finishes {first_event_predicate}",
+                ],
+                "equal": [
+                    # This means first and second start and end at the same time
+                    "At the same time {second_event_subject} {second_event_predicate} {second_event_object}, in which organisation {first_event_subject} {first_event_predicate}?",
                 ],
                 "duration_before": [
-                    "{temporal_relation} {second_event_subject} {second_event_predicate} {second_event_object}, which organisation {first_event_predicate} {first_event_object}?",
+                    "{temporal_relation} {second_event_subject} {second_event_predicate} {second_event_object}, in which organisation, {first_event_subject} {first_event_predicate}?",
                 ],
                 "duration_after": [
-                    "{temporal_relation} {first_event_subject} {first_event_predicate} {first_event_object}, which organisation {second_event_predicate} {second_event_object}?",
+                    "{temporal_relation} {first_event_subject} {first_event_predicate} {first_event_object}, in which organisation, {first_event_subject} {first_event_predicate}?",
                 ],
             },
         },
