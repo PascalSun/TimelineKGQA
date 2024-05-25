@@ -582,14 +582,11 @@ class TKGQAGenerator:
         second_event_start_time = second_event["start_time"]
         second_event_end_time = second_event["end_time"]
 
-        (
-            first_event_start_time_dt,
-            first_event_end_time_dt,
-            second_event_start_time_dt,
-            second_event_end_time_dt,
-        ) = self.util_str_to_datetime(
-            [first_event_start_time, first_event_end_time],
-            [second_event_start_time, second_event_end_time],
+        first_event_start_time_dt, first_event_end_time_dt = self.util_str_to_datetime(
+            [first_event_start_time, first_event_end_time]
+        )
+        second_event_start_time_dt, second_event_end_time_dt = self.util_str_to_datetime(
+            [second_event_start_time, second_event_end_time]
         )
 
         # first generate
@@ -1024,13 +1021,13 @@ class TKGQAGenerator:
                         question_draft["temporal_relation"] = temporal_relation
 
         questions += medium_type_1_b_questions
-        # if pharaphrased:
-        #     for question_obj in questions:
-        #         paraphrased_question = paraphrase_medium_question(
-        #             question=question_obj["question"],
-        #         )
-        #         logger.info(f"paraphrased_question: {paraphrased_question}")
-        #         question_obj["pharaphrased_question"] = paraphrased_question
+        if pharaphrased:
+            for question_obj in questions:
+                paraphrased_question = paraphrase_medium_question(
+                    question=question_obj["question"],
+                )
+                logger.info(f"paraphrased_question: {paraphrased_question}")
+                question_obj["pharaphrased_question"] = paraphrased_question
 
         return questions
 
@@ -1114,15 +1111,61 @@ class TKGQAGenerator:
         - answer_type:
             - type1:
                 - subject
+                    - trel b, trel c, ? predicate object
                 - object
+                    - trel b, trel c, subject predicate ?
             - type2:
                 - Infer a new time range: Union/Intersection
+                    - trel b, trel c, from when to when the subject predicate object? (intersection)
+                    - within (trel b, trel c), who is the subject predicate object? (union)
                 - Infer a temporal relation: Allen
+                    - ? More making sense one is ranking
+                    - hard to justify the question that
+                    - If we ask for choice question, it will be between two events
+                    - If we ask for true/false, event a,b,c; ab, ac, bc;  Question, ab+ac => is bc relation True
                 - Infer a list of time ranges: Ranking
+                    - Who is the {} amony a,b,c? => a
                 - Infer duration, and then compare
+                    - Who is the president of US for the longest time among a, b, c? => a
 
         """
-        pass
+
+        first_event_subject = first_event["subject"]
+        first_event_predicate = first_event["predicate"]
+        first_event_object = first_event["object"]
+        first_event_start_time = first_event["start_time"]
+        first_event_end_time = first_event["end_time"]
+
+        second_event_subject = second_event["subject"]
+        second_event_predicate = second_event["predicate"]
+        second_event_object = second_event["object"]
+        second_event_start_time = second_event["start_time"]
+        second_event_end_time = second_event["end_time"]
+
+        third_event_subject = third_event["subject"]
+        third_event_predicate = third_event["predicate"]
+        third_event_object = third_event["object"]
+        third_event_start_time = third_event["start_time"]
+        third_event_end_time = third_event["end_time"]
+
+        first_event_start_time_dt, first_event_end_time_dt = self.util_str_to_datetime(
+            [first_event_start_time, first_event_end_time]
+        )
+        second_event_start_time_dt, second_event_end_time_dt = self.util_str_to_datetime(
+            [second_event_start_time, second_event_end_time]
+        )
+        third_event_start_time_dt, third_event_end_time_dt = self.util_str_to_datetime(
+            [third_event_start_time, third_event_end_time]
+        )
+
+        # first generate
+        # timeline_position_retrievel *2 + temporal constrainted retrieval
+        # ask for the first subject
+        complex_type_1_a_questions = []
+        questions = []
+        
+        
+
 
     @staticmethod
     def relation_allen_time_range(
@@ -1669,29 +1712,29 @@ class TKGQAGenerator:
 
     @staticmethod
     def util_str_to_datetime(
-            time_range_a: list[str, str], time_range_b: list[str, str]
+            time_range: list[str, str]
     ):
         """
         Convert the string to datetime
 
+        Args:
+            time_range (list[str, str]): The time range in string format
+
+        Returns:
+            list[datetime, datetime]: The time range in datetime format
+
         """
-        start_time1, end_time1 = time_range_a
-        start_time2, end_time2 = time_range_b
-        if start_time1 == "beginning of time":
-            start_time1 = datetime.min.replace(year=1)
-        if end_time1 == "end of time":
-            end_time1 = datetime.max.replace(year=9999)
-        if start_time2 == "beginning of time":
-            start_time2 = datetime.min.replace(year=1)
-        if end_time2 == "end of time":
-            end_time2 = datetime.max.replace(year=9999)
+        start_time, end_time = time_range
+        if start_time == "beginning of time":
+            start_time = datetime.min.replace(year=1)
+        if end_time == "end of time":
+            end_time = datetime.max.replace(year=9999)
 
         # convert the time to numerical value, format is like this: 1939-04-25
-        start_time1 = np.datetime64(start_time1)
-        end_time1 = np.datetime64(end_time1)
-        start_time2 = np.datetime64(start_time2)
-        end_time2 = np.datetime64(end_time2)
-        return start_time1, end_time1, start_time2, end_time2
+        start_time = np.datetime64(start_time)
+        end_time = np.datetime64(end_time)
+
+        return start_time, end_time
 
     def util_average_duration_calculation(
             self, time_ranges: list[[datetime, datetime]], temporal_operator: str = None
