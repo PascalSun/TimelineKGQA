@@ -2,6 +2,7 @@ import copy
 import json
 import random
 from datetime import datetime, timedelta
+from typing import List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -44,9 +45,9 @@ class TKGQAGenerator:
     So when we try to retrieval the information, espeically the temporal part of the information.
     Normally we have several types:
 
-    - Timeline Recovery: When Bush starts his term as president of US?
+    - Timeline Position Retrievaly: When Bush starts his term as president of US?
         - First: **General Information Retrieval** [(Bush, start, president of US), (Bush, term, president of US)]
-        - Second: **Timeline Recovery Retrieval** [(Bush, start, president of US, 2000, 2000), (Bush, term, president of US, 2000, 2008)]
+        - Second: **Timeline Position Retrievaly Retrieval** [(Bush, start, president of US, 2000, 2000), (Bush, term, president of US, 2000, 2008)]
         - Third: Answer the question based on the timeline information
     - Temporal Constrainted Retrieval: In 2009, who is the president of US?
         - First: **General Information Retrieval** [(Bush, president of US), (Obama, president of US), (Trump, president of US)]
@@ -56,7 +57,7 @@ class TKGQAGenerator:
     Three key things here:
     - **General Information Retrieval**: Retrieve the general information from the knowledge graph based on the question
     - **Temporal Constrainted Retrieval**: Filter on general information retrieval, apply the temporal constraint
-    - **Timeline Recovery Retrieval**: Based on general information retrieval, recover the timeline information
+    - **Timeline Position Retrievaly Retrieval**: Based on general information retrieval, recover the timeline information
 
     ## Temporal Questions
     We can try to classify the temporal questions from quite a few perspectives:
@@ -71,19 +72,19 @@ class TKGQAGenerator:
     We are trying to decompose the question into the three key parts we mentioned above, so we can evaluate the ability of the models for this three key capabilities.
 
     ### Simple: Timeline and One Event Involved
-    - Timeline Recovery: When Bush starts his term as president of US?
-        - General Information Retrieval => Timeline Recovery => Answer the question
+    - Timeline Position Retrievaly: When Bush starts his term as president of US?
+        - General Information Retrieval => Timeline Position Retrievaly => Answer the question
         - Question Focus can be: Timestamp Start, Timestamp End, Duration, Timestamp Start and End
     - Temporal Constrainted Retrieval: In 2009, who is the president of US?
         - General Information Retrieval => Temporal Constraint Retrieval => Answer the question
         - Question Focus can be: Subject, Object, Predicate. Can be more complex if we want mask out more elements
 
     ### Medium: Timeline and Two Events Involved
-    - Timeline Recovery + Timeline Recovery: Is Bush president of US when 911 happen?
-        - (General Information Retrieval => Timeline Recovery) And (General Information Retrieval => Timeline Recovery) => Timeline Operation => Answer the question
+    - Timeline Position Retrievaly + Timeline Position Retrievaly: Is Bush president of US when 911 happen?
+        - (General Information Retrieval => Timeline Position Retrievaly) And (General Information Retrieval => Timeline Position Retrievaly) => Timeline Operation => Answer the question
         - Question Focus can be: A new Time Range, A temporal relation (Before, After, During, etc.), A list of Time Range (Ranking), or Comparison of Duration
-    - Timeline Recovery + Temporal Constrainted Retrieval: When Bush is president of US, who is the president of China?
-        - (General Information Retrieval => Timeline Recovery) => Temporal Constraint Retrieval => Answer the question
+    - Timeline Position Retrievaly + Temporal Constrainted Retrieval: When Bush is president of US, who is the president of China?
+        - (General Information Retrieval => Timeline Position Retrievaly) => Temporal Constraint Retrieval => Answer the question
         - This is same as above, Question Focus can be: Subject, Object
 
     ### Complex: Timeline and Multiple Events Involved
@@ -93,9 +94,9 @@ class TKGQAGenerator:
 
     So if we say Complex is 3 events and Timeline.
 
-    - Timeline Recovery + Timeline Recovery + Timeline Recovery: When Bush is president of US and Putin is President of Russion, is Hu the president of China?
-        - (General Information Retrieval => Timeline Recovery) And (General Information Retrieval => Timeline Recovery) And (General Information Retrieval => Timeline Recovery) => Timeline Operation => Answer the question
-    - Timeline Recovery + Timeline Recovery + Temporal Constrainted Retrieval: When Bush is president of US and Putin is President of Russion, who is the president of China?
+    - Timeline Position Retrievaly + Timeline Position Retrievaly + Timeline Position Retrievaly: When Bush is president of US and Putin is President of Russion, is Hu the president of China?
+        - (General Information Retrieval => Timeline Position Retrievaly) And (General Information Retrieval => Timeline Position Retrievaly) And (General Information Retrieval => Timeline Position Retrievaly) => Timeline Operation => Answer the question
+    - Timeline Position Retrievaly + Timeline Position Retrievaly + Temporal Constrainted Retrieval: When Bush is president of US and Putin is President of Russion, who is the president of China?
 
     input will be a unified knowledge graph, it will be stored in a table
         subject
@@ -109,13 +110,13 @@ class TKGQAGenerator:
     """
 
     def __init__(
-            self,
-            table_name: str,
-            host: str,
-            port: int,
-            user: str,
-            password: str,
-            db_name: str = "tkgqa",
+        self,
+        table_name: str,
+        host: str,
+        port: int,
+        user: str,
+        password: str,
+        db_name: str = "tkgqa",
     ):
         # setup the db connection
         self.host = host
@@ -158,7 +159,7 @@ class TKGQAGenerator:
         This is used to generate the simple question, we will have two types of questions.
 
         For each type of questions, based on the answer or the question focus, we can further divide them into
-        - Timeline Recovery
+        - Timeline Position Retrievaly
             - Start TimePoint
             - End TimePoint
             - Time Range
@@ -168,8 +169,8 @@ class TKGQAGenerator:
             - Object
 
         Simple: Timeline and One Event Involved
-        - Timeline Recovery: When Bush starts his term as president of US?
-            - General Information Retrieval => Timeline Recovery => Answer the question
+        - Timeline Position Retrievaly: When Bush starts his term as president of US?
+            - General Information Retrieval => Timeline Position Retrievaly => Answer the question
             - Question Focus can be: Timestamp Start, Timestamp End, Duration, Timestamp Start and End
         - Temporal Constrainted Retrieval: In 2009, who is the president of US?
             - General Information Retrieval => Temporal Constraint Retrieval => Answer the question
@@ -182,7 +183,7 @@ class TKGQAGenerator:
         Then use LLM to pharaphrase the questions.
 
         Template examples:
-        - Timeline Recovery
+        - Timeline Position Retrievaly
             - Start TimePoint: When did {subject} start the term as {object}?
             - End TimePoint: When did {subject} end the term as {object}?
             - Time Range: When did {subject} serve as {object}?
@@ -206,7 +207,7 @@ class TKGQAGenerator:
         - {paraphrased_question}
         - subject, predicate, object, start_time, end_time
         - {question_level} => Simple
-        - {question_type} => Timeline Recovery, Temporal Constrainted Retrieval
+        - {question_type} => Timeline Position Retrievaly, Temporal Constrainted Retrieval
         - {answer_type} => Subject, Object | Timestamp Start, Timestamp End, Duration, Timestamp Start and End
         """
         # get records not yet generated questions
@@ -265,13 +266,13 @@ class TKGQAGenerator:
 
     @staticmethod
     def simple_question_generation_individual(
-            subject: str,
-            predicate: str,
-            object: str,
-            start_time: str,
-            end_time: str,
-            template_based: bool = False,
-            pharaphrased: bool = False,
+        subject: str,
+        predicate: str,
+        object: str,
+        start_time: str,
+        end_time: str,
+        template_based: bool = False,
+        pharaphrased: bool = False,
     ) -> dict:
         """
         This will try to generate four questions belong to RE type
@@ -394,8 +395,8 @@ class TKGQAGenerator:
         """
         This will involve mainly two types of questions
 
-        - **Timeline Recovery => Temporal Constrainted Retrieval**
-        - **Timeline Recovery + Timeline Recovery**
+        - **Timeline Position Retrievaly => Temporal Constrainted Retrieval**
+        - **Timeline Position Retrievaly + Timeline Position Retrievaly**
 
         ---
 
@@ -512,11 +513,11 @@ class TKGQAGenerator:
             logger.info(flat_values)
 
     def medium_question_generation_individual(
-            self,
-            first_event: dict,
-            second_event: dict,
-            template_based: bool = True,
-            pharaphrased: bool = False,
+        self,
+        first_event: dict,
+        second_event: dict,
+        template_based: bool = True,
+        pharaphrased: bool = False,
     ) -> dict:
         """
 
@@ -585,8 +586,8 @@ class TKGQAGenerator:
         first_event_start_time_dt, first_event_end_time_dt = self.util_str_to_datetime(
             [first_event_start_time, first_event_end_time]
         )
-        second_event_start_time_dt, second_event_end_time_dt = self.util_str_to_datetime(
-            [second_event_start_time, second_event_end_time]
+        second_event_start_time_dt, second_event_end_time_dt = (
+            self.util_str_to_datetime([second_event_start_time, second_event_end_time])
         )
 
         # first generate
@@ -596,7 +597,7 @@ class TKGQAGenerator:
         medium_type_1_a_questions = []
         questions = []
         """
-        Timeline Recovery => Temporal Constrainted Retrieval Questions 
+        Timeline Position Retrievaly => Temporal Constrainted Retrieval Questions 
         """
         # NOTES: question here actually is not used, because we will replace it with the template.
         # It is putting there to get the idea about the types of questions we are generating
@@ -669,7 +670,7 @@ class TKGQAGenerator:
         # this will be added later when we process the questions with template
 
         """
-        Timeline Recovery + Timeline Recovery Questions
+        Timeline Position Retrieval + Timeline Position Retrieval Questions
         
         This one is mainly from numeric to temporal semantic
         
@@ -709,21 +710,21 @@ class TKGQAGenerator:
                 "answer_type": "relation_union_or_intersection",
                 "temporal_relation": "union",
             },
-            {
-                "question": f"{first_event_subject} {first_event_predicate} {first_event_object} ???[Timeline Operation on ({first_event_start_time}, {first_event_end_time}) vs ({second_event_start_time}, {second_event_end_time})]??? {second_event_subject} {second_event_predicate} {second_event_object}?",
-                "answer": f"Temporal Relation",
-                "pharaphrased_question": None,
-                "events": [
-                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|{first_event_start_time}|{first_event_end_time}",
-                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|{second_event_start_time}|{second_event_end_time}",
-                ],
-                "question_level": "medium",
-                "question_type": "timeline_recovery_timeline_recovery",
-                "answer_type": "relation_allen",
-                "temporal_relation": None,
-                # under this, random choose choices question or yes/no question
-                # for yes/no question, we randomly generate yes or no answer questions.
-            },
+            # {
+            #     "question": f"{first_event_subject} {first_event_predicate} {first_event_object} ???[Timeline Operation on ({first_event_start_time}, {first_event_end_time}) vs ({second_event_start_time}, {second_event_end_time})]??? {second_event_subject} {second_event_predicate} {second_event_object}?",
+            #     "answer": f"Temporal Relation",
+            #     "pharaphrased_question": None,
+            #     "events": [
+            #         f"{first_event_subject}|{first_event_predicate}|{first_event_object}|{first_event_start_time}|{first_event_end_time}",
+            #         f"{second_event_subject}|{second_event_predicate}|{second_event_object}|{second_event_start_time}|{second_event_end_time}",
+            #     ],
+            #     "question_level": "medium",
+            #     "question_type": "timeline_recovery_timeline_recovery",
+            #     "answer_type": "relation_allen",
+            #     "temporal_relation": None,
+            #     # under this, random choose choices question or yes/no question
+            #     # for yes/no question, we randomly generate yes or no answer questions.
+            # },
             {
                 "question": f"{first_event_subject} {first_event_predicate} {first_event_object} ???[Timeline Operation on ({first_event_start_time}, {first_event_end_time}) vs ({second_event_start_time}, {second_event_end_time})]??? {second_event_subject} {second_event_predicate} {second_event_object}?",
                 "answer": f"Duration",
@@ -747,8 +748,8 @@ class TKGQAGenerator:
                 ][question_draft["question_type"]][question_draft["answer_type"]]
 
                 if (
-                        question_draft["answer_type"] == "subject"
-                        or question_draft["answer_type"] == "object"
+                    question_draft["answer_type"] == "subject"
+                    or question_draft["answer_type"] == "object"
                 ):
                     """
                     Handle the Medium Type 1 Questions here: Both a and b
@@ -826,21 +827,17 @@ class TKGQAGenerator:
                     Handle in theory four types of questions here
                     """
                     if (
-                            question_draft["answer_type"]
-                            == "relation_union_or_intersection"
+                        question_draft["answer_type"]
+                        == "relation_union_or_intersection"
                     ):
                         temporal_relation = question_draft["temporal_relation"]
                         random_pick_template = random.choice(
                             this_type_templates[temporal_relation]
                         )
                         temporal_answer = self.relation_union_or_intersection(
-                            time_range_a=[
-                                first_event_start_time_dt,
-                                first_event_end_time_dt,
-                            ],
-                            time_range_b=[
-                                second_event_start_time_dt,
-                                second_event_end_time_dt,
+                            time_ranges=[
+                                [first_event_start_time_dt, first_event_end_time_dt],
+                                [second_event_start_time_dt, second_event_end_time_dt],
                             ],
                             temporal_operator=temporal_relation,
                         )
@@ -932,13 +929,15 @@ class TKGQAGenerator:
                         question_draft["temporal_relation"] = temporal_relation
                         if temporal_relation == "duration":
                             temporal_answer = self.relation_union_or_intersection(
-                                time_range_a=[
-                                    first_event_start_time_dt,
-                                    first_event_end_time_dt,
-                                ],
-                                time_range_b=[
-                                    second_event_start_time_dt,
-                                    second_event_end_time_dt,
+                                time_ranges=[
+                                    [
+                                        first_event_start_time_dt,
+                                        first_event_end_time_dt,
+                                    ],
+                                    [
+                                        second_event_start_time_dt,
+                                        second_event_end_time_dt,
+                                    ],
                                 ],
                                 temporal_operator="intersection",
                             )
@@ -1061,9 +1060,9 @@ class TKGQAGenerator:
                         continue
 
                     source_kg_id = (
-                            first_event["id"] * 1000000 * 1000000
-                            + second_event["id"] * 1000000
-                            + third_event["id"]
+                        first_event["id"] * 1000000 * 1000000
+                        + second_event["id"] * 1000000
+                        + third_event["id"]
                     )
                     if source_kg_id in questions_df["source_kg_id"].values:
                         continue
@@ -1076,14 +1075,15 @@ class TKGQAGenerator:
                         template_based=True,
                         pharaphrased=False,
                     )
+                    return
 
     def complex_question_generation_individual(
-            self,
-            first_event: dict,
-            second_event: dict,
-            third_event: dict,
-            template_based: bool = True,
-            pharaphrased: bool = True,
+        self,
+        first_event: dict,
+        second_event: dict,
+        third_event: dict,
+        template_based: bool = True,
+        pharaphrased: bool = True,
     ) -> dict:
         """
         Args:
@@ -1151,25 +1151,289 @@ class TKGQAGenerator:
         first_event_start_time_dt, first_event_end_time_dt = self.util_str_to_datetime(
             [first_event_start_time, first_event_end_time]
         )
-        second_event_start_time_dt, second_event_end_time_dt = self.util_str_to_datetime(
-            [second_event_start_time, second_event_end_time]
+        second_event_start_time_dt, second_event_end_time_dt = (
+            self.util_str_to_datetime([second_event_start_time, second_event_end_time])
         )
         third_event_start_time_dt, third_event_end_time_dt = self.util_str_to_datetime(
             [third_event_start_time, third_event_end_time]
         )
 
         # first generate
-        # timeline_position_retrievel *2 + temporal constrainted retrieval
-        # ask for the first subject
         complex_type_1_a_questions = []
         questions = []
-        
-        
 
+        # timeline_position_retrievel *2 + temporal constrainted retrieval
+        # ask for the first subject
+        complex_type_1_a_questions.append(
+            {
+                "question": f"??? {first_event_predicate} {first_event_object} {second_event_predicate} {second_event_object} {third_event_predicate} {third_event_object}?",
+                "answer": f"{first_event_subject}",
+                "pharaphrased_question": None,
+                "events": [
+                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|{first_event_start_time}|{first_event_end_time}",
+                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|{second_event_start_time}|{second_event_end_time}",
+                    f"{third_event_subject}|{third_event_predicate}|{third_event_object}|{third_event_start_time}|{third_event_end_time}",
+                ],
+                "question_level": "complex",
+                "question_type": "timeline_position_retrievel*2+temporal_constrainted_retrieval",
+                "answer_type": "subject",
+                "temporal_relation": None,
+            }
+        )
+        # ask for first object
+        complex_type_1_a_questions.append(
+            {
+                "question": f"{first_event_subject} {first_event_predicate} ??? {second_event_predicate} {second_event_object} {third_event_predicate} {third_event_object}?",
+                "answer": f"{first_event_object}",
+                "pharaphrased_question": None,
+                "events": [
+                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|{first_event_start_time}|{first_event_end_time}",
+                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|{second_event_start_time}|{second_event_end_time}",
+                    f"{third_event_subject}|{third_event_predicate}|{third_event_object}|{third_event_start_time}|{third_event_end_time}",
+                ],
+                "question_level": "complex",
+                "question_type": "timeline_position_retrievel*2+temporal_constrainted_retrieval",
+                "answer_type": "object",
+                "temporal_relation": None,
+            }
+        )
+
+        questions += complex_type_1_a_questions
+
+        """
+        For duration before, duration after type question
+        """
+
+        complex_type_1_b_questions = []
+        # this will be added later when we process the questions with template
+
+        """
+        Timeline Position Retrieva + Timeline Position Retrieval + Timeline Position Retrieval
+        """
+        complex_type_2_questions = []
+
+        complex_type_2_questions = [
+            {
+                "question": f"{first_event_subject} {first_event_predicate} {first_event_object} {second_event_predicate} {second_event_object} {third_event_predicate} {third_event_object}?",
+                "answer": f"Union/Intersection of the time range",
+                "pharaphrased_question": None,
+                "events": [
+                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|{first_event_start_time}|{first_event_end_time}",
+                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|{second_event_start_time}|{second_event_end_time}",
+                    f"{third_event_subject}|{third_event_predicate}|{third_event_object}|{third_event_start_time}|{third_event_end_time}",
+                ],
+                "question_level": "complex",
+                "question_type": "timeline_position_retrieval*3",
+                "answer_type": "relation_union_or_intersection",
+                "temporal_relation": "intersection",
+            },
+            {
+                "question": f"{first_event_subject} {first_event_predicate} {first_event_object} {second_event_predicate} {second_event_object} {third_event_predicate} {third_event_object}?",
+                "answer": f"Union/Intersection of the time range",
+                "pharaphrased_question": None,
+                "events": [
+                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|{first_event_start_time}|{first_event_end_time}",
+                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|{second_event_start_time}|{second_event_end_time}",
+                    f"{third_event_subject}|{third_event_predicate}|{third_event_object}|{third_event_start_time}|{third_event_end_time}",
+                ],
+                "question_level": "complex",
+                "question_type": "timeline_position_retrieval*3",
+                "answer_type": "relation_union_or_intersection",
+                "temporal_relation": "union",
+            },
+            {
+                "question": f"{first_event_subject} {first_event_predicate} {first_event_object} {second_event_predicate} {second_event_object} {third_event_predicate} {third_event_object}?",
+                "answer": f"Duration",
+                "pharaphrased_question": None,
+                "events": [
+                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|{first_event_start_time}|{first_event_end_time}",
+                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|{second_event_start_time}|{second_event_end_time}",
+                    f"{third_event_subject}|{third_event_predicate}|{third_event_object}|{third_event_start_time}|{third_event_end_time}",
+                ],
+                "question_level": "complex",
+                "question_type": "timeline_position_retrieval*3",
+                "answer_type": "relation_duration",
+                "temporal_relation": None,
+            },
+            # add ranking one
+            {
+                "question": f"Who is the xxx amony {first_event_subject}, {second_event_subject}, and {third_event_subject}?",
+                "answer": f"Ranking",
+                "pharaphrased_question": None,
+                "events": [
+                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|{first_event_start_time}|{first_event_end_time}",
+                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|{second_event_start_time}|{second_event_end_time}",
+                    f"{third_event_subject}|{third_event_predicate}|{third_event_object}|{third_event_start_time}|{third_event_end_time}",
+                ],
+                "question_level": "complex",
+                "question_type": "timeline_position_retrieval*3",
+                "answer_type": "relation_ranking",
+                "temporal_relation": "ranking",
+            },
+        ]
+
+        questions += complex_type_2_questions
+
+        if template_based:
+            for question_draft in questions:
+                this_type_templates = QUESTION_TEMPLATES[
+                    question_draft["question_level"]
+                ][question_draft["question_type"]][question_draft["answer_type"]]
+
+                if (
+                    question_draft["answer_type"] == "subject"
+                    or question_draft["answer_type"] == "object"
+                ):
+                    """
+                    Handle the Complex Type 1 Questions here:
+                    a,b,c, will ask for a information.
+                    Get temporal_relation_12, temporal_relation_13, then generate the question
+                    """
+                    temporal_relation_12 = self.relation_allen_time_range(
+                        time_range_a=[
+                            first_event_start_time_dt,
+                            first_event_end_time_dt,
+                        ],
+                        time_range_b=[
+                            second_event_start_time_dt,
+                            second_event_end_time_dt,
+                        ],
+                    )
+                    temporal_relation_13 = self.relation_allen_time_range(
+                        time_range_a=[
+                            first_event_start_time_dt,
+                            first_event_end_time_dt,
+                        ],
+                        time_range_b=[
+                            third_event_start_time_dt,
+                            third_event_end_time_dt,
+                        ],
+                    )
+
+                    temporal_relation_12_semantic = temporal_relation_12.get("semantic")
+                    temporal_relation_13_semantic = temporal_relation_13.get("semantic")
+                    question_draft["temporal_relation"] = (
+                        f"{temporal_relation_12['relation']}&{temporal_relation_13['relation']}"
+                    )
+                    random_pick_template = random.choice(this_type_templates)
+
+                    question_draft["question"] = random_pick_template.format(
+                        first_event_subject=first_event_subject,
+                        first_event_predicate=first_event_predicate,
+                        first_event_object=first_event_object,
+                        temporal_relation_12=temporal_relation_12_semantic,
+                        second_event_subject=second_event_subject,
+                        second_event_predicate=second_event_predicate,
+                        second_event_object=second_event_object,
+                        temporal_relation_13=temporal_relation_13_semantic,
+                        third_event_subject=third_event_subject,
+                        third_event_predicate=third_event_predicate,
+                        third_event_object=third_event_object,
+                    )
+
+                    # this will generate the basic temporal relation questions.
+                    # then we will want to generate the duration_before, duration_after
+                    can_generate_duration_question = False
+                    if temporal_relation_12_semantic in ["before", "after"]:
+                        duration = self.relation_duration_calculation(
+                            time_range_a=[
+                                first_event_start_time_dt,
+                                first_event_end_time_dt,
+                            ],
+                            time_range_b=[
+                                second_event_start_time_dt,
+                                second_event_end_time_dt,
+                            ],
+                            temporal_operator=f"duration_{temporal_relation_12_semantic}",
+                        )
+                        temporal_relation_12_semantic = (
+                            f"{duration} {temporal_relation_12_semantic}"
+                        )
+                        logger.info(temporal_relation_12_semantic)
+                        can_generate_duration_question = True
+                    if temporal_relation_13_semantic in ["before", "after"]:
+                        duration = self.relation_duration_calculation(
+                            time_range_a=[
+                                first_event_start_time_dt,
+                                first_event_end_time_dt,
+                            ],
+                            time_range_b=[
+                                third_event_start_time_dt,
+                                third_event_end_time_dt,
+                            ],
+                            temporal_operator=f"duration_{temporal_relation_13_semantic}",
+                        )
+                        temporal_relation_13_semantic = (
+                            f"{duration} {temporal_relation_13_semantic}"
+                        )
+                        logger.info(temporal_relation_13_semantic)
+                        can_generate_duration_question = True
+                    if can_generate_duration_question:
+                        # copy a new question draft
+                        duration_question_draft = copy.deepcopy(question_draft)
+                        duration_question_draft["question"] = (
+                            random_pick_template.format(
+                                first_event_subject=first_event_subject,
+                                first_event_predicate=first_event_predicate,
+                                first_event_object=first_event_object,
+                                temporal_relation_12=temporal_relation_12_semantic,
+                                second_event_subject=second_event_subject,
+                                second_event_predicate=second_event_predicate,
+                                second_event_object=second_event_object,
+                                temporal_relation_13=temporal_relation_13_semantic,
+                                third_event_subject=third_event_subject,
+                                third_event_predicate=third_event_predicate,
+                                third_event_object=third_event_object,
+                            )
+                        )
+                        duration_question_draft["temporal_relation"] = (
+                            f"duration_{temporal_relation_12_semantic}&duration_{temporal_relation_13_semantic}"
+                        )
+                        complex_type_1_b_questions.append(duration_question_draft)
+                else:
+                    # handle the Timeline Position Retrieval + Timeline Position Retrieval + Timeline Position Retrieval
+                    if (
+                        question_draft["answer_type"]
+                        == "relation_union_or_intersection"
+                    ):
+                        temporal_relation = question_draft["temporal_relation"]
+                        random_pick_template = random.choice(
+                            this_type_templates[temporal_relation]
+                        )
+                        temporal_answer = self.relation_union_or_intersection(
+                            time_ranges=[
+                                [first_event_start_time_dt, first_event_end_time_dt],
+                                [second_event_start_time_dt, second_event_end_time_dt],
+                                [third_event_start_time_dt, third_event_end_time_dt],
+                            ],
+                            temporal_operator=temporal_relation,
+                        )
+
+                        question_draft["question"] = random_pick_template.format(
+                            first_event_subject=first_event_subject,
+                            first_event_predicate=first_event_predicate,
+                            first_event_object=first_event_object,
+                            second_event_subject=second_event_subject,
+                            second_event_predicate=second_event_predicate,
+                            second_event_object=second_event_object,
+                            third_event_subject=third_event_subject,
+                            third_event_predicate=third_event_predicate,
+                            third_event_object=third_event_object,
+                        )
+                        logger.info(question_draft["question"])
+                        logger.info(temporal_answer)
+                        if temporal_answer is None:
+                            temporal_answer = "No Answer"
+                        question_draft["answer"] = temporal_answer
+                    elif question_draft["answer_type"] == "relation_duration":
+                        pass
+
+        for question in questions:
+            logger.info(question)
 
     @staticmethod
     def relation_allen_time_range(
-            time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
+        time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
     ) -> dict:
         """
         This function will return the allen temporal relation between two time ranges
@@ -1466,7 +1730,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def relation_allen_time_duration(
-            time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
+        time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
     ) -> dict:
         """
 
@@ -1506,59 +1770,56 @@ class TKGQAGenerator:
 
     @staticmethod
     def relation_union_or_intersection(
-            time_range_a: list[datetime, datetime],
-            time_range_b: list[datetime, datetime],
-            temporal_operator: str = None,
+        time_ranges: List[Tuple[datetime, datetime]],
+        temporal_operator: str = "intersection",
     ) -> str:
         """
-        This function will return the temporal operator between two time ranges
+        This function will return the temporal operator between multiple time ranges
         The temporal operator can be:
-        - Intersection
-        - Union
-        - Complement
+            - 'intersection'
+            - 'union'
 
         Args:
-            time_range_a (list): The first time range
-            time_range_b (list): The second time range
+            time_ranges (List[Tuple[datetime, datetime]]): A list of time ranges
             temporal_operator (str): The temporal operator
 
-        It is basically try to output a set of new time range.
-
         Returns:
-            set: The new time range
+            str: A string representation of the new time range, or None if no valid range exists.
 
         """
-        if temporal_operator is None or temporal_operator not in [
-            "intersection",
-            "union",
-        ]:
+        if temporal_operator not in ["intersection", "union"]:
             raise ValueError(
-                "temporal_operator should be one of the following: intersection, union, complement"
+                "temporal_operator should be either 'intersection' or 'union'"
             )
-        start_a, end_a = time_range_a
-        start_b, end_b = time_range_b
 
-        if temporal_operator == "intersection":
-            start = max(start_a, start_b)
-            end = min(end_a, end_b)
-            if start < end:
+        if not time_ranges:
+            return None
+
+        # Start with the first time range
+        result = time_ranges[0]
+
+        for current in time_ranges[1:]:
+            if temporal_operator == "intersection":
+                # Find the latest start time and earliest end time
+                start = max(result[0], current[0])
+                end = min(result[1], current[1])
+                if start >= end:
+                    return None  # No intersection
                 result = (start, end)
-            else:
-                return None
-        elif temporal_operator == "union":
-            if start_a > end_b or start_b > end_a:
-                return None  # No overlap, no union # ALERT
-            start = min(start_a, start_b)
-            end = max(end_a, end_b)
-            result = (start, end)
+            elif temporal_operator == "union":
+                # Find the earliest start time and latest end time
+                start = min(result[0], current[0])
+                end = max(result[1], current[1])
+                # Check if there is a gap between the ranges
+                if result[1] < current[0] or current[1] < result[0]:
+                    return None  # No continuous union possible
+                result = (start, end)
 
-        result_str = f"({result[0]}, {result[1]})"
-
-        return result_str
+        return f"({result[0]}, {result[1]})"
 
     @staticmethod
     def relation_ordinal_time_range(
-            time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
+        time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
     ) -> list:
         """
         For the time range, it will do the rank operation, sort it
@@ -1617,7 +1878,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def relation_duration(
-            time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
+        time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
     ) -> list:
         """
         For the time range, it will do the rank operation, sort it
@@ -1675,9 +1936,9 @@ class TKGQAGenerator:
 
     @staticmethod
     def relation_duration_calculation(
-            time_range_a: list[datetime, datetime],
-            time_range_b: list[datetime, datetime],
-            temporal_operator: str = None,
+        time_range_a: list[datetime, datetime],
+        time_range_b: list[datetime, datetime],
+        temporal_operator: str = None,
     ) -> timedelta:
         """
         We will calculate the time difference between two time ranges
@@ -1711,9 +1972,7 @@ class TKGQAGenerator:
         return None
 
     @staticmethod
-    def util_str_to_datetime(
-            time_range: list[str, str]
-    ):
+    def util_str_to_datetime(time_range: list[str, str]):
         """
         Convert the string to datetime
 
@@ -1737,7 +1996,7 @@ class TKGQAGenerator:
         return start_time, end_time
 
     def util_average_duration_calculation(
-            self, time_ranges: list[[datetime, datetime]], temporal_operator: str = None
+        self, time_ranges: list[[datetime, datetime]], temporal_operator: str = None
     ):
         try:
             if temporal_operator == "average":
@@ -1815,12 +2074,13 @@ if __name__ == "__main__":
         - Ask for the event    
             - Temporal Constrainted Retrieval
     - Medium: Timeline and Two Events Involved
-        - Timeline Recover => Temporal Constrainted Retrieval
-        - Timeline Recover + Timeline Recover
+        - Timeline Position Retrieval => Temporal Constrainted Retrieval
+        - Timeline Position Retrieval + Timeline Position Retrieval
     - Complex: Timeline and Three Events Involved
-        - Timeline Recover + Timeline Recover + Timeline Recover
-        - Timeline Recover + Timeline Recover + Timeline Recover + Timeline Recover
+        - Timeline Position Retrieval + Timeline Position Retrieval + Timeline Position Retrieval
+        - Timeline Position Retrieval + Timeline Position Retrieval + Timeline Position Retrieval
     """
 
     # generator.simple_question_generation()
-    generator.medium_question_generation()
+    # generator.medium_question_generation()
+    generator.complex_question_generation()

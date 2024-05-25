@@ -202,4 +202,47 @@ QUESTION_TEMPLATES = {
             },
         },
     },
+    "complex": {
+        "timeline_position_retrievel*2+temporal_constrainted_retrieval": {
+            "subject": [
+                "Who {first_event_subject} {first_event_object}, {temporal_relation_12} {second_event_subject} {second_event_predicate} {second_event_object}, {temporal_relation_13} {third_event_subject} {third_event_predicate}, {third_event_object}?",
+            ],
+            "object": [
+                "{first_event_subject} {first_event_predicate} which organisation, {temporal_relation_12} {second_event_subject} {second_event_predicate} {second_event_object}, {temporal_relation_13} {third_event_subject} {third_event_predicate} {third_event_object}?",
+            ],
+        },
+        "timeline_position_retrieval*3": {
+            "relation_union_or_intersection": {
+                "intersection": [
+                    "From when to when, {first_event_subject} {first_event_predicate} {first_event_object}, at the same time, {second_event_subject} {second_event_predicate} {second_event_object}, at the same time, {third_event_subject} {third_event_predicate} {third_event_object}?"
+                ],
+                "union": [
+                    "From when to when, {first_event_subject} {first_event_predicate} {first_event_object} or {second_event_subject} {second_event_predicate} {second_event_object} or {third_event_subject} {third_event_predicate} {third_event_object}?"
+                ],
+            },
+            # TODO: this is not really make sense, so we ignore it here
+            "relation_duration": {
+                "duration": [
+                    "What is the duration of {first_event_subject} {first_event_predicate} {first_event_object} jointly when {second_event_subject} {second_event_predicate} {second_event_object} and {third_event_subject} {third_event_predicate} {third_event_object}?"
+                ],
+                "duration_compare": [
+                    "Is the duration of {first_event_subject} {first_event_predicate} {first_event_object} {temporal_relation_12} the duration of {second_event_subject} {second_event_predicate} {second_event_object} {temporal_relation_23} the duration of {third_event_subject} {third_event_predicate} {third_event_object}?"
+                ],
+                "sum": [
+                    "How long is the total duration of {first_event_subject} {first_event_predicate} {first_event_object}, {second_event_subject} {second_event_predicate} {second_event_object} and {third_event_subject} {third_event_predicate} {third_event_object}?"
+                ],
+                "average": [
+                    "What is the average duration of {first_event_subject} {first_event_predicate} {first_event_object}, {second_event_subject} {second_event_predicate} {second_event_object} and {third_event_subject} {third_event_predicate} {third_event_object}?"
+                ],
+            },
+            "relation_ranking": {
+                "rank_start_time": [
+                    "Who {first_event_predicate} {first_event_object} first, {second_event_subject} {second_event_predicate} {second_event_object} second, {third_event_subject} {third_event_predicate} {third_event_object} third?"
+                ],
+                "rank_end_time": [
+                    "Who {first_event_predicate} {first_event_object} last, {second_event_subject} {second_event_predicate} {second_event_object} second last, {third_event_subject} {third_event_predicate} {third_event_object} third last?"
+                ],
+            },
+        },
+    },
 }
