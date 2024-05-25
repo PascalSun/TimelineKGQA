@@ -226,7 +226,7 @@ QUESTION_TEMPLATES = {
                     "What is the duration of {first_event_subject} {first_event_predicate} {first_event_object} jointly when {second_event_subject} {second_event_predicate} {second_event_object} and {third_event_subject} {third_event_predicate} {third_event_object}?"
                 ],
                 "duration_compare": [
-                    "Is the duration of {first_event_subject} {first_event_predicate} {first_event_object} {temporal_relation_12} the duration of {second_event_subject} {second_event_predicate} {second_event_object} {temporal_relation_23} the duration of {third_event_subject} {third_event_predicate} {third_event_object}?"
+                    "Which one is {temporal_duration_rank} longest among {first_event_subject} {first_event_predicate} {first_event_object}, {second_event_subject} {second_event_predicate} {second_event_object}, {third_event_subject} {third_event_predicate} {third_event_object}?",
                 ],
                 "sum": [
                     "How long is the total duration of {first_event_subject} {first_event_predicate} {first_event_object}, {second_event_subject} {second_event_predicate} {second_event_object} and {third_event_subject} {third_event_predicate} {third_event_object}?"
@@ -237,10 +237,10 @@ QUESTION_TEMPLATES = {
             },
             "relation_ranking": {
                 "rank_start_time": [
-                    "Who {first_event_predicate} {first_event_object} first, {second_event_subject} {second_event_predicate} {second_event_object} second, {third_event_subject} {third_event_predicate} {third_event_object} third?"
+                    "{first_event_subject} is ranking what based on the start time amony {first_event_subject} {first_event_predicate} {first_event_object}, {second_event_subject} {second_event_predicate} {second_event_object} and {third_event_subject} {third_event_predicate} {third_event_object}?"
                 ],
                 "rank_end_time": [
-                    "Who {first_event_predicate} {first_event_object} last, {second_event_subject} {second_event_predicate} {second_event_object} second last, {third_event_subject} {third_event_predicate} {third_event_object} third last?"
+                    "{first_event_subject} is ranking what based on the end time amony {first_event_subject} {first_event_predicate} {first_event_object}, {second_event_subject} {second_event_predicate} {second_event_object} and {third_event_subject} {third_event_predicate} {third_event_object}?"
                 ],
             },
         },

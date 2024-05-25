@@ -110,13 +110,13 @@ class TKGQAGenerator:
     """
 
     def __init__(
-        self,
-        table_name: str,
-        host: str,
-        port: int,
-        user: str,
-        password: str,
-        db_name: str = "tkgqa",
+            self,
+            table_name: str,
+            host: str,
+            port: int,
+            user: str,
+            password: str,
+            db_name: str = "tkgqa",
     ):
         # setup the db connection
         self.host = host
@@ -266,13 +266,13 @@ class TKGQAGenerator:
 
     @staticmethod
     def simple_question_generation_individual(
-        subject: str,
-        predicate: str,
-        object: str,
-        start_time: str,
-        end_time: str,
-        template_based: bool = False,
-        pharaphrased: bool = False,
+            subject: str,
+            predicate: str,
+            object: str,
+            start_time: str,
+            end_time: str,
+            template_based: bool = False,
+            pharaphrased: bool = False,
     ) -> dict:
         """
         This will try to generate four questions belong to RE type
@@ -513,11 +513,11 @@ class TKGQAGenerator:
             logger.info(flat_values)
 
     def medium_question_generation_individual(
-        self,
-        first_event: dict,
-        second_event: dict,
-        template_based: bool = True,
-        pharaphrased: bool = False,
+            self,
+            first_event: dict,
+            second_event: dict,
+            template_based: bool = True,
+            pharaphrased: bool = False,
     ) -> dict:
         """
 
@@ -748,8 +748,8 @@ class TKGQAGenerator:
                 ][question_draft["question_type"]][question_draft["answer_type"]]
 
                 if (
-                    question_draft["answer_type"] == "subject"
-                    or question_draft["answer_type"] == "object"
+                        question_draft["answer_type"] == "subject"
+                        or question_draft["answer_type"] == "object"
                 ):
                     """
                     Handle the Medium Type 1 Questions here: Both a and b
@@ -827,8 +827,8 @@ class TKGQAGenerator:
                     Handle in theory four types of questions here
                     """
                     if (
-                        question_draft["answer_type"]
-                        == "relation_union_or_intersection"
+                            question_draft["answer_type"]
+                            == "relation_union_or_intersection"
                     ):
                         temporal_relation = question_draft["temporal_relation"]
                         random_pick_template = random.choice(
@@ -1051,6 +1051,9 @@ class TKGQAGenerator:
         third_event_df = first_event_df.copy(deep=True)
 
         # next step is to construct three events
+        insert_values_list = []
+        number_to_break = 10
+        number_point = 0
         for first_index, first_event in first_event_df.iterrows():
             for second_index, second_event in second_event_df.iterrows():
                 if first_index == second_index:
@@ -1058,32 +1061,97 @@ class TKGQAGenerator:
                 for third_index, third_event in third_event_df.iterrows():
                     if first_index == third_index or second_index == third_index:
                         continue
+                    number_point += 1
 
                     source_kg_id = (
-                        first_event["id"] * 1000000 * 1000000
-                        + second_event["id"] * 1000000
-                        + third_event["id"]
+                            first_event["id"] * 1000000 * 1000000
+                            + second_event["id"] * 1000000
+                            + third_event["id"]
                     )
                     if source_kg_id in questions_df["source_kg_id"].values:
                         continue
                     logger.info(f"Generating question for source_kg_id: {source_kg_id}")
 
-                    self.complex_question_generation_individual(
+                    questions = self.complex_question_generation_individual(
                         first_event=first_event.to_dict(),
                         second_event=second_event.to_dict(),
                         third_event=third_event.to_dict(),
                         template_based=True,
                         pharaphrased=False,
                     )
-                    return
+                    for question_obj in questions:
+                        indiv_sql_command = """
+                        INSERT INTO {} (source_kg_id,
+                                        question,
+                                        answer,
+                                        paraphrased_question,
+                                        events,
+                                        question_level,
+                                        question_type,
+                                        answer_type,
+                                        temporal_relation
+                                        )
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """.format(
+                            self.unified_kg_table_questions,
+                        )
+
+                        question_obj["source_kg_id"] = source_kg_id
+                        # get dict to tuple, sequence should be the same as the sql command
+                        data = (
+                            1,
+                            question_obj["question"],
+                            question_obj["answer"],
+                            question_obj["pharaphrased_question"],
+                            question_obj["events"],
+                            question_obj["question_level"],
+                            question_obj["question_type"],
+                            question_obj["answer_type"],
+                            question_obj["temporal_relation"],
+                        )
+                        insert_values_list.append(data)
+                    break
+                break
+            break
+            # if number_point % number_to_break == 0:
+            #     logger.info(f"Processing {number_point} questions")
+            #     break
+        values_str = ",\n".join(
+            ["(%s, %s, %s, %s, %s, %s, %s, %s, %s)"] * len(insert_values_list)
+        )
+        # Final bulk insert command
+        bulk_insert_command = f"""
+                INSERT INTO {self.unified_kg_table_questions} (source_kg_id,
+                                                              question,
+                                                              answer,
+                                                              paraphrased_question,
+                                                              events,
+                                                              question_level,
+                                                              question_type,
+                                                              answer_type,
+                                                              temporal_relation
+                                                              )
+                VALUES {values_str}
+                """
+
+        # Flatten the list of values tuples into a single tuple for execution
+        flat_values = [item for sublist in insert_values_list for item in sublist]
+
+        # Execute the bulk insert command
+        try:
+            self.cursor.execute(bulk_insert_command, flat_values)
+            self.connection.commit()
+        except Exception as e:
+            logger.exception(f"Error: {e}")
+            logger.info(flat_values)
 
     def complex_question_generation_individual(
-        self,
-        first_event: dict,
-        second_event: dict,
-        third_event: dict,
-        template_based: bool = True,
-        pharaphrased: bool = True,
+            self,
+            first_event: dict,
+            second_event: dict,
+            third_event: dict,
+            template_based: bool = True,
+            pharaphrased: bool = True,
     ) -> dict:
         """
         Args:
@@ -1281,8 +1349,8 @@ class TKGQAGenerator:
                 ][question_draft["question_type"]][question_draft["answer_type"]]
 
                 if (
-                    question_draft["answer_type"] == "subject"
-                    or question_draft["answer_type"] == "object"
+                        question_draft["answer_type"] == "subject"
+                        or question_draft["answer_type"] == "object"
                 ):
                     """
                     Handle the Complex Type 1 Questions here:
@@ -1393,8 +1461,8 @@ class TKGQAGenerator:
                 else:
                     # handle the Timeline Position Retrieval + Timeline Position Retrieval + Timeline Position Retrieval
                     if (
-                        question_draft["answer_type"]
-                        == "relation_union_or_intersection"
+                            question_draft["answer_type"]
+                            == "relation_union_or_intersection"
                     ):
                         temporal_relation = question_draft["temporal_relation"]
                         random_pick_template = random.choice(
@@ -1426,14 +1494,183 @@ class TKGQAGenerator:
                             temporal_answer = "No Answer"
                         question_draft["answer"] = temporal_answer
                     elif question_draft["answer_type"] == "relation_duration":
-                        pass
+                        """
+                        There are four types in this category
+                        - duration => which is the intersection of the two time range
+                        - duration_compare => longer shorter equal
+                        - sum => total duration of the two time range, which is actually the union
+                        - average => average duration of the two time range
+                        """
+                        temporal_relation = random.choice(
+                            [
+                                "duration",
+                                "duration_compare",
+                                "sum",
+                                "average",
+                            ]
+                        )
+                        random_pick_template = random.choice(
+                            this_type_templates[temporal_relation]
+                        )
+                        question_draft["temporal_relation"] = temporal_relation
+                        if temporal_relation == "duration":
+                            temporal_answer = self.relation_union_or_intersection(
+                                time_ranges=[
+                                    [
+                                        first_event_start_time_dt,
+                                        first_event_end_time_dt,
+                                    ],
+                                    [
+                                        second_event_start_time_dt,
+                                        second_event_end_time_dt,
+                                    ],
+                                    [
+                                        third_event_start_time_dt,
+                                        third_event_end_time_dt,
+                                    ],
+                                ],
+                                temporal_operator="intersection",
+                            )
+                            question_draft["question"] = random_pick_template.format(
+                                first_event_subject=first_event_subject,
+                                first_event_predicate=first_event_predicate,
+                                first_event_object=first_event_object,
+                                second_event_subject=second_event_subject,
+                                second_event_predicate=second_event_predicate,
+                                second_event_object=second_event_object,
+                                third_event_subject=third_event_subject,
+                                third_event_predicate=third_event_predicate,
+                                third_event_object=third_event_object,
+                            )
+                        elif temporal_relation == "duration_compare":
+                            # we do duration ranking here
+                            duration_rank_by_index = self.relation_duration(
+                                time_ranges=[
+                                    [first_event_start_time_dt, first_event_end_time_dt],
+                                    [second_event_start_time_dt, second_event_end_time_dt],
+                                    [third_event_start_time_dt, third_event_end_time_dt],
+                                ],
+                                agg_temporal_operator="ranking"
+                            )
+                            logger.info(duration_rank_by_index)
+                            temporal_answer = duration_rank_by_index[0]
+                            question_draft["question"] = random_pick_template.format(
+                                first_event_subject=first_event_subject,
+                                first_event_predicate=first_event_predicate,
+                                first_event_object=first_event_object,
+                                second_event_subject=second_event_subject,
+                                second_event_predicate=second_event_predicate,
+                                second_event_object=second_event_object,
+                                third_event_subject=third_event_subject,
+                                third_event_predicate=third_event_predicate,
+                                third_event_object=third_event_object,
+                                temporal_duration_rank=temporal_answer,
+                            )
+                        elif temporal_relation == "sum":
+                            temporal_answer = self.util_average_duration_calculation(
+                                time_ranges=[
+                                    [
+                                        first_event_start_time_dt,
+                                        first_event_end_time_dt,
+                                    ],
+                                    [
+                                        second_event_start_time_dt,
+                                        second_event_end_time_dt,
+                                    ],
+                                    [
+                                        third_event_start_time_dt,
+                                        third_event_end_time_dt,
+                                    ],
+                                ],
+                                temporal_operator="sum",
+                            )
+                            question_draft["question"] = random_pick_template.format(
+                                first_event_subject=first_event_subject,
+                                first_event_predicate=first_event_predicate,
+                                first_event_object=first_event_object,
+                                second_event_subject=second_event_subject,
+                                second_event_predicate=second_event_predicate,
+                                second_event_object=second_event_object,
+                                third_event_subject=third_event_subject,
+                                third_event_predicate=third_event_predicate,
+                                third_event_object=third_event_object,
+                            )
+                        elif temporal_relation == "average":
+                            temporal_answer = self.util_average_duration_calculation(
+                                time_ranges=[
+                                    [
+                                        first_event_start_time_dt,
+                                        first_event_end_time_dt,
+                                    ],
+                                    [
+                                        second_event_start_time_dt,
+                                        second_event_end_time_dt,
+                                    ],
+                                    [
+                                        third_event_start_time_dt,
+                                        third_event_end_time_dt,
+                                    ],
+                                ])
+                            question_draft["question"] = random_pick_template.format(
+                                first_event_subject=first_event_subject,
+                                first_event_predicate=first_event_predicate,
+                                first_event_object=first_event_object,
+                                second_event_subject=second_event_subject,
+                                second_event_predicate=second_event_predicate,
+                                second_event_object=second_event_object,
+                                third_event_subject=third_event_subject,
+                                third_event_predicate=third_event_predicate,
+                                third_event_object=third_event_object,
+                            )
+                        question_draft["answer"] = temporal_answer
+                        question_draft["temporal_relation"] = temporal_relation
+                    elif question_draft["answer_type"] == "relation_ranking":
+                        # random select, ranking based on start time or end time
+                        rank_by_what = random.choice(["rank_start_time", "rank_end_time"])
+                        rank_by_index = self.relation_ordinal_time_range(
+                            time_ranges=[
+                                [first_event_start_time_dt, first_event_end_time_dt],
+                                [second_event_start_time_dt, second_event_end_time_dt],
+                                [third_event_start_time_dt, third_event_end_time_dt],
+                            ],
+                            agg_temporal_operator=rank_by_what
+                        )
+
+                        random_pick_template = random.choice(
+                            this_type_templates[rank_by_what]
+                        )
+                        question_draft["question"] = random_pick_template.format(
+                            first_event_subject=first_event_subject,
+                            first_event_predicate=first_event_predicate,
+                            first_event_object=first_event_object,
+                            second_event_subject=second_event_subject,
+                            second_event_predicate=second_event_predicate,
+                            second_event_object=second_event_object,
+                            third_event_subject=third_event_subject,
+                            third_event_predicate=third_event_predicate,
+                            third_event_object=third_event_object,
+
+                        )
+                        temporal_answer = rank_by_index[0]
+                        question_draft["answer"] = temporal_answer
+                        question_draft["temporal_relation"] = rank_by_what
+
+        questions += complex_type_1_b_questions
+        if pharaphrased:
+            for question_obj in questions:
+                paraphrased_question = paraphrase_medium_question(
+                    question=question_obj["question"],
+                )
+                logger.info(f"paraphrased_question: {paraphrased_question}")
+                question_obj["pharaphrased_question"] = paraphrased_question
 
         for question in questions:
             logger.info(question)
+        return questions
 
     @staticmethod
     def relation_allen_time_range(
-        time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
+            time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
     ) -> dict:
         """
         This function will return the allen temporal relation between two time ranges
@@ -1730,7 +1967,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def relation_allen_time_duration(
-        time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
+            time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
     ) -> dict:
         """
 
@@ -1770,8 +2007,8 @@ class TKGQAGenerator:
 
     @staticmethod
     def relation_union_or_intersection(
-        time_ranges: List[Tuple[datetime, datetime]],
-        temporal_operator: str = "intersection",
+            time_ranges: List[Tuple[datetime, datetime]],
+            temporal_operator: str = "intersection",
     ) -> str:
         """
         This function will return the temporal operator between multiple time ranges
@@ -1819,7 +2056,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def relation_ordinal_time_range(
-        time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
+            time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
     ) -> list:
         """
         For the time range, it will do the rank operation, sort it
@@ -1858,15 +2095,15 @@ class TKGQAGenerator:
         # Create a list of indices paired with time ranges
         indexed_time_ranges = list(enumerate(time_ranges))
 
-        if agg_temporal_operator == "ranking_start":
+        if agg_temporal_operator == "rank_start_time":
             # Sort by start time, but maintain original indices
             indexed_time_ranges.sort(key=lambda x: x[1][0])
-        elif agg_temporal_operator == "ranking_end":
+        elif agg_temporal_operator == "rank_end_time":
             # Sort by end time, but maintain original indices
             indexed_time_ranges.sort(key=lambda x: x[1][1])
         else:
             raise ValueError(
-                "Unsupported aggregation temporal operator. Please use 'ranking_start' or 'ranking_end'."
+                "Unsupported aggregation temporal operator. Please use 'rank_start_time' or 'rank_end_time'."
             )
 
         # After sorting, create a new list that maps the original index to its new rank
@@ -1878,7 +2115,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def relation_duration(
-        time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
+            time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
     ) -> list:
         """
         For the time range, it will do the rank operation, sort it
@@ -1936,9 +2173,9 @@ class TKGQAGenerator:
 
     @staticmethod
     def relation_duration_calculation(
-        time_range_a: list[datetime, datetime],
-        time_range_b: list[datetime, datetime],
-        temporal_operator: str = None,
+            time_range_a: list[datetime, datetime],
+            time_range_b: list[datetime, datetime],
+            temporal_operator: str = None,
     ) -> timedelta:
         """
         We will calculate the time difference between two time ranges
@@ -1996,7 +2233,7 @@ class TKGQAGenerator:
         return start_time, end_time
 
     def util_average_duration_calculation(
-        self, time_ranges: list[[datetime, datetime]], temporal_operator: str = None
+            self, time_ranges: list[[datetime, datetime]], temporal_operator: str = None
     ):
         try:
             if temporal_operator == "average":
