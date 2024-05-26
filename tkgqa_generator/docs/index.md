@@ -92,68 +92,89 @@ In this way, we can align all the events along the timeline, and do the temporal
 
 ---
 
-### Temporal Questions
+## Temporal Questions Classification
 
-We can try to classify the temporal questions from quite a few perspectives:
+In this case, if we want to handle the Temporal Questions in the knowledge graph, we have four types of timelines.
 
-- Based on Answer: Entity, Temporal
-- Based on Temporal Relations in Question: Before, After, During , etc or First, Last, etc.
-- Based on Temporal Representation Type: Point, Range, Duration, etc.
-- Based on Complexity of Question: Simple (direct retrieval), Complex (Multiple hops with the three key things we
-  mention above)
+Here we only consider the **Straight Homogenous(*Objective*)** Timeline.
 
-There is still no agreement or clear classification here, most of them stays in the first two.
-However, it is obvious that they have overlaps, so will not be the best way to advance the temporal embedding
-algorithms development.
+As shown in the following figure:
 
-We are trying to decompose the question into the three key parts we mentioned above, so we can evaluate the ability of
-the models for this three key capabilities.
+![Timeline Types](./imgs/EventTimelineQA.jpg)
 
-![Question Classification](./imgs/TimelineQA.jpg)
+Based on the complexity of the question, we can classify the temporal questions into three levels:
 
-#### Simple: Timeline and One Event Involved
+- **Simple**: Timeline and One Event Involved
+- **Medium**: Timeline and Two Events Involved
+- **Complex**: Timeline and Multiple Events Involved
+
+### Simple: Timeline and One Event Involved
+
+Under this category, the question will be simple, and only one event involved.
 
 - Timeline Position Retrieval:
-    - When Bush starts his term as president of US?
-        - General Information Retrieval => Timeline Recovery => Answer the question
-        - Question Focus can be: *Timestamp Start, Timestamp End, Duration, Timestamp Start and End*
+    - When we was given the event, we will want to clarify the timeline position of the event.
+    - And then we can answer the question based on the timeline position of the event.
+    - For example: *When Bush starts his term as president of US?*
+        - General Information Retrieval => Timeline Position Retrieval => Answer the question
 - Temporal Constrainted Retrieval:
-    - In 2009, who is the president of US?
+    - When we was given the time range, we will want to clarify the event within the time range.
+    - And then we can answer the question based on the event within the time range.
+    - For example: *In 2009, who is the president of US?*
         - General Information Retrieval => Temporal Constraint Retrieval => Answer the question
-        - Question Focus can be: *Subject, Object, Predicate*. Can be more complex if we want mask out more elements
 
-#### Medium: Timeline and Two Events Involved
+Most of the questions in the literature are in this category.
+
+### Medium: Timeline and Two Events Involved
+
+We will need to compare the events from temporal perspective.
 
 - Timeline Position Retrieval + Timeline Position Retrieval:
     - Is Bush president of US when 911 happen?
-        - *(General Information Retrieval => Timeline Recovery)* And *(General Information Retrieval => Timeline
-          Recovery)* => *Timeline Operation* => Answer the question
-        - Question Focus can be:
-            - A new Time Range
-            - A temporal relation (Before, After, During, etc.)
-            - A list of Time Range (Ranking)
-            - or Comparison of Duration
-        - Key ability here is: **Timeline Operation**
+        1. *(General Information Retrieval => Timeline Position Retrieval)*
+        2. *(General Information Retrieval => Timeline Position Retrieval)*
+        3. *Timeline Operation* => Answer the question
 - Timeline Position Retrieval + Temporal Constrainted Retrieval:
-    - When Bush is president of US, who is the president of China?
-        - *(General Information Retrieval => Timeline Position Retrieval)* => *Temporal Semantic Operation* => *Temporal
-          Constraint Retrieval* => Answer the question
-        - This is same as above, Question Focus can be: *Subject, Object*
-        - Key ability here is: **Temporal Semantic Operation**
+    - Who is the president of US when 911 happen?
+        1. *(General Information Retrieval => Timeline Position Retrieval)*
+        2. *(General Information Retrieval => Temporal Constraint Retrieval)*
+        3. *Temporal Semantic Operation* => Answer the question
 
-#### Complex: Timeline and Multiple Events Involved
+Here we introudce two key operations:
 
-In general, question focus (answer type) will only be two types when we extend from Medium Level
+- **Timeline Operation**: From numeric to semantic
+    - Infer a new time range based on two time ranges (Intersection, Union)
+    - Infer a semantic temporal relationship based on two time ranges (Before, After, Overlap, Allen Temporal
+      Relationship)
+    - Infer a list of time ranges based on two time ranges (Ranking)
+    - Infer the duration of time range, and then compare the duration
+        - Duration relationships (Shorter, Longer, Equal)
+- **Temporal Semantic Operation**: From Semantic to Numeric
+    - Given a time range and a semantic temporal relationship, infer the new time range
 
-- Timeline Operation
-- (Subject, Predicate, Object)
+These two key operations are the key ability required for the medium level questions.
 
-So if we say Complex is 3 or n events and Timeline.
+### Complex: Timeline and Multiple Events Involved
 
-- Timeline Position Retrieval * n
-- Timeline Position Retrieval * (n -1) => Semantic Operation * (n - 1)? => Temporal Constrainted Retrieval
+Let's say the multiple is **3**.
+Derived from the medium level questions, we mainly have two types of questions:
 
-#### Key ability required
+- Timeline Position Retrieval + Timeline Position Retrieval + Timeline Position Retrieval:
+    - Is Bush president of US when 911 happen and when the financial crisis happen?
+        1. *(General Information Retrieval => Timeline Position Retrieval)*
+        2. *(General Information Retrieval => Timeline Position Retrieval)*
+        3. *(General Information Retrieval => Timeline Position Retrieval)*
+        4. *Timeline Operation* => Answer the question
+- Timeline Position Retrieval + Timeline Position Retrieval + Temporal Constrainted Retrieval:
+    - Who is the president of US when 911 happen and when the financial crisis happen?
+        1. *(General Information Retrieval => Timeline Position Retrieval)*
+        2. *(General Information Retrieval => Timeline Position Retrieval)*
+        3. *(General Information Retrieval => Temporal Constraint Retrieval)*
+        4. *Temporal Semantic Operation* => Answer the question
+
+We can find that the key ability required for the complex level questions are the same as the medium level questions.
+
+### Key ability required
 
 - **General Information Retrieval**: Retrieve the general information from the knowledge graph based on the question
 - **Temporal Constrainted Retrieval**: Filter on general information retrieval, apply the temporal constraint
