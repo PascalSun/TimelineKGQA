@@ -110,13 +110,13 @@ class TKGQAGenerator:
     """
 
     def __init__(
-            self,
-            table_name: str,
-            host: str,
-            port: int,
-            user: str,
-            password: str,
-            db_name: str = "tkgqa",
+        self,
+        table_name: str,
+        host: str,
+        port: int,
+        user: str,
+        password: str,
+        db_name: str = "tkgqa",
     ):
         # setup the db connection
         self.host = host
@@ -135,7 +135,8 @@ class TKGQAGenerator:
         # we also need to create a new table, we can call it
         self.unified_kg_table_questions = f"{self.unified_kg_table}_questions"
         self.cursor = self.connection.cursor()
-        self.bulk_sql_size = 10
+        self.bulk_sql_size = 100
+        self.bulk_sample_size = 100
         # create a table to store retrieval questions
         self.cursor.execute(
             f"""
@@ -153,6 +154,7 @@ class TKGQAGenerator:
             );
         """
         )
+        self.cursor.connection.commit()
 
     def simple_question_generation(self):
         """
@@ -217,12 +219,14 @@ class TKGQAGenerator:
         )
         events_df = pd.DataFrame(self.cursor.fetchall())
         # set the column names
-        events_df.columns = [desc[0] for desc in self.cursor.description]
-
+        columns = [desc[0] for desc in self.cursor.description]
+        if len(events_df) > 0:
+            events_df.columns = columns
+        else:
+            events_df = pd.DataFrame(columns=columns)
         insert_values_list = []
         bulk_sql_pointer = 0
         for index, event in events_df.iterrows():
-            logger.info(f"event: {event}")
             questions = self.simple_question_generation_individual(
                 subject=event["subject"],
                 predicate=event["predicate"],
@@ -230,6 +234,7 @@ class TKGQAGenerator:
                 start_time=event["start_time"],
                 end_time=event["end_time"],
                 template_based=True,
+                pharaphrased=False,
             )
 
             # insert each qa into the table, have a flat table
@@ -245,6 +250,7 @@ class TKGQAGenerator:
                     question_obj["question_level"],
                     question_obj["question_type"],
                     question_obj["answer_type"],
+                    "timeline",
                 )
                 insert_values_list.append(data)
                 bulk_sql_pointer += 1
@@ -252,17 +258,23 @@ class TKGQAGenerator:
                     self.bulk_insert(values=insert_values_list)
                     insert_values_list = []
 
+                if (
+                    bulk_sql_pointer > self.bulk_sample_size
+                    and self.bulk_sample_size > 0
+                ):
+                    return
+
         self.bulk_insert(values=insert_values_list)
 
     @staticmethod
     def simple_question_generation_individual(
-            subject: str,
-            predicate: str,
-            object: str,
-            start_time: str,
-            end_time: str,
-            template_based: bool = False,
-            pharaphrased: bool = False,
+        subject: str,
+        predicate: str,
+        object: str,
+        start_time: str,
+        end_time: str,
+        template_based: bool = False,
+        pharaphrased: bool = False,
     ) -> dict:
         """
         This will try to generate four questions belong to RE type
@@ -358,7 +370,7 @@ class TKGQAGenerator:
                 this_type_templates = QUESTION_TEMPLATES[
                     question_draft["question_level"]
                 ][question_draft["question_type"]][question_draft["answer_type"]]
-                logger.info(f"this_type_templates: {this_type_templates}")
+                logger.debug(f"this_type_templates: {this_type_templates}")
                 random_pick_template = random.choice(this_type_templates)
                 # replace {subject}, {predicate}, {object}, {start_time}, {end_time} with the real value
                 question_draft["question"] = random_pick_template.format(
@@ -376,9 +388,7 @@ class TKGQAGenerator:
                 )
                 logger.info(f"paraphrased_question: {paraphrased_question}")
                 question_obj["pharaphrased_question"] = paraphrased_question
-        else:
-            for question_obj in questions:
-                question_obj["pharaphrased_question"] = question_obj["question"]
+
         return questions
 
     def medium_question_generation(self):
@@ -409,8 +419,11 @@ class TKGQAGenerator:
         self.cursor.execute(f"SELECT * FROM {self.unified_kg_table_questions}")
         # get it into the dataframe
         questions_df = pd.DataFrame(self.cursor.fetchall())
-        questions_df.columns = [desc[0] for desc in self.cursor.description]
-        logger.info(questions_df)
+        columns = [desc[0] for desc in self.cursor.description]
+        if len(questions_df) > 0:
+            questions_df.columns = columns
+        else:
+            questions_df = pd.DataFrame(columns=columns)
         # TODO: can try to filter the events to make sure it make more sense in the final question
         self.cursor.execute(f"SELECT * FROM {self.unified_kg_table}")
         first_event_df = pd.DataFrame(self.cursor.fetchall())
@@ -425,7 +438,7 @@ class TKGQAGenerator:
                     continue
 
                 source_kg_id = first_event["id"] * 1000000 + second_event["id"]
-                logger.info(f"Generating question for source_kg_id: {source_kg_id}")
+                logger.debug(f"Generating question for source_kg_id: {source_kg_id}")
                 # check is this in the df already
                 if source_kg_id in questions_df["source_kg_id"].values:
                     continue
@@ -457,14 +470,19 @@ class TKGQAGenerator:
                     if bulk_sql_pointer % self.bulk_sql_size == 0:
                         self.bulk_insert(values=insert_values_list)
                         insert_values_list = []
+                    if (
+                        bulk_sql_pointer > self.bulk_sample_size
+                        and self.bulk_sample_size > 0
+                    ):
+                        return
         self.bulk_insert(values=insert_values_list)
 
     def medium_question_generation_individual(
-            self,
-            first_event: dict,
-            second_event: dict,
-            template_based: bool = True,
-            pharaphrased: bool = False,
+        self,
+        first_event: dict,
+        second_event: dict,
+        template_based: bool = True,
+        pharaphrased: bool = False,
     ) -> dict:
         """
 
@@ -695,8 +713,8 @@ class TKGQAGenerator:
                 ][question_draft["question_type"]][question_draft["answer_type"]]
 
                 if (
-                        question_draft["answer_type"] == "subject"
-                        or question_draft["answer_type"] == "object"
+                    question_draft["answer_type"] == "subject"
+                    or question_draft["answer_type"] == "object"
                 ):
                     """
                     Handle the Medium Type 1 Questions here: Both a and b
@@ -774,8 +792,8 @@ class TKGQAGenerator:
                     Handle in theory four types of questions here
                     """
                     if (
-                            question_draft["answer_type"]
-                            == "relation_union_or_intersection"
+                        question_draft["answer_type"]
+                        == "relation_union_or_intersection"
                     ):
                         temporal_relation = question_draft["temporal_relation"]
                         random_pick_template = random.choice(
@@ -988,8 +1006,14 @@ class TKGQAGenerator:
         self.cursor.execute(f"SELECT * FROM {self.unified_kg_table_questions}")
         # get it into the dataframe
         questions_df = pd.DataFrame(self.cursor.fetchall())
-        questions_df.columns = [desc[0] for desc in self.cursor.description]
-        logger.info(questions_df)
+        # need to consider the situation that the question is not generated
+        columns = [desc[0] for desc in self.cursor.description]
+        if questions_df.empty:
+            # create a df with the columns
+            questions_df = pd.DataFrame(columns=columns)
+        else:
+            questions_df.columns = columns
+
         # TODO: can try to filter the events to make sure it make more sense in the final question
         self.cursor.execute(f"SELECT * FROM {self.unified_kg_table}")
         first_event_df = pd.DataFrame(self.cursor.fetchall())
@@ -1008,9 +1032,9 @@ class TKGQAGenerator:
                     if first_index == third_index or second_index == third_index:
                         continue
                     source_kg_id = (
-                            first_event["id"] * 1000000 * 1000000
-                            + second_event["id"] * 1000000
-                            + third_event["id"]
+                        first_event["id"] * 1000000 * 1000000
+                        + second_event["id"] * 1000000
+                        + third_event["id"]
                     )
                     if source_kg_id in questions_df["source_kg_id"].values:
                         continue
@@ -1042,16 +1066,20 @@ class TKGQAGenerator:
                         if bulk_sql_pointer % self.bulk_sql_size == 0:
                             self.bulk_insert(insert_values_list)
                             insert_values_list = []
-
+                        if (
+                            bulk_sql_pointer > self.bulk_sample_size
+                            and self.bulk_sample_size > 0
+                        ):
+                            return
         self.bulk_insert(insert_values_list)
 
     def complex_question_generation_individual(
-            self,
-            first_event: dict,
-            second_event: dict,
-            third_event: dict,
-            template_based: bool = True,
-            pharaphrased: bool = True,
+        self,
+        first_event: dict,
+        second_event: dict,
+        third_event: dict,
+        template_based: bool = True,
+        pharaphrased: bool = True,
     ) -> dict:
         """
         Args:
@@ -1249,8 +1277,8 @@ class TKGQAGenerator:
                 ][question_draft["question_type"]][question_draft["answer_type"]]
 
                 if (
-                        question_draft["answer_type"] == "subject"
-                        or question_draft["answer_type"] == "object"
+                    question_draft["answer_type"] == "subject"
+                    or question_draft["answer_type"] == "object"
                 ):
                     """
                     Handle the Complex Type 1 Questions here:
@@ -1361,8 +1389,8 @@ class TKGQAGenerator:
                 else:
                     # handle the Timeline Position Retrieval + Timeline Position Retrieval + Timeline Position Retrieval
                     if (
-                            question_draft["answer_type"]
-                            == "relation_union_or_intersection"
+                        question_draft["answer_type"]
+                        == "relation_union_or_intersection"
                     ):
                         temporal_relation = question_draft["temporal_relation"]
                         random_pick_template = random.choice(
@@ -1519,8 +1547,10 @@ class TKGQAGenerator:
                                         third_event_start_time_dt,
                                         third_event_end_time_dt,
                                     ],
-                                ]
+                                ],
+                                temporal_operator="average",
                             )
+                            logger.info(temporal_answer)
                             question_draft["question"] = random_pick_template.format(
                                 first_event_subject=first_event_subject,
                                 first_event_predicate=first_event_predicate,
@@ -1579,7 +1609,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def relation_allen_time_range(
-            time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
+        time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
     ) -> dict:
         """
         This function will return the allen temporal relation between two time ranges
@@ -1876,7 +1906,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def relation_allen_time_duration(
-            time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
+        time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
     ) -> dict:
         """
 
@@ -1916,8 +1946,8 @@ class TKGQAGenerator:
 
     @staticmethod
     def relation_union_or_intersection(
-            time_ranges: List[Tuple[datetime, datetime]],
-            temporal_operator: str = "intersection",
+        time_ranges: List[Tuple[datetime, datetime]],
+        temporal_operator: str = "intersection",
     ) -> str:
         """
         This function will return the temporal operator between multiple time ranges
@@ -1965,7 +1995,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def relation_ordinal_time_range(
-            time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
+        time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
     ) -> list:
         """
         For the time range, it will do the rank operation, sort it
@@ -2024,7 +2054,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def relation_duration(
-            time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
+        time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
     ) -> list:
         """
         For the time range, it will do the rank operation, sort it
@@ -2082,9 +2112,9 @@ class TKGQAGenerator:
 
     @staticmethod
     def relation_duration_calculation(
-            time_range_a: list[datetime, datetime],
-            time_range_b: list[datetime, datetime],
-            temporal_operator: str = None,
+        time_range_a: list[datetime, datetime],
+        time_range_b: list[datetime, datetime],
+        temporal_operator: str = None,
     ) -> timedelta:
         """
         We will calculate the time difference between two time ranges
@@ -2142,7 +2172,7 @@ class TKGQAGenerator:
         return start_time, end_time
 
     def util_average_duration_calculation(
-            self, time_ranges: list[[datetime, datetime]], temporal_operator: str = None
+        self, time_ranges: list[[datetime, datetime]], temporal_operator: str = None
     ):
         try:
             if temporal_operator == "average":
@@ -2211,7 +2241,8 @@ class TKGQAGenerator:
         flat_values = [item for sublist in values for item in sublist]
 
         bulk_insert_query = f"""
-        INSERT INTO {self.unified_kg_table_questions} (source_kg_id,
+        INSERT INTO {self.unified_kg_table_questions} (
+                                                    source_kg_id,
                                                       question,
                                                       answer,
                                                       paraphrased_question,
@@ -2259,6 +2290,6 @@ if __name__ == "__main__":
         - Timeline Position Retrieval + Timeline Position Retrieval + Timeline Position Retrieval
     """
 
-    # generator.simple_question_generation()
-    # generator.medium_question_generation()
+    generator.simple_question_generation()
+    generator.medium_question_generation()
     generator.complex_question_generation()
