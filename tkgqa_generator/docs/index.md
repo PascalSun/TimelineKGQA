@@ -182,16 +182,42 @@ We can find that the key ability required for the complex level questions are th
 - **Timeline Operation**: From numeric to semantic
 - **Temporal Semantic Operation**: From Semantic to Numeric
 
+---
+
 ## Workflow
 
 The workflow of the temporal logic question answering pairs over knowledge graph is as follows:
 
-1. **Unified Knowledge Graph**: Transform the knowledge graph into a unified format, where **SPO** are nodes,
-   and [start_time, end_time] are attributes.
+1. **Unified Knowledge Graph**:
+    - Transform the knowledge graph into a unified format, where **SPO** are nodes,
+      and [start_time, end_time] are attributes.
 2. Generate questions based on the template, then use LLM to get it more natural.
     - **Simple**
+        - Type 1:
+            - Ask for Subject, Predicate or Object
+                - Timeline Position Retrieval
+        - Type 2:
+            - Ask for Start Time or End Time
+            - Ask for Start Time and End Time, or the duration
     - **Medium**
+        - Type 1:
+            - Ask for Subject, Predicate or Object
+                - After the Timeline Position Retrieval, operate on the timeline, get the new time range
+                    - Then Temporal Constrainted Retrieval with the new time range
+                - Temporal Constrainted Retrieval with a specific time range and a duration
+        - Type 2:
+            - Ask for the timeline position of the event
+                - A new time range based on two time ranges (Or ask for the how long of the union/intersection)
+                - A semantic temporal relationship based on two time ranges (Choices or True/False) for **Allen Temporal
+                  Logic**
+                - Duration relationships (Shorter, Longer, Equal)
     - **Complex**
+        - Type 1:
+            - Ask for Subject, Predicate or Object
+                - Temporal Constrainted Retrieval with a specific time range and a semantic temporal relationship
+                - Temporal Constrainted Retrieval with a specific time range and a duration
+
+---
 
 ## Datasets
 
