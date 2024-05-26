@@ -212,7 +212,7 @@ The workflow of the temporal logic question answering pairs over knowledge graph
                 - A new time range based on two time ranges (Or ask for the how long of the union/intersection)
                 - A semantic temporal relationship based on two time ranges (Choices or True/False) for **Allen Temporal
                   Logic**
-                - ~~A list of time ranges based on two time ranges (
+                - Ignored: ~~A list of time ranges based on two time ranges (
                   Ranking) [Because Ranking is same as Allen with two events]~~
                 - Duration relationships (Shorter, Longer, Equal)
     - **Complex**
@@ -226,7 +226,7 @@ The workflow of the temporal logic question answering pairs over knowledge graph
                 - Infer a new time range based on three time ranges (Intersection, Union), or ask for the how long of
                   the
                   union/intersection
-                - ~~Infer a semantic temporal relationship based on three time ranges (Choices or True/False)
+                - Ignored: ~~Infer a semantic temporal relationship based on three time ranges (Choices or True/False)
                   for **Allen
                   Temporal Logic**[Not common how we ask questions, can be decomposed to multiple medium allen]~~
                 - Infer a list of time ranges based on three time ranges (Ranking)
