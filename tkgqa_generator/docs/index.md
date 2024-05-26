@@ -179,8 +179,8 @@ We can find that the key ability required for the complex level questions are th
 - **General Information Retrieval**: Retrieve the general information from the knowledge graph based on the question
 - **Temporal Constrainted Retrieval**: Filter on general information retrieval, apply the temporal constraint
 - **Timeline Position Retrieval**: Based on general information retrieval, recover the timeline information
-- **Timeline Operation**: From numeric to semantic
-- **Temporal Semantic Operation**: From Semantic to Numeric
+- *Timeline Operation*: From numeric to semantic
+- *Temporal Semantic Operation*: From Semantic to Numeric
 
 ---
 
@@ -194,28 +194,43 @@ The workflow of the temporal logic question answering pairs over knowledge graph
 2. Generate questions based on the template, then use LLM to get it more natural.
     - **Simple**
         - Type 1:
-            - Ask for Subject, Predicate or Object
-                - Timeline Position Retrieval
+            - **Temporal Constrainted Retrieval** with a specific time range
+                - Ask for Subject, Predicate or Object
         - Type 2:
-            - Ask for Start Time or End Time
-            - Ask for Start Time and End Time, or the duration
+            - **Timeline Position Retrieval**
+                - Ask for Start Time or End Time
+                - Ask for Start Time and End Time, or the duration
     - **Medium**
         - Type 1:
-            - Ask for Subject, Predicate or Object
-                - After the Timeline Position Retrieval, operate on the timeline, get the new time range
-                    - Then Temporal Constrainted Retrieval with the new time range
-                - Temporal Constrainted Retrieval with a specific time range and a duration
+            - **Timeline Position Retrieval** => *Temporal Semantic Operation*=> **Temporal Constrainted Retrieval**
+                - Ask for Subject, Predicate or Object
+                    - After the Timeline Position Retrieval, operate on the timeline, get the new time range
+                        - Then Temporal Constrainted Retrieval with the new time range
+                    - Temporal Constrainted Retrieval with a specific time range and a duration
         - Type 2:
-            - Ask for the timeline position of the event
+            - **Timeline Position Retrieval** + **Timeline Position Retrieval** => *Timeline Operation*
                 - A new time range based on two time ranges (Or ask for the how long of the union/intersection)
                 - A semantic temporal relationship based on two time ranges (Choices or True/False) for **Allen Temporal
                   Logic**
+                - ~~A list of time ranges based on two time ranges (
+                  Ranking) [Because Ranking is same as Allen with two events]~~
                 - Duration relationships (Shorter, Longer, Equal)
     - **Complex**
         - Type 1:
-            - Ask for Subject, Predicate or Object
-                - Temporal Constrainted Retrieval with a specific time range and a semantic temporal relationship
-                - Temporal Constrainted Retrieval with a specific time range and a duration
+            - **Timeline Position Retrieval** X 2 => **Temporal Constrainted Retrieval**
+                - This will include *Timeline Operation* and *Temporal Semantic Operation*
+                - Ask for Subject, Predicate or Object
+        - Type 2:
+            - **Timeline Position Retrieval** X 3
+                - This will include *Timeline Operation*
+                - Infer a new time range based on three time ranges (Intersection, Union), or ask for the how long of
+                  the
+                  union/intersection
+                - ~~Infer a semantic temporal relationship based on three time ranges (Choices or True/False)
+                  for **Allen
+                  Temporal Logic**[Not common how we ask questions, can be decomposed to multiple medium allen]~~
+                - Infer a list of time ranges based on three time ranges (Ranking)
+                - Infer the duration of time range, and then compare the duration
 
 ---
 
@@ -224,6 +239,8 @@ The workflow of the temporal logic question answering pairs over knowledge graph
 We are exploring the following datasets for the temporal question answering pairs:
 
 - [ICEWS](./data/ICEWS.md)
+
+---
 
 ## Development Setup
 
@@ -245,6 +262,20 @@ If you are doing development, you will also need a database to store the knowled
 ```bash
 # spin up the database
 docker-compose up -d
+
+# After this we need to load the data
+
+# for iceews_dict
+source venv/bin/activate
+export OPENAI_API_KEY=sk-proj-xxx
+# this will load the icews_dicts data into the database
+python3 -m tkgqa_generator.data_loader.load_icews --mode load_data --data_name icews_dicts
+# this will create the unified knowledge graph
+python3 -m tkgqa_generator.data_loader.load_icews --mode actor_unified_kg
+
+# this will generate the question answering pairs
+python3 -m tkgqa_generator.generator
+
 ```
 
 ### Folder Structure
@@ -269,7 +300,3 @@ tkgqa_generator/
 ├── README.md
 └── LICENSE
 ```
-
-# Note:
-
-How old roughly is my Grandfather?
