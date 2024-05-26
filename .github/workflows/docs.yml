@@ -27,6 +27,8 @@ jobs:
           pip install -r requirements.txt
 
       - name: Deploy to GitHub Pages
-        run: mkdocs gh-deploy --force
+        run: |
+          cd ./tkgqa_generator
+          mkdocs gh-deploy --force
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
