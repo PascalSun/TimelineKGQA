@@ -1,8 +1,8 @@
-# Timeline QA
+# Event Timeline QA
 
 We plan to generate temporal question answering pairs from knowledge graphs from three different perspectives:
 
-- **Temporal Logic**
+- **Temporal Operation**
 - **Temporal Pattern**
 - **Temporal Modifier**
 
