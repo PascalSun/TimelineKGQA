@@ -8,7 +8,7 @@ plugins:
       global_password: 'TimelineQA'
   - gen-files:
       scripts:
-        - scripts/gen_ref_pages.py
+        - script/gen_ref_pages.py
   - mkdocstrings:
       handlers:
         python:
