@@ -135,12 +135,13 @@ class TKGQAGenerator:
         # we also need to create a new table, we can call it
         self.unified_kg_table_questions = f"{self.unified_kg_table}_questions"
         self.cursor = self.connection.cursor()
+        self.bulk_sql_size = 10
         # create a table to store retrieval questions
         self.cursor.execute(
             f"""
             CREATE TABLE IF NOT EXISTS {self.unified_kg_table_questions} (
                 id SERIAL PRIMARY KEY,
-                source_kg_id INTEGER,
+                source_kg_id BIGINT,
                 question VARCHAR(1024),
                 answer VARCHAR(1024),
                 paraphrased_question VARCHAR(1024),
@@ -218,6 +219,8 @@ class TKGQAGenerator:
         # set the column names
         events_df.columns = [desc[0] for desc in self.cursor.description]
 
+        insert_values_list = []
+        bulk_sql_pointer = 0
         for index, event in events_df.iterrows():
             logger.info(f"event: {event}")
             questions = self.simple_question_generation_individual(
@@ -231,21 +234,6 @@ class TKGQAGenerator:
 
             # insert each qa into the table, have a flat table
             for question_obj in questions:
-                indiv_sql_command = """
-                    INSERT INTO {} (source_kg_id, 
-                                    question, 
-                                    answer, 
-                                    paraphrased_question,
-                                    events,
-                                    question_level,
-                                    question_type,
-                                    answer_type
-                                    )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                """.format(
-                    self.unified_kg_table_questions
-                )
-
                 question_obj["source_kg_id"] = event["id"]
                 # get dict to tuple, sequence should be the same as the sql command
                 data = (
@@ -258,11 +246,13 @@ class TKGQAGenerator:
                     question_obj["question_type"],
                     question_obj["answer_type"],
                 )
-                logger.info(f"question: {question_obj['pharaphrased_question']}")
-                self.cursor.execute(indiv_sql_command, data)
-                self.connection.commit()
-            break
-        self.connection.commit()
+                insert_values_list.append(data)
+                bulk_sql_pointer += 1
+                if bulk_sql_pointer % self.bulk_sql_size == 0:
+                    self.bulk_insert(values=insert_values_list)
+                    insert_values_list = []
+
+        self.bulk_insert(values=insert_values_list)
 
     @staticmethod
     def simple_question_generation_individual(
@@ -428,6 +418,7 @@ class TKGQAGenerator:
         second_event_df = first_event_df.copy(deep=True)
 
         insert_values_list = []
+        bulk_sql_pointer = 0
         for first_index, first_event in first_event_df.iterrows():
             for second_index, second_event in second_event_df.iterrows():
                 if first_index == second_index:
@@ -447,21 +438,6 @@ class TKGQAGenerator:
                 )
 
                 for question_obj in questions:
-                    indiv_sql_command = """
-                    INSERT INTO {} (source_kg_id,
-                                    question,
-                                    answer,
-                                    paraphrased_question,
-                                    events,
-                                    question_level,
-                                    question_type,
-                                    answer_type,
-                                    temporal_relation
-                                    )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    """.format(
-                        self.unified_kg_table_questions,
-                    )
 
                     question_obj["source_kg_id"] = source_kg_id
                     # get dict to tuple, sequence should be the same as the sql command
@@ -477,40 +453,11 @@ class TKGQAGenerator:
                         question_obj["temporal_relation"],
                     )
                     insert_values_list.append(data)
-                    # try:
-                    #     self.cursor.execute(indiv_sql_command, data)
-                    #     # self.connection.commit()
-                    # except Exception as e:
-                    #     logger.error(f"Error: {e}")
-                    #     logger.info(data)
-        values_str = ",\n".join(
-            ["(%s, %s, %s, %s, %s, %s, %s, %s, %s)"] * len(insert_values_list)
-        )
-        # Final bulk insert command
-        bulk_insert_command = f"""
-        INSERT INTO {self.unified_kg_table_questions} (source_kg_id,
-                                                      question,
-                                                      answer,
-                                                      paraphrased_question,
-                                                      events,
-                                                      question_level,
-                                                      question_type,
-                                                      answer_type,
-                                                      temporal_relation
-                                                      )
-        VALUES {values_str}
-        """
-
-        # Flatten the list of values tuples into a single tuple for execution
-        flat_values = [item for sublist in values_list for item in sublist]
-
-        # Execute the bulk insert command
-        try:
-            self.cursor.execute(bulk_insert_command, flat_values)
-            self.connection.commit()
-        except Exception as e:
-            logger.error(f"Error: {e}")
-            logger.info(flat_values)
+                    bulk_sql_pointer += 1
+                    if bulk_sql_pointer % self.bulk_sql_size == 0:
+                        self.bulk_insert(values=insert_values_list)
+                        insert_values_list = []
+        self.bulk_insert(values=insert_values_list)
 
     def medium_question_generation_individual(
             self,
@@ -1052,8 +999,7 @@ class TKGQAGenerator:
 
         # next step is to construct three events
         insert_values_list = []
-        number_to_break = 10
-        number_point = 0
+        bulk_sql_pointer = 0
         for first_index, first_event in first_event_df.iterrows():
             for second_index, second_event in second_event_df.iterrows():
                 if first_index == second_index:
@@ -1061,8 +1007,6 @@ class TKGQAGenerator:
                 for third_index, third_event in third_event_df.iterrows():
                     if first_index == third_index or second_index == third_index:
                         continue
-                    number_point += 1
-
                     source_kg_id = (
                             first_event["id"] * 1000000 * 1000000
                             + second_event["id"] * 1000000
@@ -1080,26 +1024,10 @@ class TKGQAGenerator:
                         pharaphrased=False,
                     )
                     for question_obj in questions:
-                        indiv_sql_command = """
-                        INSERT INTO {} (source_kg_id,
-                                        question,
-                                        answer,
-                                        paraphrased_question,
-                                        events,
-                                        question_level,
-                                        question_type,
-                                        answer_type,
-                                        temporal_relation
-                                        )
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        """.format(
-                            self.unified_kg_table_questions,
-                        )
-
                         question_obj["source_kg_id"] = source_kg_id
                         # get dict to tuple, sequence should be the same as the sql command
                         data = (
-                            1,
+                            question_obj["source_kg_id"],
                             question_obj["question"],
                             question_obj["answer"],
                             question_obj["pharaphrased_question"],
@@ -1110,40 +1038,12 @@ class TKGQAGenerator:
                             question_obj["temporal_relation"],
                         )
                         insert_values_list.append(data)
-                    break
-                break
-            break
-            # if number_point % number_to_break == 0:
-            #     logger.info(f"Processing {number_point} questions")
-            #     break
-        values_str = ",\n".join(
-            ["(%s, %s, %s, %s, %s, %s, %s, %s, %s)"] * len(insert_values_list)
-        )
-        # Final bulk insert command
-        bulk_insert_command = f"""
-                INSERT INTO {self.unified_kg_table_questions} (source_kg_id,
-                                                              question,
-                                                              answer,
-                                                              paraphrased_question,
-                                                              events,
-                                                              question_level,
-                                                              question_type,
-                                                              answer_type,
-                                                              temporal_relation
-                                                              )
-                VALUES {values_str}
-                """
+                        bulk_sql_pointer += 1
+                        if bulk_sql_pointer % self.bulk_sql_size == 0:
+                            self.bulk_insert(insert_values_list)
+                            insert_values_list = []
 
-        # Flatten the list of values tuples into a single tuple for execution
-        flat_values = [item for sublist in insert_values_list for item in sublist]
-
-        # Execute the bulk insert command
-        try:
-            self.cursor.execute(bulk_insert_command, flat_values)
-            self.connection.commit()
-        except Exception as e:
-            logger.exception(f"Error: {e}")
-            logger.info(flat_values)
+        self.bulk_insert(insert_values_list)
 
     def complex_question_generation_individual(
             self,
@@ -1546,11 +1446,20 @@ class TKGQAGenerator:
                             # we do duration ranking here
                             duration_rank_by_index = self.relation_duration(
                                 time_ranges=[
-                                    [first_event_start_time_dt, first_event_end_time_dt],
-                                    [second_event_start_time_dt, second_event_end_time_dt],
-                                    [third_event_start_time_dt, third_event_end_time_dt],
+                                    [
+                                        first_event_start_time_dt,
+                                        first_event_end_time_dt,
+                                    ],
+                                    [
+                                        second_event_start_time_dt,
+                                        second_event_end_time_dt,
+                                    ],
+                                    [
+                                        third_event_start_time_dt,
+                                        third_event_end_time_dt,
+                                    ],
                                 ],
-                                agg_temporal_operator="ranking"
+                                agg_temporal_operator="ranking",
                             )
                             logger.info(duration_rank_by_index)
                             temporal_answer = duration_rank_by_index[0]
@@ -1610,7 +1519,8 @@ class TKGQAGenerator:
                                         third_event_start_time_dt,
                                         third_event_end_time_dt,
                                     ],
-                                ])
+                                ]
+                            )
                             question_draft["question"] = random_pick_template.format(
                                 first_event_subject=first_event_subject,
                                 first_event_predicate=first_event_predicate,
@@ -1626,14 +1536,16 @@ class TKGQAGenerator:
                         question_draft["temporal_relation"] = temporal_relation
                     elif question_draft["answer_type"] == "relation_ranking":
                         # random select, ranking based on start time or end time
-                        rank_by_what = random.choice(["rank_start_time", "rank_end_time"])
+                        rank_by_what = random.choice(
+                            ["rank_start_time", "rank_end_time"]
+                        )
                         rank_by_index = self.relation_ordinal_time_range(
                             time_ranges=[
                                 [first_event_start_time_dt, first_event_end_time_dt],
                                 [second_event_start_time_dt, second_event_end_time_dt],
                                 [third_event_start_time_dt, third_event_end_time_dt],
                             ],
-                            agg_temporal_operator=rank_by_what
+                            agg_temporal_operator=rank_by_what,
                         )
 
                         random_pick_template = random.choice(
@@ -1649,7 +1561,6 @@ class TKGQAGenerator:
                             third_event_subject=third_event_subject,
                             third_event_predicate=third_event_predicate,
                             third_event_object=third_event_object,
-
                         )
                         temporal_answer = rank_by_index[0]
                         question_draft["answer"] = temporal_answer
@@ -1664,8 +1575,6 @@ class TKGQAGenerator:
                 logger.info(f"paraphrased_question: {paraphrased_question}")
                 question_obj["pharaphrased_question"] = paraphrased_question
 
-        for question in questions:
-            logger.info(question)
         return questions
 
     @staticmethod
@@ -2291,6 +2200,38 @@ class TKGQAGenerator:
             "X mi Y",
             "X > Y",
         ]
+
+    def bulk_insert(self, values: List[Tuple]):
+        """
+        This function will insert the values into the table
+
+        """
+        values_str = ",\n".join(["(%s, %s, %s, %s, %s, %s, %s, %s, %s)"] * len(values))
+        # Flatten the list of values tuples into a single tuple for execution
+        flat_values = [item for sublist in values for item in sublist]
+
+        bulk_insert_query = f"""
+        INSERT INTO {self.unified_kg_table_questions} (source_kg_id,
+                                                      question,
+                                                      answer,
+                                                      paraphrased_question,
+                                                      events,
+                                                      question_level,
+                                                      question_type,
+                                                      answer_type,
+                                                      temporal_relation
+                                                      )
+        VALUES {values_str}
+        """
+
+        # Execute the bulk insert command
+        try:
+            self.cursor.execute(bulk_insert_query, flat_values)
+            self.connection.commit()
+            logger.info(f"Successfully inserted {len(values)} rows into the table.")
+        except Exception as e:
+            logger.exception(f"Error: {e}")
+            logger.info(flat_values)
 
 
 if __name__ == "__main__":

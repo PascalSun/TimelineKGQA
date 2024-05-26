@@ -716,6 +716,7 @@ if __name__ == "__main__":
         """
         load the data into the database in tabluar format
         """
+        logger.info("Loading data")
         icews_data_loader.icews_load_data()
     if mode == "explore_data":
         """
