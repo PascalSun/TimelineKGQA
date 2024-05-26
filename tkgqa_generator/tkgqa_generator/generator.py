@@ -117,6 +117,9 @@ class TKGQAGenerator:
         user: str,
         password: str,
         db_name: str = "tkgqa",
+        paraphrased: bool = False,
+        bulk_sample_size: int = 100,
+        bulk_sql_size: int = 100,
     ):
         # setup the db connection
         self.host = host
@@ -135,8 +138,8 @@ class TKGQAGenerator:
         # we also need to create a new table, we can call it
         self.unified_kg_table_questions = f"{self.unified_kg_table}_questions"
         self.cursor = self.connection.cursor()
-        self.bulk_sql_size = 100
-        self.bulk_sample_size = 100
+        self.bulk_sql_size = bulk_sql_size
+        self.bulk_sample_size = bulk_sample_size
         # create a table to store retrieval questions
         self.cursor.execute(
             f"""
@@ -155,6 +158,7 @@ class TKGQAGenerator:
         """
         )
         self.cursor.connection.commit()
+        self.pharaphrased = paraphrased
 
     def simple_question_generation(self):
         """
@@ -234,7 +238,7 @@ class TKGQAGenerator:
                 start_time=event["start_time"],
                 end_time=event["end_time"],
                 template_based=True,
-                pharaphrased=False,
+                pharaphrased=self.pharaphrased,
             )
 
             # insert each qa into the table, have a flat table
@@ -447,7 +451,7 @@ class TKGQAGenerator:
                     first_event=first_event.to_dict(),
                     second_event=second_event.to_dict(),
                     template_based=True,
-                    pharaphrased=False,
+                    pharaphrased=self.pharaphrased,
                 )
 
                 for question_obj in questions:
@@ -1045,7 +1049,7 @@ class TKGQAGenerator:
                         second_event=second_event.to_dict(),
                         third_event=third_event.to_dict(),
                         template_based=True,
-                        pharaphrased=False,
+                        pharaphrased=self.pharaphrased,
                     )
                     for question_obj in questions:
                         question_obj["source_kg_id"] = source_kg_id
@@ -1489,8 +1493,8 @@ class TKGQAGenerator:
                                 ],
                                 agg_temporal_operator="ranking",
                             )
-                            logger.info(duration_rank_by_index)
-                            temporal_answer = duration_rank_by_index[0]
+                            logger.debug(duration_rank_by_index)
+                            temporal_answer = duration_rank_by_index[0] + 1
                             question_draft["question"] = random_pick_template.format(
                                 first_event_subject=first_event_subject,
                                 first_event_predicate=first_event_predicate,
@@ -1592,7 +1596,7 @@ class TKGQAGenerator:
                             third_event_predicate=third_event_predicate,
                             third_event_object=third_event_object,
                         )
-                        temporal_answer = rank_by_index[0]
+                        temporal_answer = rank_by_index[0] + 1
                         question_draft["answer"] = temporal_answer
                         question_draft["temporal_relation"] = rank_by_what
 
@@ -2273,6 +2277,9 @@ if __name__ == "__main__":
         user="tkgqa",
         password="tkgqa",
         db_name="tkgqa",
+        paraphrased=True,
+        bulk_sql_size=10,
+        bulk_sample_size=10,
     )
     """
     Question Types:

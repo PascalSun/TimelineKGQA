@@ -13,7 +13,7 @@ def paraphrase_simple_question(
     question: str,
     answer: str = None,
     answer_type: str = None,
-    model_name: str = "gpt-4o",
+    model_name: str = "gpt-3.5-turbo",
 ) -> str:
     """
     Paraphrases the given question using the OpenAI model specified.
@@ -41,7 +41,6 @@ def paraphrase_simple_question(
                 {
                     "role": "system",
                     "content": """You are an expert on paraphrasing questions.
-                                  We take out one part of the element in the statement, and replace it by ???.
                                   You job is paraphrasing this into a natural language question.
                                   The missing part can be someone, some organisation or some time.
                                   Use diverse ways to represent the temporal aspect of the question.
@@ -66,7 +65,7 @@ def paraphrase_simple_question(
 
 def paraphrase_medium_question(
     question: str,
-    model_name: str = "gpt-4o",
+    model_name: str = "gpt-3.5-turbo",
 ) -> str:
     """
     Paraphrases the given question using the OpenAI model specified.

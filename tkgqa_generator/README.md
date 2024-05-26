@@ -175,6 +175,7 @@ We are exploring the following datasets for the temporal question answering pair
 ```bash
 # cd to current directory
 cd tkgqa_generator
+python3 -m venv venv
 pip install -r requirements.txt
 # if you are doing development
 pip install -r requirements.dev.txt
@@ -188,6 +189,20 @@ If you are doing development, you will also need a database to store the knowled
 ```bash
 # spin up the database
 docker-compose up -d
+
+# After this we need to load the data
+
+# for iceews_dict
+source venv/bin/activate
+export OPENAI_API_KEY=sk-proj-xxx
+# this will load the icews_dicts data into the database
+python3 -m tkgqa_generator.data_loader.load_icews --mode load_data --data_name icews_dicts
+# this will create the unified knowledge graph
+python3 -m tkgqa_generator.data_loader.load_icews --mode actor_unified_kg
+
+# this will generate the question answering pairs
+python3 -m tkgqa_generator.generator
+
 ```
 
 ### Folder Structure
