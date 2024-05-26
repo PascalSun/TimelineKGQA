@@ -79,6 +79,19 @@ So we propose to represent the temporal information as the attribute of a SPO tr
 graph.
 This is similar to the event knowledge graph representation in the literature.
 
+The Node we have within the **Unified Knowledge Graph** will be:
+
+- **SPO**: Subject, Predicate, Object together to form a node
+- **Time**: [start_time, end_time] as the attribute of the node
+
+As shown in the following figure:
+
+![Unified Knowledge Graph](./imgs/UnifiedKG.jpg)
+
+In this way, we can align all the events along the timeline, and do the temporal operations on the timeline.
+
+---
+
 ### Temporal Questions
 
 We can try to classify the temporal questions from quite a few perspectives:
