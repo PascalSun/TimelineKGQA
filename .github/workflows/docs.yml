@@ -29,6 +29,8 @@ jobs:
       - name: Deploy to GitHub Pages
         run: |
           cd ./tkgqa_generator
+          ls
+          pwd
           mkdocs gh-deploy --force
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
