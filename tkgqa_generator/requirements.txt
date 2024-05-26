@@ -10,3 +10,8 @@ transformers~=4.39.3
 sentence-transformers
 requests
 openai
+mkdocstrings[python]
+mkdocs
+mkdocs-material
+mkdocs_gen_files
+mkdocs-encryptcontent-plugin

@@ -4,6 +4,8 @@ theme:
   name: material
 plugins:
   - search
+  - encryptcontent:
+      global_password: 'TimelineQA'
   - gen-files:
       scripts:
         - scripts/gen_ref_pages.py
