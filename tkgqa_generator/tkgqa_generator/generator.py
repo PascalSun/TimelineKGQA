@@ -165,6 +165,19 @@ class TKGQAGenerator:
         )
         self.cursor.connection.commit()
         self.pharaphrased = paraphrased
+        with timer(the_logger=logger, message="Getting the events from the database"):
+            self.cursor.execute(f"SELECT * FROM {self.unified_kg_table} LIMIT 100")
+            events_df = pd.DataFrame(self.cursor.fetchall())
+            # set the column names
+            columns = [desc[0] for desc in self.cursor.description]
+            if len(events_df) > 0:
+                events_df.columns = columns
+            else:
+                events_df = pd.DataFrame(columns=columns)
+            self.events_df = events_df
+        self.sample_simple_events = []
+        self.sample_medium_events = []
+        self.sample_complex_events = []
 
     def simple_question_generation(self):
         """
@@ -224,19 +237,12 @@ class TKGQAGenerator:
         - {answer_type} => Subject, Object | Timestamp Start, Timestamp End, Duration, Timestamp Start and End
         """
         # get records not yet generated questions
-        self.cursor.execute(
-            f"SELECT * FROM {self.unified_kg_table} WHERE id not in (SELECT source_kg_id FROM {self.unified_kg_table_questions})"
-        )
-        events_df = pd.DataFrame(self.cursor.fetchall())
-        # set the column names
-        columns = [desc[0] for desc in self.cursor.description]
-        if len(events_df) > 0:
-            events_df.columns = columns
-        else:
-            events_df = pd.DataFrame(columns=columns)
+
         insert_values_list = []
         bulk_sql_pointer = 0
-        for index, event in events_df.iterrows():
+        # for index, event in events_df.iterrows():
+        for item in self.sample_simple_events:
+            event = self.events_df.iloc[item]
             questions = self.simple_question_generation_individual(
                 subject=event["subject"],
                 predicate=event["predicate"],
@@ -249,7 +255,7 @@ class TKGQAGenerator:
 
             # insert each qa into the table, have a flat table
             for question_obj in questions:
-                question_obj["source_kg_id"] = event["id"]
+                question_obj["source_kg_id"] = int(event["id"])
                 # get dict to tuple, sequence should be the same as the sql command
                 data = (
                     question_obj["source_kg_id"],
@@ -267,12 +273,6 @@ class TKGQAGenerator:
                 if bulk_sql_pointer % self.bulk_sql_size == 0:
                     self.bulk_insert(values=insert_values_list)
                     insert_values_list = []
-
-                if (
-                    bulk_sql_pointer > self.bulk_sample_size
-                    and self.bulk_sample_size > 0
-                ):
-                    return
 
         self.bulk_insert(values=insert_values_list)
 
@@ -425,66 +425,43 @@ class TKGQAGenerator:
                 - Note: Ranking will be the same as Allen, so it will be in **Complex** level
 
         """
-        # get all questions
-        self.cursor.execute(f"SELECT * FROM {self.unified_kg_table_questions}")
-        # get it into the dataframe
-        questions_df = pd.DataFrame(self.cursor.fetchall())
-        columns = [desc[0] for desc in self.cursor.description]
-        if len(questions_df) > 0:
-            questions_df.columns = columns
-        else:
-            questions_df = pd.DataFrame(columns=columns)
-        # TODO: can try to filter the events to make sure it make more sense in the final question
-        self.cursor.execute(f"SELECT * FROM {self.unified_kg_table}")
-        first_event_df = pd.DataFrame(self.cursor.fetchall())
-        first_event_df.columns = [desc[0] for desc in self.cursor.description]
-        second_event_df = first_event_df.copy(deep=True)
 
         insert_values_list = []
         bulk_sql_pointer = 0
-        for first_index, first_event in first_event_df.iterrows():
-            for second_index, second_event in second_event_df.iterrows():
-                if first_index == second_index:
-                    continue
 
-                source_kg_id = first_event["id"] * 1000000 + second_event["id"]
-                logger.debug(f"Generating question for source_kg_id: {source_kg_id}")
-                # check is this in the df already
-                if source_kg_id in questions_df["source_kg_id"].values:
-                    continue
+        for item in self.sample_medium_events:
+            first_event = self.events_df.iloc[item[0]]
+            second_event = self.events_df.iloc[item[1]]
 
-                questions = self.medium_question_generation_individual(
-                    first_event=first_event.to_dict(),
-                    second_event=second_event.to_dict(),
-                    template_based=True,
-                    pharaphrased=self.pharaphrased,
+            source_kg_id = first_event["id"] * 1000000 + second_event["id"]
+            logger.debug(f"Generating question for source_kg_id: {source_kg_id}")
+            questions = self.medium_question_generation_individual(
+                first_event=first_event.to_dict(),
+                second_event=second_event.to_dict(),
+                template_based=True,
+                pharaphrased=self.pharaphrased,
+            )
+
+            for question_obj in questions:
+
+                question_obj["source_kg_id"] = int(source_kg_id)
+                # get dict to tuple, sequence should be the same as the sql command
+                data = (
+                    question_obj["source_kg_id"],
+                    question_obj["question"],
+                    question_obj["answer"],
+                    question_obj["pharaphrased_question"],
+                    question_obj["events"],
+                    question_obj["question_level"],
+                    question_obj["question_type"],
+                    question_obj["answer_type"],
+                    question_obj["temporal_relation"],
                 )
-
-                for question_obj in questions:
-
-                    question_obj["source_kg_id"] = source_kg_id
-                    # get dict to tuple, sequence should be the same as the sql command
-                    data = (
-                        question_obj["source_kg_id"],
-                        question_obj["question"],
-                        question_obj["answer"],
-                        question_obj["pharaphrased_question"],
-                        question_obj["events"],
-                        question_obj["question_level"],
-                        question_obj["question_type"],
-                        question_obj["answer_type"],
-                        question_obj["temporal_relation"],
-                    )
-                    insert_values_list.append(data)
-                    bulk_sql_pointer += 1
-                    if bulk_sql_pointer % self.bulk_sql_size == 0:
-                        self.bulk_insert(values=insert_values_list)
-                        insert_values_list = []
-                    if (
-                        bulk_sql_pointer > self.bulk_sample_size
-                        and self.bulk_sample_size > 0
-                    ):
-                        return
+                insert_values_list.append(data)
+                bulk_sql_pointer += 1
+                if bulk_sql_pointer % self.bulk_sql_size == 0:
+                    self.bulk_insert(values=insert_values_list)
+                    insert_values_list = []
         self.bulk_insert(values=insert_values_list)
 
     def medium_question_generation_individual(
@@ -1012,75 +989,48 @@ class TKGQAGenerator:
         - Type 1: Before Bush, after Kennedy, who is the president of US?
         - Type 2: Who is the first president of US among Bush, Kennedy, and Obama?
         """
-        # get all questions
-        self.cursor.execute(f"SELECT * FROM {self.unified_kg_table_questions}")
-        # get it into the dataframe
-        questions_df = pd.DataFrame(self.cursor.fetchall())
-        # need to consider the situation that the question is not generated
-        columns = [desc[0] for desc in self.cursor.description]
-        if questions_df.empty:
-            # create a df with the columns
-            questions_df = pd.DataFrame(columns=columns)
-        else:
-            questions_df.columns = columns
-
-        # TODO: can try to filter the events to make sure it make more sense in the final question
-        self.cursor.execute(f"SELECT * FROM {self.unified_kg_table}")
-        first_event_df = pd.DataFrame(self.cursor.fetchall())
-        first_event_df.columns = [desc[0] for desc in self.cursor.description]
-        second_event_df = first_event_df.copy(deep=True)
-        third_event_df = first_event_df.copy(deep=True)
 
         # next step is to construct three events
         insert_values_list = []
         bulk_sql_pointer = 0
-        for first_index, first_event in first_event_df.iterrows():
-            for second_index, second_event in second_event_df.iterrows():
-                if first_index == second_index:
-                    continue
-                for third_index, third_event in third_event_df.iterrows():
-                    if first_index == third_index or second_index == third_index:
-                        continue
-                    source_kg_id = (
-                        first_event["id"] * 1000000 * 1000000
-                        + second_event["id"] * 1000000
-                        + third_event["id"]
-                    )
-                    if source_kg_id in questions_df["source_kg_id"].values:
-                        continue
-                    logger.info(f"Generating question for source_kg_id: {source_kg_id}")
 
-                    questions = self.complex_question_generation_individual(
-                        first_event=first_event.to_dict(),
-                        second_event=second_event.to_dict(),
-                        third_event=third_event.to_dict(),
-                        template_based=True,
-                        pharaphrased=self.pharaphrased,
-                    )
-                    for question_obj in questions:
-                        question_obj["source_kg_id"] = source_kg_id
-                        # get dict to tuple, sequence should be the same as the sql command
-                        data = (
-                            question_obj["source_kg_id"],
-                            question_obj["question"],
-                            question_obj["answer"],
-                            question_obj["pharaphrased_question"],
-                            question_obj["events"],
-                            question_obj["question_level"],
-                            question_obj["question_type"],
-                            question_obj["answer_type"],
-                            question_obj["temporal_relation"],
-                        )
-                        insert_values_list.append(data)
-                        bulk_sql_pointer += 1
-                        if bulk_sql_pointer % self.bulk_sql_size == 0:
-                            self.bulk_insert(insert_values_list)
-                            insert_values_list = []
-                        if (
-                            bulk_sql_pointer > self.bulk_sample_size
-                            and self.bulk_sample_size > 0
-                        ):
-                            return
+        for item in self.sample_complex_events:
+            first_event = self.events_df.iloc[item[0]]
+            second_event = self.events_df.iloc[item[1]]
+            third_event = self.events_df.iloc[item[2]]
+            source_kg_id = (
+                first_event["id"] * 1000000 * 1000000
+                + second_event["id"] * 1000000
+                + third_event["id"]
+            )
+
+            questions = self.complex_question_generation_individual(
+                first_event=first_event.to_dict(),
+                second_event=second_event.to_dict(),
+                third_event=third_event.to_dict(),
+                template_based=True,
+                pharaphrased=self.pharaphrased,
+            )
+            for question_obj in questions:
+                question_obj["source_kg_id"] = int(source_kg_id)
+                # get dict to tuple, sequence should be the same as the sql command
+                data = (
+                    question_obj["source_kg_id"],
+                    question_obj["question"],
+                    question_obj["answer"],
+                    question_obj["pharaphrased_question"],
+                    question_obj["events"],
+                    question_obj["question_level"],
+                    question_obj["question_type"],
+                    question_obj["answer_type"],
+                    question_obj["temporal_relation"],
+                )
+                insert_values_list.append(data)
+                bulk_sql_pointer += 1
+                if bulk_sql_pointer % self.bulk_sql_size == 0:
+                    self.bulk_insert(insert_values_list)
+                    insert_values_list = []
+
         self.bulk_insert(insert_values_list)
 
     def complex_question_generation_individual(
@@ -2264,7 +2214,8 @@ class TKGQAGenerator:
                                                       )
         VALUES {values_str}
         """
-
+        if len(values) == 0:
+            return
         # Execute the bulk insert command
         try:
             self.cursor.execute(bulk_insert_query, flat_values)
@@ -2296,8 +2247,7 @@ class TKGQAGenerator:
             raise ValueError(
                 "sample_stragety should be random, temporal_close, degree_high, or both"
             )
-        if sample_percentage > 1 or sample_percentage < 0:
-            raise ValueError("sample_percentage should be between 0 and 1")
+
         """
         Do matrix sampling based on the element value
         If the dimension is 2, we will have a nxn matrix
@@ -2309,34 +2259,29 @@ class TKGQAGenerator:
         And then use the value as weight to do the sampling over the matrix
         """
 
-        with timer(the_logger=logger, message="Getting the events from the database"):
-            self.cursor.execute(f"SELECT * FROM {self.unified_kg_table}")
-            events_df = pd.DataFrame(self.cursor.fetchall())
-            # set the column names
-            columns = [desc[0] for desc in self.cursor.description]
-            if len(events_df) > 0:
-                events_df.columns = columns
-            else:
-                events_df = pd.DataFrame(columns=columns)
-            num_events = len(events_df)
+        num_events = len(self.events_df)
         # for dimension 1 generate, first construct a matrix with len(event_df), using numpy
         # and it is always sampling randomly
+        if sample_stragety == "degree_high" or sample_stragety == "both":
+            degree_scores = self.calculate_degree_scores(self.events_df)
+        else:
+            degree_scores = None
 
         with timer(the_logger=logger, message="Generating the matrix D1"):
-            dimension_1_matrix = np.ones((len(events_df)))
+            dimension_1_matrix = np.ones((num_events))
 
             # make sure every element in the matrix sum to 1
             dimension_1_matrix = dimension_1_matrix / dimension_1_matrix.sum()
 
         with timer(the_logger=logger, message="Generating the matrix D2"):
             # for dimension 2 generate, first construct a matrix with len(event_df), using numpy
-            dimension_2_matrix = np.zeros((len(events_df), len(events_df)))
+            dimension_2_matrix = np.zeros((num_events, num_events))
 
             if sample_stragety == "random":
-                dimension_2_matrix = np.ones((len(events_df), len(events_df)))
+                dimension_2_matrix = np.ones((num_events, num_events))
             elif sample_stragety == "temporal_close":
-                start_times = events_df["start_time"].values
-                end_times = events_df["end_time"].values
+                start_times = self.events_df["start_time"].values
+                end_times = self.events_df["end_time"].values
 
                 for x in range(num_events):
                     for y in range(x + 1, num_events):  # y > x to avoid redundancy
@@ -2350,24 +2295,41 @@ class TKGQAGenerator:
                         dimension_2_matrix[y, x] = score  # Leverage symmetry
 
             elif sample_stragety == "degree_high":
+
+                for x in range(num_events):
+                    for y in range(x + 1, num_events):
+                        score = degree_scores[x] = degree_scores[y]
+                        dimension_2_matrix[x, y] = score
+                        dimension_2_matrix[y, x] = score  # Leverage symmetry
+
+            elif sample_stragety == "both":
                 # park here
-                pass
+                start_times = self.events_df["start_time"].values
+                end_times = self.events_df["end_time"].values
+                for x in range(num_events):
+                    for y in range(x + 1, num_events):
+                        degree_score = degree_scores[x] + degree_scores[y]
+                        temporal_score = self.temporal_close_score(
+                            time_ranges=[
+                                [start_times[x], end_times[x]],
+                                [start_times[y], end_times[y]],
+                            ]
+                        )
+                        score = degree_score + temporal_score
+                        dimension_2_matrix[x, y] = score
+                        dimension_2_matrix[y, x] = score
 
             # make sure every element in the matrix sum to 1
             dimension_2_matrix = dimension_2_matrix / dimension_2_matrix.sum()
 
-        with timer("Generating the matrix D3", the_logger=logger):
+        with timer(the_logger=logger, message="Generating the matrix D3"):
             # for dimension 3 generate, first construct a matrix with len(event_df), using numpy
-            dimension_3_matrix = np.zeros(
-                len(events_df), len(events_df), len(events_df)
-            )
+            dimension_3_matrix = np.zeros((num_events, num_events, num_events))
             if sample_stragety == "random":
-                dimension_3_matrix = np.ones(
-                    (len(events_df), len(events_df), len(events_df))
-                )
+                dimension_3_matrix = np.ones((num_events, num_events, num_events))
             elif sample_stragety == "temporal_close":
-                start_times = events_df["start_time"].values
-                end_times = events_df["end_time"].values
+                start_times = self.events_df["start_time"].values
+                end_times = self.events_df["end_time"].values
 
                 for x in range(num_events):
                     for y in range(x + 1, num_events):  # y > x to avoid redundancy
@@ -2386,7 +2348,42 @@ class TKGQAGenerator:
                             dimension_3_matrix[z, x, y] = score
                             dimension_3_matrix[z, y, x] = score
             elif sample_stragety == "degree_high":
-                pass
+                for x in range(num_events):
+                    for y in range(x + 1, num_events):
+                        for z in range(y + 1, num_events):
+                            score = (
+                                degree_scores[x] + degree_scores[y] + degree_scores[z]
+                            )
+                            dimension_3_matrix[x, y, z] = score
+                            dimension_3_matrix[x, z, y] = score
+                            dimension_3_matrix[y, x, z] = score
+                            dimension_3_matrix[y, z, x] = score
+                            dimension_3_matrix[z, x, y] = score
+                            dimension_3_matrix[z, y, x] = score
+            elif sample_stragety == "both":
+                # park here
+                start_times = self.events_df["start_time"].values
+                end_times = self.events_df["end_time"].values
+                for x in range(num_events):
+                    for y in range(x + 1, num_events):
+                        for z in range(y + 1, num_events):
+                            degree_score = (
+                                degree_scores[x] + degree_scores[y] + degree_scores[z]
+                            )
+                            temporal_score = self.temporal_close_score(
+                                time_ranges=[
+                                    [start_times[x], end_times[x]],
+                                    [start_times[y], end_times[y]],
+                                    [start_times[z], end_times[z]],
+                                ]
+                            )
+                            score = degree_score + temporal_score
+                            dimension_3_matrix[x, y, z] = score
+                            dimension_3_matrix[x, z, y] = score
+                            dimension_3_matrix[y, x, z] = score
+                            dimension_3_matrix[y, z, x] = score
+                            dimension_3_matrix[z, x, y] = score
+                            dimension_3_matrix[z, y, x] = score
 
             # make sure every element in the matrix sum to 1
             dimension_3_matrix = dimension_3_matrix / dimension_3_matrix.sum()
@@ -2399,30 +2396,32 @@ class TKGQAGenerator:
             if isinstance(sample_percentage, float):
                 # sample based on the rate, and the value (weight) is the matrix value
                 dimension_1_samples = np.random.choice(
-                    len(events_df),
-                    int(len(events_df) * sample_percentage),
+                    num_events,
+                    int(num_events * sample_percentage),
                     p=dimension_1_matrix,
                 )
-                dimension_2_samples = np.random.choice(
-                    len(events_df),
-                    int(len(events_df) * sample_percentage),
-                    p=dimension_2_matrix,
+                # sample it from dimension 2 matrix
+                dimension_2_samples = self.random_selection(
+                    dimension_2_matrix,
+                    int(dimension_2_matrix.size * sample_percentage),
                 )
-                dimension_3_samples = np.random.choice(
-                    len(events_df),
-                    int(len(events_df) * sample_percentage),
-                    p=dimension_3_matrix,
+                # sample it from dimension 3 matrix
+                dimension_3_samples = self.random_selection(
+                    dimension_3_matrix,
+                    int(dimension_3_matrix.size * sample_percentage),
                 )
 
             elif isinstance(sample_percentage, int):
                 dimension_1_samples = np.random.choice(
-                    len(events_df), sample_percentage, p=dimension_1_matrix
+                    num_events, sample_percentage, p=dimension_1_matrix
                 )
-                dimension_2_samples = np.random.choice(
-                    len(events_df), sample_percentage, p=dimension_2_matrix
+                dimension_2_samples = self.random_selection(
+                    dimension_2_matrix,
+                    sample_percentage,
                 )
-                dimension_3_samples = np.random.choice(
-                    len(events_df), sample_percentage, p=dimension_3_matrix
+                dimension_3_samples = self.random_selection(
+                    dimension_3_matrix,
+                    sample_percentage,
                 )
 
             elif isinstance(sample_percentage, dict):
@@ -2452,15 +2451,13 @@ class TKGQAGenerator:
                         int(len(events_df) * dimension_1_samples),
                         p=dimension_1_matrix,
                     )
-                    dimension_2_samples = np.random.choice(
-                        len(events_df),
-                        int(len(events_df) * dimension_2_samples),
-                        p=dimension_2_matrix,
+                    dimension_2_samples = self.random_selection(
+                        dimension_2_matrix,
+                        int(dimension_2_matrix.size * dimension_2_samples),
                     )
-                    dimension_3_samples = np.random.choice(
-                        len(events_df),
-                        int(len(events_df) * dimension_3_samples),
-                        p=dimension_3_matrix,
+                    dimension_3_samples = self.random_selection(
+                        dimension_3_matrix,
+                        int(dimension_3_matrix.size * dimension_3_samples),
                     )
                 # if all types of dimension_1_sample_percentage, dimension_2_sample_percentage, dimension_3_sample_percentage are int
                 # then we will sample based on the number
@@ -2475,11 +2472,13 @@ class TKGQAGenerator:
                     dimension_1_samples = np.random.choice(
                         len(events_df), dimension_1_samples, p=dimension_1_matrix
                     )
-                    dimension_2_samples = np.random.choice(
-                        len(events_df), dimension_2_samples, p=dimension_2_matrix
+                    dimension_2_samples = self.random_selection(
+                        dimension_2_matrix,
+                        dimension_2_samples,
                     )
-                    dimension_3_samples = np.random.choice(
-                        len(events_df), dimension_3_samples, p=dimension_3_matrix
+                    dimension_3_samples = self.random_selection(
+                        dimension_3_matrix,
+                        dimension_3_samples,
                     )
                 else:
                     raise ValueError(
@@ -2490,9 +2489,23 @@ class TKGQAGenerator:
                     "The sample_percentage should be either float, int, or dict"
                 )
 
-        logger.info(dimension_1_samples)
-        logger.info(dimension_2_samples)
-        logger.info(dimension_3_samples)
+        logger.info(len(dimension_1_samples))
+        logger.info(len(dimension_2_samples))
+        logger.info(len(dimension_3_samples))
+
+        """
+        Examples of the output:
+        
+        ```
+        [  0  10  20  30  40  50  60  70  80  90 100]
+        [(0, 10), (20, 30), (40, 50), (60, 70), (80, 90), (100, 110)]
+        [(0, 10, 20), (30, 40, 50), (60, 70, 80), (90, 100, 110)]
+        ```
+        """
+        self.sample_simple_events = dimension_1_samples
+        self.sample_medium_events = dimension_2_samples
+        self.sample_complex_events = dimension_3_samples
+        return dimension_1_samples, dimension_2_samples, dimension_3_samples
 
     def temporal_close_score(self, time_ranges: List) -> float:
         """
@@ -2542,6 +2555,73 @@ class TKGQAGenerator:
             return 0
         return 1 / score
 
+    def calculate_degree_scores(self, event_df: pd.DataFrame):
+        """
+        group by subject, each subject will have a degree
+        group by object, each object will have a degree
+        merge subject_degree and object_degree back to the event_df, it will have extract two columns
+        - subject_degree
+        - object_degree
+        then we will calculate the degree score based on the two columns
+
+        In this way, we have the degree score for each event
+
+        Args:
+            event_df (pd.DataFrame): The dataframe of the events
+
+        Returns:
+            Tuple: The tuple of the degree scores
+        """
+
+        subject_degree_df = (
+            event_df.groupby("subject").size().reset_index(name="subject_degree")
+        )
+        object_degree_df = (
+            event_df.groupby("object").size().reset_index(name="object_degree")
+        )
+
+        event_df = event_df.merge(subject_degree_df, on="subject", how="left")
+        event_df = event_df.merge(object_degree_df, on="object", how="left")
+
+        event_df["degree_score"] = (
+            event_df["subject_degree"] + event_df["object_degree"]
+        )
+        # show the summary of the degree score
+        logger.debug(event_df["degree_score"].describe())
+
+        # flat the score to 1,2,3,4 based on the quartile
+        event_df["degree_score"] = pd.qcut(event_df["degree_score"], q=4, labels=False)
+        event_df["degree_score"] = event_df["degree_score"] + 1
+
+        # normalize the score to 0-1
+        event_df["degree_score"] = event_df["degree_score"] / 4
+
+        return event_df["degree_score"].values
+
+    @staticmethod
+    def random_selection(matrix, sample_num):
+
+        if sample_num > matrix.size:
+            raise ValueError(
+                "The sample number should be less than the length of the matrix"
+            )
+
+        if matrix.shape[0] != matrix.shape[1]:
+            raise ValueError("The matrix should be a square matrix")
+        # if it is one dimension, then we will sample based on the rate
+        if matrix.shape[0] == 1:
+            raise ValueError("The matrix should be at least two dimensions")
+
+        flatten_matrix = matrix.flatten()
+        sample_indices = np.random.choice(
+            np.arange(len(flatten_matrix)),
+            size=sample_num,
+            replace=False,
+            p=flatten_matrix,
+        )
+        samples = [np.unravel_index(i, matrix.shape) for i in sample_indices]
+        return samples
+
 
 if __name__ == "__main__":
     generator = TKGQAGenerator(
@@ -2551,7 +2631,7 @@ if __name__ == "__main__":
         user="tkgqa",
         password="tkgqa",
         db_name="tkgqa",
-        paraphrased=True,
+        paraphrased=False,
         bulk_sql_size=10,
         bulk_sample_size=10,
     )
@@ -2570,8 +2650,8 @@ if __name__ == "__main__":
         - Timeline Position Retrieval + Timeline Position Retrieval + Timeline Position Retrieval
         - Timeline Position Retrieval + Timeline Position Retrieval + Timeline Position Retrieval
     """
-    generator.sampling_events()
+    generator.sampling_events(sample_stragety="both", sample_percentage=20)
 
-    # generator.simple_question_generation()
-    # generator.medium_question_generation()
-    # generator.complex_question_generation()
+    generator.simple_question_generation()
+    generator.medium_question_generation()
+    generator.complex_question_generation()
