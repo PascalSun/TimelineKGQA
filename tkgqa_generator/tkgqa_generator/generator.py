@@ -2,7 +2,7 @@ import copy
 import json
 import random
 from datetime import datetime, timedelta
-from typing import List, Tuple
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -13,11 +13,17 @@ from tkgqa_generator.openai_utils import (
     paraphrase_simple_question,
 )
 from tkgqa_generator.templates import QUESTION_TEMPLATES
-from tkgqa_generator.utils import get_logger
+from tkgqa_generator.utils import get_logger, timer
 
 logger = get_logger(__name__)
 
 
+# TODO:
+# Sampling Stragety
+# 1. totally random
+# 2. based on the time range, give different wieghts
+# 3. based on degree of the node, give different weights
+# 4. Combine 2 and 3 to have a stragety
 class TKGQAGenerator:
     """
     **How human handle the temporal information and answer the temporal questions?**
@@ -110,16 +116,16 @@ class TKGQAGenerator:
     """
 
     def __init__(
-            self,
-            table_name: str,
-            host: str,
-            port: int,
-            user: str,
-            password: str,
-            db_name: str = "tkgqa",
-            paraphrased: bool = False,
-            bulk_sample_size: int = 100,
-            bulk_sql_size: int = 100,
+        self,
+        table_name: str,
+        host: str,
+        port: int,
+        user: str,
+        password: str,
+        db_name: str = "tkgqa",
+        paraphrased: bool = False,
+        bulk_sample_size: int = 100,
+        bulk_sql_size: int = 100,
     ):
         # setup the db connection
         self.host = host
@@ -263,8 +269,8 @@ class TKGQAGenerator:
                     insert_values_list = []
 
                 if (
-                        bulk_sql_pointer > self.bulk_sample_size
-                        and self.bulk_sample_size > 0
+                    bulk_sql_pointer > self.bulk_sample_size
+                    and self.bulk_sample_size > 0
                 ):
                     return
 
@@ -272,13 +278,13 @@ class TKGQAGenerator:
 
     @staticmethod
     def simple_question_generation_individual(
-            subject: str,
-            predicate: str,
-            object: str,
-            start_time: str,
-            end_time: str,
-            template_based: bool = False,
-            pharaphrased: bool = False,
+        subject: str,
+        predicate: str,
+        object: str,
+        start_time: str,
+        end_time: str,
+        template_based: bool = False,
+        pharaphrased: bool = False,
     ) -> dict:
         """
         This will try to generate four questions belong to RE type
@@ -475,18 +481,18 @@ class TKGQAGenerator:
                         self.bulk_insert(values=insert_values_list)
                         insert_values_list = []
                     if (
-                            bulk_sql_pointer > self.bulk_sample_size
-                            and self.bulk_sample_size > 0
+                        bulk_sql_pointer > self.bulk_sample_size
+                        and self.bulk_sample_size > 0
                     ):
                         return
         self.bulk_insert(values=insert_values_list)
 
     def medium_question_generation_individual(
-            self,
-            first_event: dict,
-            second_event: dict,
-            template_based: bool = True,
-            pharaphrased: bool = False,
+        self,
+        first_event: dict,
+        second_event: dict,
+        template_based: bool = True,
+        pharaphrased: bool = False,
     ) -> dict:
         """
 
@@ -717,8 +723,8 @@ class TKGQAGenerator:
                 ][question_draft["question_type"]][question_draft["answer_type"]]
 
                 if (
-                        question_draft["answer_type"] == "subject"
-                        or question_draft["answer_type"] == "object"
+                    question_draft["answer_type"] == "subject"
+                    or question_draft["answer_type"] == "object"
                 ):
                     """
                     Handle the Medium Type 1 Questions here: Both a and b
@@ -796,8 +802,8 @@ class TKGQAGenerator:
                     Handle in theory four types of questions here
                     """
                     if (
-                            question_draft["answer_type"]
-                            == "relation_union_or_intersection"
+                        question_draft["answer_type"]
+                        == "relation_union_or_intersection"
                     ):
                         temporal_relation = question_draft["temporal_relation"]
                         random_pick_template = random.choice(
@@ -1036,9 +1042,9 @@ class TKGQAGenerator:
                     if first_index == third_index or second_index == third_index:
                         continue
                     source_kg_id = (
-                            first_event["id"] * 1000000 * 1000000
-                            + second_event["id"] * 1000000
-                            + third_event["id"]
+                        first_event["id"] * 1000000 * 1000000
+                        + second_event["id"] * 1000000
+                        + third_event["id"]
                     )
                     if source_kg_id in questions_df["source_kg_id"].values:
                         continue
@@ -1071,19 +1077,19 @@ class TKGQAGenerator:
                             self.bulk_insert(insert_values_list)
                             insert_values_list = []
                         if (
-                                bulk_sql_pointer > self.bulk_sample_size
-                                and self.bulk_sample_size > 0
+                            bulk_sql_pointer > self.bulk_sample_size
+                            and self.bulk_sample_size > 0
                         ):
                             return
         self.bulk_insert(insert_values_list)
 
     def complex_question_generation_individual(
-            self,
-            first_event: dict,
-            second_event: dict,
-            third_event: dict,
-            template_based: bool = True,
-            pharaphrased: bool = True,
+        self,
+        first_event: dict,
+        second_event: dict,
+        third_event: dict,
+        template_based: bool = True,
+        pharaphrased: bool = True,
     ) -> dict:
         """
         Args:
@@ -1281,8 +1287,8 @@ class TKGQAGenerator:
                 ][question_draft["question_type"]][question_draft["answer_type"]]
 
                 if (
-                        question_draft["answer_type"] == "subject"
-                        or question_draft["answer_type"] == "object"
+                    question_draft["answer_type"] == "subject"
+                    or question_draft["answer_type"] == "object"
                 ):
                     """
                     Handle the Complex Type 1 Questions here:
@@ -1393,8 +1399,8 @@ class TKGQAGenerator:
                 else:
                     # handle the Timeline Position Retrieval + Timeline Position Retrieval + Timeline Position Retrieval
                     if (
-                            question_draft["answer_type"]
-                            == "relation_union_or_intersection"
+                        question_draft["answer_type"]
+                        == "relation_union_or_intersection"
                     ):
                         temporal_relation = question_draft["temporal_relation"]
                         random_pick_template = random.choice(
@@ -1613,7 +1619,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def relation_allen_time_range(
-            time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
+        time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
     ) -> dict:
         """
         This function will return the allen temporal relation between two time ranges
@@ -1910,7 +1916,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def relation_allen_time_duration(
-            time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
+        time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
     ) -> dict:
         """
 
@@ -1950,8 +1956,8 @@ class TKGQAGenerator:
 
     @staticmethod
     def relation_union_or_intersection(
-            time_ranges: List[Tuple[datetime, datetime]],
-            temporal_operator: str = "intersection",
+        time_ranges: List[Tuple[datetime, datetime]],
+        temporal_operator: str = "intersection",
     ) -> str:
         """
         This function will return the temporal operator between multiple time ranges
@@ -1999,7 +2005,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def relation_ordinal_time_range(
-            time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
+        time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
     ) -> list:
         """
         For the time range, it will do the rank operation, sort it
@@ -2058,7 +2064,7 @@ class TKGQAGenerator:
 
     @staticmethod
     def relation_duration(
-            time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
+        time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
     ) -> list:
         """
         For the time range, it will do the rank operation, sort it
@@ -2116,9 +2122,9 @@ class TKGQAGenerator:
 
     @staticmethod
     def relation_duration_calculation(
-            time_range_a: list[datetime, datetime],
-            time_range_b: list[datetime, datetime],
-            temporal_operator: str = None,
+        time_range_a: list[datetime, datetime],
+        time_range_b: list[datetime, datetime],
+        temporal_operator: str = None,
     ) -> timedelta:
         """
         We will calculate the time difference between two time ranges
@@ -2176,7 +2182,7 @@ class TKGQAGenerator:
         return start_time, end_time
 
     def util_average_duration_calculation(
-            self, time_ranges: list[[datetime, datetime]], temporal_operator: str = None
+        self, time_ranges: list[[datetime, datetime]], temporal_operator: str = None
     ):
         try:
             if temporal_operator == "average":
@@ -2268,6 +2274,274 @@ class TKGQAGenerator:
             logger.exception(f"Error: {e}")
             logger.info(flat_values)
 
+    def sampling_events(
+        self,
+        sample_percentage: Union[float, dict, int] = 0.1,
+        sample_stragety: str = "temporal_close",
+    ) -> List[str]:
+        """
+        This function will sample the events from the list
+
+        Args:
+            events_df (pd.DataFrame): The dataframe of the events
+            sample_percentage (float): The sample percentage
+            sample_stragety (str): The sample strategy, can be random, temporal_close, degree_high, both
+
+        Returns:
+            List[Tuple]: The list Tuples (event1_id, event2_id, event3_id)
+
+        """
+
+        if sample_stragety not in ("random", "temporal_close", "degree_high", "both"):
+            raise ValueError(
+                "sample_stragety should be random, temporal_close, degree_high, or both"
+            )
+        if sample_percentage > 1 or sample_percentage < 0:
+            raise ValueError("sample_percentage should be between 0 and 1")
+        """
+        Do matrix sampling based on the element value
+        If the dimension is 2, we will have a nxn matrix
+            - value of the matrix is 1 for random
+            - value will be calculated based on the temporal information if it is temporal_close
+            - value will be calculated based on the degree information if it is degree_high
+            - value will be calculated based on both temporal and degree information if it is both
+
+        And then use the value as weight to do the sampling over the matrix
+        """
+
+        with timer(the_logger=logger, message="Getting the events from the database"):
+            self.cursor.execute(f"SELECT * FROM {self.unified_kg_table}")
+            events_df = pd.DataFrame(self.cursor.fetchall())
+            # set the column names
+            columns = [desc[0] for desc in self.cursor.description]
+            if len(events_df) > 0:
+                events_df.columns = columns
+            else:
+                events_df = pd.DataFrame(columns=columns)
+            num_events = len(events_df)
+        # for dimension 1 generate, first construct a matrix with len(event_df), using numpy
+        # and it is always sampling randomly
+
+        with timer(the_logger=logger, message="Generating the matrix D1"):
+            dimension_1_matrix = np.ones((len(events_df)))
+
+            # make sure every element in the matrix sum to 1
+            dimension_1_matrix = dimension_1_matrix / dimension_1_matrix.sum()
+
+        with timer(the_logger=logger, message="Generating the matrix D2"):
+            # for dimension 2 generate, first construct a matrix with len(event_df), using numpy
+            dimension_2_matrix = np.zeros((len(events_df), len(events_df)))
+
+            if sample_stragety == "random":
+                dimension_2_matrix = np.ones((len(events_df), len(events_df)))
+            elif sample_stragety == "temporal_close":
+                start_times = events_df["start_time"].values
+                end_times = events_df["end_time"].values
+
+                for x in range(num_events):
+                    for y in range(x + 1, num_events):  # y > x to avoid redundancy
+                        score = self.temporal_close_score(
+                            time_ranges=[
+                                [start_times[x], end_times[x]],
+                                [start_times[y], end_times[y]],
+                            ]
+                        )
+                        dimension_2_matrix[x, y] = score
+                        dimension_2_matrix[y, x] = score  # Leverage symmetry
+
+            elif sample_stragety == "degree_high":
+                # park here
+                pass
+
+            # make sure every element in the matrix sum to 1
+            dimension_2_matrix = dimension_2_matrix / dimension_2_matrix.sum()
+
+        with timer("Generating the matrix D3", the_logger=logger):
+            # for dimension 3 generate, first construct a matrix with len(event_df), using numpy
+            dimension_3_matrix = np.zeros(
+                len(events_df), len(events_df), len(events_df)
+            )
+            if sample_stragety == "random":
+                dimension_3_matrix = np.ones(
+                    (len(events_df), len(events_df), len(events_df))
+                )
+            elif sample_stragety == "temporal_close":
+                start_times = events_df["start_time"].values
+                end_times = events_df["end_time"].values
+
+                for x in range(num_events):
+                    for y in range(x + 1, num_events):  # y > x to avoid redundancy
+                        for z in range(y + 1, num_events):  # z > y to avoid redundancy
+                            score = self.temporal_close_score(
+                                time_ranges=[
+                                    [start_times[x], end_times[x]],
+                                    [start_times[y], end_times[y]],
+                                    [start_times[z], end_times[z]],
+                                ]
+                            )
+                            dimension_3_matrix[x, y, z] = score
+                            dimension_3_matrix[x, z, y] = score
+                            dimension_3_matrix[y, x, z] = score
+                            dimension_3_matrix[y, z, x] = score
+                            dimension_3_matrix[z, x, y] = score
+                            dimension_3_matrix[z, y, x] = score
+            elif sample_stragety == "degree_high":
+                pass
+
+            # make sure every element in the matrix sum to 1
+            dimension_3_matrix = dimension_3_matrix / dimension_3_matrix.sum()
+        # do the sampling based on the matrix
+        # if sampling is a float value, then it means all three dimensions will be sampled based on the rate
+        # if samping is a int value, then it means all three dimension will have that many questions
+        # if sampling is a dict value, then it means the sampling rate for each dimension
+
+        with timer(the_logger=logger, message="Sampling the events"):
+            if isinstance(sample_percentage, float):
+                # sample based on the rate, and the value (weight) is the matrix value
+                dimension_1_samples = np.random.choice(
+                    len(events_df),
+                    int(len(events_df) * sample_percentage),
+                    p=dimension_1_matrix,
+                )
+                dimension_2_samples = np.random.choice(
+                    len(events_df),
+                    int(len(events_df) * sample_percentage),
+                    p=dimension_2_matrix,
+                )
+                dimension_3_samples = np.random.choice(
+                    len(events_df),
+                    int(len(events_df) * sample_percentage),
+                    p=dimension_3_matrix,
+                )
+
+            elif isinstance(sample_percentage, int):
+                dimension_1_samples = np.random.choice(
+                    len(events_df), sample_percentage, p=dimension_1_matrix
+                )
+                dimension_2_samples = np.random.choice(
+                    len(events_df), sample_percentage, p=dimension_2_matrix
+                )
+                dimension_3_samples = np.random.choice(
+                    len(events_df), sample_percentage, p=dimension_3_matrix
+                )
+
+            elif isinstance(sample_percentage, dict):
+                dimension_3_sample_percentage = sample_percentage.get("dimension_1", 0)
+                dimension_2_sample_percentage = sample_percentage.get("dimension_2", 0)
+                dimension_3_sample_percentage = sample_percentage.get("dimension_3", 0)
+                if (
+                    dimension_1_samples == 0
+                    or dimension_2_samples == 0
+                    or dimension_3_samples == 0
+                ):
+                    raise ValueError(
+                        "The sample_percentage should have all three dimensions"
+                    )
+                # if all types of dimension_1_sample_percentage, dimension_2_sample_percentage, dimension_3_sample_percentage are float
+                # then we will sample based on the rate
+                if all(
+                    isinstance(i, float)
+                    for i in [
+                        dimension_1_samples,
+                        dimension_2_samples,
+                        dimension_3_samples,
+                    ]
+                ):
+                    dimension_1_samples = np.random.choice(
+                        len(events_df),
+                        int(len(events_df) * dimension_1_samples),
+                        p=dimension_1_matrix,
+                    )
+                    dimension_2_samples = np.random.choice(
+                        len(events_df),
+                        int(len(events_df) * dimension_2_samples),
+                        p=dimension_2_matrix,
+                    )
+                    dimension_3_samples = np.random.choice(
+                        len(events_df),
+                        int(len(events_df) * dimension_3_samples),
+                        p=dimension_3_matrix,
+                    )
+                # if all types of dimension_1_sample_percentage, dimension_2_sample_percentage, dimension_3_sample_percentage are int
+                # then we will sample based on the number
+                elif all(
+                    isinstance(i, int)
+                    for i in [
+                        dimension_1_samples,
+                        dimension_2_samples,
+                        dimension_3_samples,
+                    ]
+                ):
+                    dimension_1_samples = np.random.choice(
+                        len(events_df), dimension_1_samples, p=dimension_1_matrix
+                    )
+                    dimension_2_samples = np.random.choice(
+                        len(events_df), dimension_2_samples, p=dimension_2_matrix
+                    )
+                    dimension_3_samples = np.random.choice(
+                        len(events_df), dimension_3_samples, p=dimension_3_matrix
+                    )
+                else:
+                    raise ValueError(
+                        "The sample_percentage should have all three dimensions"
+                    )
+            else:
+                raise ValueError(
+                    "The sample_percentage should be either float, int, or dict"
+                )
+
+        logger.info(dimension_1_samples)
+        logger.info(dimension_2_samples)
+        logger.info(dimension_3_samples)
+
+    def temporal_close_score(self, time_ranges: List) -> float:
+        """
+        This function will calculate the temporal close score between two/three time ranges.
+
+        range_a = [start_time_a, end_time_a]
+        range_b = [start_time_b, end_time_b]
+        range_c = [start_time_c, end_time_c] (if three ranges are provided)
+
+        score = 1 / ((start_time_b - start_time_a)**2 + (end_time_b - end_time_a)**2)
+        (for two ranges)
+
+        score = 1 / ((start_time_b - start_time_a)**2 + (end_time_b - end_time_a)**2 +
+                     (start_time_c - start_time_a)**2 + (end_time_c - end_time_a)**2)
+        (for three ranges)
+
+        Args:
+            time_ranges (List[Tuple[datetime, datetime]]): The list of time ranges
+
+        Returns:
+            temporal_close_score (float): The temporal close score between two/three time ranges, if it is close
+            to 1, it means the time ranges are close to each other, if it is close to 0, it means the time ranges
+            are far from each other
+        """
+        if len(time_ranges) not in [2, 3]:
+            raise ValueError("The function only supports two or three time ranges")
+
+        # Utility function to convert string to datetime
+        start_time_a_dt, end_time_a_dt = self.util_str_to_datetime(time_ranges[0])
+        start_time_b_dt, end_time_b_dt = self.util_str_to_datetime(time_ranges[1])
+
+        # Calculate the differences in days
+        start_diff_days = (start_time_b_dt - start_time_a_dt) / np.timedelta64(1, "D")
+        end_diff_days = (end_time_b_dt - end_time_a_dt) / np.timedelta64(1, "D")
+
+        # Calculate the score using days difference
+        score = start_diff_days**2 + end_diff_days**2
+
+        if len(time_ranges) == 3:
+            start_time_c_dt, end_time_c_dt = self.util_str_to_datetime(time_ranges[2])
+            start_diff_days_c = (start_time_c_dt - start_time_a_dt) / np.timedelta64(
+                1, "D"
+            )
+            end_diff_days_c = (end_time_c_dt - end_time_a_dt) / np.timedelta64(1, "D")
+            score += start_diff_days_c**2 + end_diff_days_c**2
+        if score == 0:
+            return 0
+        return 1 / score
+
 
 if __name__ == "__main__":
     generator = TKGQAGenerator(
@@ -2296,7 +2570,8 @@ if __name__ == "__main__":
         - Timeline Position Retrieval + Timeline Position Retrieval + Timeline Position Retrieval
         - Timeline Position Retrieval + Timeline Position Retrieval + Timeline Position Retrieval
     """
+    generator.sampling_events()
 
-    generator.simple_question_generation()
-    generator.medium_question_generation()
-    generator.complex_question_generation()
+    # generator.simple_question_generation()
+    # generator.medium_question_generation()
+    # generator.complex_question_generation()
