@@ -159,7 +159,9 @@ class TKGQAGenerator:
         self.cursor.connection.commit()
         self.pharaphrased = paraphrased
         with timer(the_logger=logger, message="Getting the events from the database"):
-            self.cursor.execute(f"SELECT * FROM {self.unified_kg_table}")
+            self.cursor.execute(
+                f"SELECT * FROM {self.unified_kg_table} ORDER BY RANDOM() LIMIT 1000;"
+            )
             events_df = pd.DataFrame(self.cursor.fetchall())
             # set the column names
             columns = [desc[0] for desc in self.cursor.description]
@@ -2324,7 +2326,7 @@ class TKGQAGenerator:
                 start_times = self.events_df["start_time"].values
                 end_times = self.events_df["end_time"].values
 
-                for x in range(num_events):
+                for x in tqdm(range(num_events), desc="Processing 3D events"):
                     for y in range(x + 1, num_events):  # y > x to avoid redundancy
                         for z in range(y + 1, num_events):  # z > y to avoid redundancy
                             score = self.temporal_close_score(
@@ -2357,7 +2359,7 @@ class TKGQAGenerator:
                 # park here
                 start_times = self.events_df["start_time"].values
                 end_times = self.events_df["end_time"].values
-                for x in range(num_events):
+                for x in tqdm(range(num_events), desc="Processing 3D events"):
                     for y in range(x + 1, num_events):
                         for z in range(y + 1, num_events):
                             degree_score = (
@@ -2583,6 +2585,7 @@ class TKGQAGenerator:
         logger.debug(event_df["degree_score"].describe())
 
         # flat the score to 1,2,3,4 based on the quartile
+        event_df['degree_score'] += np.random.normal(0, 1e-5, size=event_df['degree_score'].shape)
         event_df["degree_score"] = pd.qcut(event_df["degree_score"], q=4, labels=False)
         event_df["degree_score"] = event_df["degree_score"] + 1
 
