@@ -3,10 +3,11 @@ import json
 import random
 from datetime import datetime, timedelta
 from typing import List, Optional, Tuple, Union
-
+from tqdm import tqdm
 import numpy as np
 import pandas as pd
 import psycopg2
+import argparse
 
 from tkgqa_generator.openai_utils import (
     paraphrase_medium_question,
@@ -18,12 +19,6 @@ from tkgqa_generator.utils import get_logger, timer
 logger = get_logger(__name__)
 
 
-# TODO:
-# Sampling Stragety
-# 1. totally random
-# 2. based on the time range, give different wieghts
-# 3. based on degree of the node, give different weights
-# 4. Combine 2 and 3 to have a stragety
 class TKGQAGenerator:
     """
     **How human handle the temporal information and answer the temporal questions?**
@@ -124,7 +119,6 @@ class TKGQAGenerator:
         password: str,
         db_name: str = "tkgqa",
         paraphrased: bool = False,
-        bulk_sample_size: int = 100,
         bulk_sql_size: int = 100,
     ):
         # setup the db connection
@@ -145,7 +139,6 @@ class TKGQAGenerator:
         self.unified_kg_table_questions = f"{self.unified_kg_table}_questions"
         self.cursor = self.connection.cursor()
         self.bulk_sql_size = bulk_sql_size
-        self.bulk_sample_size = bulk_sample_size
         # create a table to store retrieval questions
         self.cursor.execute(
             f"""
@@ -166,7 +159,7 @@ class TKGQAGenerator:
         self.cursor.connection.commit()
         self.pharaphrased = paraphrased
         with timer(the_logger=logger, message="Getting the events from the database"):
-            self.cursor.execute(f"SELECT * FROM {self.unified_kg_table} LIMIT 100")
+            self.cursor.execute(f"SELECT * FROM {self.unified_kg_table}")
             events_df = pd.DataFrame(self.cursor.fetchall())
             # set the column names
             columns = [desc[0] for desc in self.cursor.description]
@@ -2306,7 +2299,7 @@ class TKGQAGenerator:
                 # park here
                 start_times = self.events_df["start_time"].values
                 end_times = self.events_df["end_time"].values
-                for x in range(num_events):
+                for x in tqdm(range(num_events), desc="Processing events"):
                     for y in range(x + 1, num_events):
                         degree_score = degree_scores[x] + degree_scores[y]
                         temporal_score = self.temporal_close_score(
@@ -2624,6 +2617,78 @@ class TKGQAGenerator:
 
 
 if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--table_name",
+        type=str,
+        default="unified_kg_icews_actor",
+        help="The table name for the unified knowledge graph",
+    )
+    parser.add_argument(
+        "--host",
+        type=str,
+        default="localhost",
+        help="The host name for the database",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=5433,
+        help="The port number for the database",
+    )
+
+    parser.add_argument(
+        "--user",
+        type=str,
+        default="tkgqa",
+        help="The user name for the database",
+    )
+
+    parser.add_argument(
+        "--password",
+        type=str,
+        default="tkgqa",
+        help="The password for the database",
+    )
+
+    parser.add_argument(
+        "--db_name",
+        type=str,
+        default="tkgqa",
+        help="The database name for the database",
+    )
+
+    parser.add_argument(
+        "--paraphrased",
+        type=bool,
+        default=False,
+        help="The flag to indicate if the question is paraphrased",
+    )
+
+    parser.add_argument(
+        "--bulk_sql_size",
+        type=int,
+        default=100,
+        help="The bulk sql size for the insert",
+    )
+
+    # sampling the events strategy
+    parser.add_argument(
+        "--sample_stragety",
+        type=str,
+        default="both",
+        help="The sampling strategy for the events",
+    )
+
+    # sampling the events percentage
+    parser.add_argument(
+        "--sample_percentage",
+        type=float,
+        default=0.1,
+        help="The sampling percentage for the events",
+    )
+
     generator = TKGQAGenerator(
         table_name="unified_kg_icews_actor",
         host="localhost",
@@ -2632,8 +2697,7 @@ if __name__ == "__main__":
         password="tkgqa",
         db_name="tkgqa",
         paraphrased=False,
-        bulk_sql_size=10,
-        bulk_sample_size=10,
+        bulk_sql_size=100,
     )
     """
     Question Types:
@@ -2650,7 +2714,7 @@ if __name__ == "__main__":
         - Timeline Position Retrieval + Timeline Position Retrieval + Timeline Position Retrieval
         - Timeline Position Retrieval + Timeline Position Retrieval + Timeline Position Retrieval
     """
-    generator.sampling_events(sample_stragety="both", sample_percentage=20)
+    generator.sampling_events(sample_stragety="both", sample_percentage=5000)
 
     generator.simple_question_generation()
     generator.medium_question_generation()
