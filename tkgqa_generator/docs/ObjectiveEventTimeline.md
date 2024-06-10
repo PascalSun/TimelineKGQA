@@ -37,3 +37,39 @@ Which is:
 **Straight Homogenous(*Objective*)** Timeline
 
 ---
+
+## Question Categorization
+
+### Answer Type
+
+| answer\_type                      |
+|:----------------------------------|
+| relation\_duration                |
+| relation\_ranking                 |
+| relation\_union\_or\_intersection |
+| timestamp\_start                  |
+| subject                           |
+| timestamp\_range                  |
+| timestamp\_end                    |
+| duration                          |
+| object                            |
+
+### Question Type
+
+| question\_type                                                    |
+|:------------------------------------------------------------------|
+| timeline\_position\_retrievel\*2+temporal\_constrained\_retrieval |
+| timeline\_position\_retrieval\*3                                  |
+| temporal\_constrained\_retrieval                                  |
+| timeline\_position\_retrieval\_temporal\_constrained\_retrieval   |
+| timeline\_position\_retrieval                                     |
+| timeline\_position\_retrieval\_timeline\_position\_retrieval      |
+
+### Difficulty Level
+
+| difficulty\_level |
+|:------------------|
+| medium            |
+| simple            |
+| complex           |
+
