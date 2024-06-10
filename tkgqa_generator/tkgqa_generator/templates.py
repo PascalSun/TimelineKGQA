@@ -1,6 +1,6 @@
 QUESTION_TEMPLATES = {
     "simple": {
-        "temporal_constrainted_retrieval": {
+        "temporal_constrained_retrieval": {
             "subject": [
                 "Who {predicate} {object} from {start_time} to {end_time}?",
                 "{object} is {predicate} by who from {start_time} to {end_time}?",
@@ -10,7 +10,7 @@ QUESTION_TEMPLATES = {
                 "Which organisation is {predicate} by {subject} from {start_time} to {end_time}?",
             ],
         },
-        "timeline_recovery": {
+        "timeline_position_retrieval": {
             "timestamp_start": [
                 "When did {subject} {predicate} {object} start?",
                 "At what time did {subject} start {predicate} {object}?",
@@ -30,7 +30,7 @@ QUESTION_TEMPLATES = {
         },
     },
     "medium": {
-        "timeline_recovery_temporal_constrainted_retrieval": {
+        "timeline_position_retrieval_temporal_constrained_retrieval": {
             "subject": {
                 "before": [
                     "Who/Which Organisation {first_event_predicate} {first_event_object} before {second_event_subject} {second_event_predicate} {second_event_object}?",
@@ -149,7 +149,7 @@ QUESTION_TEMPLATES = {
                 ],
             },
         },
-        "timeline_recovery_timeline_recovery": {
+        "timeline_position_retrieval_timeline_position_retrieval": {
             # because it is the time range, then we should also ask about the duration
             "relation_union_or_intersection": {
                 "intersection": [
@@ -203,7 +203,7 @@ QUESTION_TEMPLATES = {
         },
     },
     "complex": {
-        "timeline_position_retrievel*2+temporal_constrainted_retrieval": {
+        "timeline_position_retrievel*2+temporal_constrained_retrieval": {
             "subject": [
                 "Who {first_event_subject} {first_event_object}, {temporal_relation_12} {second_event_subject} {second_event_predicate} {second_event_object}, {temporal_relation_13} {third_event_subject} {third_event_predicate}, {third_event_object}?",
             ],

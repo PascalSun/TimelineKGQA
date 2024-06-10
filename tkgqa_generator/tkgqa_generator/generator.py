@@ -1,13 +1,14 @@
+import argparse
 import copy
 import json
 import random
 from datetime import datetime, timedelta
 from typing import List, Optional, Tuple, Union
-from tqdm import tqdm
+
 import numpy as np
 import pandas as pd
 import psycopg2
-import argparse
+from tqdm import tqdm
 
 from tkgqa_generator.openai_utils import (
     paraphrase_medium_question,
@@ -320,7 +321,7 @@ class TKGQAGenerator:
                 "pharaphrased_question": None,
                 "events": [f"{subject}|{predicate}|{object}|{start_time}|{end_time}"],
                 "question_level": "simple",
-                "question_type": "temporal_constrainted_retrieval",
+                "question_type": "temporal_constrained_retrieval",
                 "answer_type": "subject",
             },
             {
@@ -329,7 +330,7 @@ class TKGQAGenerator:
                 "pharaphrased_question": None,
                 "events": [f"{subject}|{predicate}|{object}|{start_time}|{end_time}"],
                 "question_level": "simple",
-                "question_type": "temporal_constrainted_retrieval",
+                "question_type": "temporal_constrained_retrieval",
                 "answer_type": "object",
             },
             {
@@ -338,7 +339,7 @@ class TKGQAGenerator:
                 "pharaphrased_question": None,
                 "events": [f"{subject}|{predicate}|{object}|{start_time}|{end_time}"],
                 "question_level": "simple",
-                "question_type": "timeline_recovery",
+                "question_type": "timeline_position_retrieval",
                 "answer_type": "timestamp_start",
             },
             {
@@ -347,7 +348,7 @@ class TKGQAGenerator:
                 "pharaphrased_question": None,
                 "events": [f"{subject}|{predicate}|{object}|{start_time}|{end_time}"],
                 "question_level": "simple",
-                "question_type": "timeline_recovery",
+                "question_type": "timeline_position_retrieval",
                 "answer_type": "timestamp_end",
             },
             {
@@ -356,7 +357,7 @@ class TKGQAGenerator:
                 "pharaphrased_question": None,
                 "events": [f"{subject}|{predicate}|{object}|{start_time}|{end_time}"],
                 "question_level": "simple",
-                "question_type": "timeline_recovery",
+                "question_type": "timeline_position_retrieval",
                 "answer_type": "timestamp_range",
             },
             {
@@ -365,7 +366,7 @@ class TKGQAGenerator:
                 "pharaphrased_question": None,
                 "events": [f"{subject}|{predicate}|{object}|{start_time}|{end_time}"],
                 "question_level": "simple",
-                "question_type": "timeline_recovery",
+                "question_type": "timeline_position_retrieval",
                 "answer_type": "duration",
             },
         ]
@@ -407,7 +408,7 @@ class TKGQAGenerator:
 
         - question_level: medium
         - question_type:
-            - timeline_recovery_temporal_constrainted_retrieval
+            - timeline_recovery_temporal_constrained_retrieval
             - timeline_recovery_timeline_recovery
         - answer_type:
             - entity:
@@ -486,13 +487,13 @@ class TKGQAGenerator:
                 - answer_type: The type of the answer
 
         - question_type:
-            - timeline_recovery_temporal_constrainted_retrieval
+            - timeline_position_retrieval_temporal_constrained_retrieval
                 - For this one, the logic/reasoning/math part will be like: **TimeRange** + Temporal Semantic Operation => "TimeRange**
                 - Then the interesting part will be the Timeline Operation, we have mentioned serveral types of operations below.
                     - There are mostly from numeric to semantic perspective
                     - Here is the reverse process: name it Temporal Semantic Operation
                     - So this is trying to convert the temporal semantic representation to a numeric operation and then get a new operation.
-            - timeline_recovery_timeline_recovery
+            - timeline_position_retrieval_timeline_position_retrieval
                 - For the logic/reasoning/math side, it actually is **TimeRange** vs **TimeRange** => Timeline Operation
                     - Get an way to ask about this comparision relations.
                     - So the question will mainly be about whether this relation is True, or which relation it is.
@@ -500,13 +501,13 @@ class TKGQAGenerator:
                     - Or we can compare the event ranking based on the time range
             - there is another types: Three years before 2019,  who is the president of China? => It is a valid question, but nobody will in this way.
                 - It will be normally classied into **simple**: in 2016, who is the president of China?
-                - Or it will be something like: Three years before bush end the term, who is the president of China? => This will be classifed into **Medium**, and belong to the timeline_recovery_temporal_constrainted_retrieval
+                - Or it will be something like: Three years before bush end the term, who is the president of China? => This will be classifed into **Medium**, and belong to the timeline_position_retrieval_temporal_constrained_retrieval
         - answer_type:
-            - subject, object for timeline_recovery_temporal_constrainted_retrieval
+            - subject, object for timeline_position_retrieval_temporal_constrained_retrieval
                 - subject
                 - object
                 - only focus on the first one, as the second will always become the first later
-            - temporal related for timeline_recovery_timeline_recovery
+            - temporal related for timeline_position_retrieval_timeline_position_retrieval
                 - Infer a new time range: Union/Intersection
                 - Infer a temporal relation: Allen
                 - Infer a list of time ranges: Ranking
@@ -538,13 +539,13 @@ class TKGQAGenerator:
         )
 
         # first generate
-        # timeline_recovery => temporal_constrainted_retrieval
+        # timeline_position_retrieval => timeline_position_retrieval
         # this will ask for the subject or object in one of the event
 
         medium_type_1_a_questions = []
         questions = []
         """
-        Timeline Position Retrievaly => Temporal Constrainted Retrieval Questions 
+        Timeline Position Retrieval => Temporal Constrained Retrieval Questions 
         """
         # NOTES: question here actually is not used, because we will replace it with the template.
         # It is putting there to get the idea about the types of questions we are generating
@@ -586,7 +587,7 @@ class TKGQAGenerator:
                     f"{second_event_subject}|{second_event_predicate}|{second_event_object}|{second_event_start_time}|{second_event_end_time}",
                 ],
                 "question_level": "medium",
-                "question_type": "timeline_recovery_temporal_constrainted_retrieval",
+                "question_type": "timeline_position_retrieval_temporal_constrained_retrieval",
                 "answer_type": "subject",
                 "temporal_relation": None,
             }
@@ -603,7 +604,7 @@ class TKGQAGenerator:
                     f"{second_event_subject}|{second_event_predicate}|{second_event_object}|{second_event_start_time}|{second_event_end_time}",
                 ],
                 "question_level": "medium",
-                "question_type": "timeline_recovery_temporal_constrainted_retrieval",
+                "question_type": "timeline_position_retrieval_temporal_constrained_retrieval",
                 "answer_type": "object",
                 "temporal_relation": None,
             }
@@ -626,7 +627,7 @@ class TKGQAGenerator:
         - Infer a list of time ranges: Ranking (not considered here)
         - Infer duration, and then compare
         """
-        # timeline_recovery + timeline_recovery
+        # Timeline Position Retrieval + Timeline Position Retrieval
         medium_type_2_questions = []
         # ask for union/intersection of the time range
 
@@ -640,7 +641,7 @@ class TKGQAGenerator:
                     f"{second_event_subject}|{second_event_predicate}|{second_event_object}|{second_event_start_time}|{second_event_end_time}",
                 ],
                 "question_level": "medium",
-                "question_type": "timeline_recovery_timeline_recovery",
+                "question_type": "timeline_position_retrieval_timeline_position_retrieval",
                 "answer_type": "relation_union_or_intersection",
                 "temporal_relation": "intersection",
             },
@@ -653,7 +654,7 @@ class TKGQAGenerator:
                     f"{second_event_subject}|{second_event_predicate}|{second_event_object}|{second_event_start_time}|{second_event_end_time}",
                 ],
                 "question_level": "medium",
-                "question_type": "timeline_recovery_timeline_recovery",
+                "question_type": "timeline_position_retrieval_timeline_position_retrieval",
                 "answer_type": "relation_union_or_intersection",
                 "temporal_relation": "union",
             },
@@ -681,7 +682,7 @@ class TKGQAGenerator:
                     f"{second_event_subject}|{second_event_predicate}|{second_event_object}|{second_event_start_time}|{second_event_end_time}",
                 ],
                 "question_level": "medium",
-                "question_type": "timeline_recovery_timeline_recovery",
+                "question_type": "timeline_position_retrieval_timeline_position_retrieval",
                 "answer_type": "relation_duration",
                 "temporal_relation": None,
             },
@@ -1057,7 +1058,7 @@ class TKGQAGenerator:
 
 
         - question_type:
-            - timeline_position_retrievel *2 + temporal constrainted retrieval
+            - timeline_position_retrievel *2 + temporal constrained retrieval
             - timeline_position_retrievel *3
         - answer_type:
             - type1:
@@ -1126,7 +1127,7 @@ class TKGQAGenerator:
                     f"{third_event_subject}|{third_event_predicate}|{third_event_object}|{third_event_start_time}|{third_event_end_time}",
                 ],
                 "question_level": "complex",
-                "question_type": "timeline_position_retrievel*2+temporal_constrainted_retrieval",
+                "question_type": "timeline_position_retrievel*2+temporal_constrained_retrieval",
                 "answer_type": "subject",
                 "temporal_relation": None,
             }
@@ -1143,7 +1144,7 @@ class TKGQAGenerator:
                     f"{third_event_subject}|{third_event_predicate}|{third_event_object}|{third_event_start_time}|{third_event_end_time}",
                 ],
                 "question_level": "complex",
-                "question_type": "timeline_position_retrievel*2+temporal_constrainted_retrieval",
+                "question_type": "timeline_position_retrievel*2+temporal_constrained_retrieval",
                 "answer_type": "object",
                 "temporal_relation": None,
             }
@@ -1159,7 +1160,7 @@ class TKGQAGenerator:
         # this will be added later when we process the questions with template
 
         """
-        Timeline Position Retrieva + Timeline Position Retrieval + Timeline Position Retrieval
+        Timeline Position Retrieval + Timeline Position Retrieval + Timeline Position Retrieval
         """
         complex_type_2_questions = []
 
@@ -2585,7 +2586,9 @@ class TKGQAGenerator:
         logger.debug(event_df["degree_score"].describe())
 
         # flat the score to 1,2,3,4 based on the quartile
-        event_df['degree_score'] += np.random.normal(0, 1e-5, size=event_df['degree_score'].shape)
+        event_df["degree_score"] += np.random.normal(
+            0, 1e-5, size=event_df["degree_score"].shape
+        )
         event_df["degree_score"] = pd.qcut(event_df["degree_score"], q=4, labels=False)
         event_df["degree_score"] = event_df["degree_score"] + 1
 
@@ -2709,9 +2712,9 @@ if __name__ == "__main__":
         - Ask for the timeline
             - Timeline Position Retrieval 
         - Ask for the event    
-            - Temporal Constrainted Retrieval
+            - Temporal Constrained Retrieval
     - Medium: Timeline and Two Events Involved
-        - Timeline Position Retrieval => Temporal Constrainted Retrieval
+        - Timeline Position Retrieval => Temporal Constrained Retrieval
         - Timeline Position Retrieval + Timeline Position Retrieval
     - Complex: Timeline and Three Events Involved
         - Timeline Position Retrieval + Timeline Position Retrieval + Timeline Position Retrieval
