@@ -115,3 +115,15 @@ def paraphrase_medium_question(
     except Exception as e:
         print(f"An error occurred: {e}")
         return ""
+
+
+def embedding_content(prompt, model_name="text-embedding-3-small"):
+    """
+    Args:
+        prompt: The prompt to generate the embedding for
+        model_name: The model to use for generating the embedding
+
+    """
+    response = client.embeddings.create(input=prompt, model=model_name)
+
+    return response.data[0].embedding
