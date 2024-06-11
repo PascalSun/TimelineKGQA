@@ -49,7 +49,7 @@ Normally we have several types:
         - Second: **Timeline Position Retrieval** => [(Bush, start, president of US, 2000, 2000),
           (Bush, term, president of US, 2000, 2008)]
         - Third: Answer the question based on the timeline information
-- **Temporal Constrainted Retrieval**:
+- **Temporal Constrained Retrieval**:
     - In 2009, who is the president of US?
         - First: **General Information Retrieval**  => [(Bush, president of US),
           (Obama, president of US), (Trump, president of US)]
@@ -59,7 +59,7 @@ Normally we have several types:
 Three key **Retrieval** include:
 
 - **General Information Retrieval**: Retrieve the general information from the knowledge graph based on the question
-- **Temporal Constrainted Retrieval**: Filter on general information retrieval, apply the temporal constraint
+- **Temporal Constrained Retrieval**: Filter on general information retrieval, apply the temporal constraint
 - **Timeline Position Retrieval**: Based on general information retrieval, recover the timeline information
 
 ---
