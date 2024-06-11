@@ -80,10 +80,10 @@ class RAGRank:
         )
         # embed the facts
         for index, row in tqdm(df.iterrows(), total=df.shape[0]):
-            content = f"{row['subject']} {row['predicate']} {row['object']}"
-            logger.info(content)
+            content = f"{row['subject']} {row['predicate']} {row['object']} {row['start_time']} {row['end_time']}"
+            # logger.info(content)
             embedding = embedding_content(content)
-            logger.info(len(embedding))
+            # logger.info(len(embedding))
             with self.connection.cursor() as cursor:
                 cursor.execute(
                     f"UPDATE {self.table_name} SET embedding = array{embedding}::vector WHERE id = {row['id']};",
@@ -103,7 +103,14 @@ class RAGRank:
         Returns:
             The ranked facts based on the question.
         """
-        pass
+        query_embedding = embedding_content(question)
+        # get top 30 facts based on the question
+        df = pd.read_sql(
+            f"SELECT subject, predicate, object, start_time, end_time FROM {self.table_name} ORDER BY embedding <-> array{query_embedding}::vector LIMIT 30;",
+            self.connection,
+        )
+
+        return facts
 
 
 if __name__ == "__main__":
@@ -117,3 +124,6 @@ if __name__ == "__main__":
     )
     rag.add_embedding_column()
     rag.embed_facts()
+    # rag.rag(
+    #     "Chamber of Deputies of Mexico is Affiliation To by who from 2003-09-01 to 2006-08-31?"
+    # )
