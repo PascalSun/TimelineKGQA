@@ -1,11 +1,12 @@
 import numpy as np
 import pandas as pd
 import torch
+from typing import List
 from sqlalchemy import create_engine, text
 from tqdm import tqdm
-
+from tkgqa_generator.constants import LOGS_DIR
 from tkgqa_generator.openai_utils import embedding_content
-from tkgqa_generator.rag.metrics import mean_reciprocal_rank
+from tkgqa_generator.rag.metrics import mean_reciprocal_rank, hit_n
 from tkgqa_generator.utils import get_logger, timer
 
 logger = get_logger(__name__)
@@ -80,7 +81,8 @@ class RAGRank:
         with self.engine.connect() as cursor:
             result = cursor.execute(
                 text(
-                    f"SELECT column_name FROM information_schema.columns WHERE table_name = '{self.table_name}_questions' "
+                    f"SELECT column_name FROM information_schema.columns WHERE "
+                    f"table_name = '{self.table_name}_questions' "
                     f"AND column_name = 'embedding';"
                 )
             )
@@ -123,15 +125,18 @@ class RAGRank:
                 )
                 self.connection.commit()
 
-    def embed_questions(self):
+    def embed_questions(self, question_level: str = "complex"):
         """
         Get all the questions into the embedding, and save the embedding
 
+        Args:
+            question_level: The level of the question, can be complex, medium, simple
         """
         # get whether the question with embedding total number = 2000, if yes, do not need to continue
 
         df = pd.read_sql(
-            f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NOT NULL and question_level = 'complex';",
+            f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NOT NULL "
+            f"and question_level = '{question_level}';",
             self.engine,
         )
 
@@ -139,7 +144,8 @@ class RAGRank:
             return
 
         df = pd.read_sql(
-            f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NULL and question_level = 'complex';",
+            f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NULL "
+            f"and question_level = '{question_level}';",
             self.engine,
         )
         # embed the facts
@@ -164,7 +170,7 @@ class RAGRank:
             if index > 2000:
                 return
 
-    def benchmark(self):
+    def benchmark(self, question_level: str = "complex", semantic_parse: bool = False):
         """
         Benchmark the RAG model
 
@@ -176,10 +182,14 @@ class RAGRank:
 
         Grab the fact, and then compare with the actual fact.
 
+        Args:
+            question_level: The level of the question, can be complex, medium, simple
+            semantic_parse: Whether to do the semantic parse
+
         """
         questions_df = pd.read_sql(
             f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NOT NULL "
-            f"and question_level = 'complex' LIMIT 2000;",
+            f"and question_level = '{question_level}'  LIMIT 2000;",
             self.engine,
         )
 
@@ -205,6 +215,20 @@ class RAGRank:
             torch.tensor(questions_embedding_array),
             torch.tensor(events_embedding_array).T,
         )
+        logger.info(similarities.shape)
+
+        if semantic_parse:
+            """
+            Filter the facts based on the entity
+            if it is candidate, mark as 1
+            if it is not candidate, mark as 0
+            Then use this to mask the similarity matrix
+            not candidate one set as -inf
+            Then do the top 30
+            """
+            mask_result_matrix = self.semantic_parse(questions_df)
+            similarities = similarities + mask_result_matrix
+
         # get top 30 event index based on the similarity
         # within the similarity matrix,
         top_30_values, top_30_indices = torch.topk(similarities, 30, dim=1)
@@ -250,9 +274,78 @@ class RAGRank:
                 }
             )
         ranks_df = pd.DataFrame(ranks)
-        ranks_df.to_csv("ranks.csv")
+        ranks_df.to_csv(LOGS_DIR / f"{question_level}_ranks.csv")
         mrr = mean_reciprocal_rank(ranks_df["rank"].tolist())
-        logger.info(f"MRR: {mrr}")
+        logger.info(
+            f"MRR: {mrr}, Question Level: {question_level}, Semantic Parse: {semantic_parse}"
+        )
+        hit_1 = hit_n(ranks_df["rank"].tolist(), 1)
+        logger.info(
+            f"Hit@1: {hit_1}, Question Level: {question_level}, Semantic Parse: {semantic_parse}"
+        )
+        hit_3 = hit_n(ranks_df["rank"].tolist(), 3)
+        logger.info(
+            f"Hit@3: {hit_3}, Question Level: {question_level}, Semantic Parse: {semantic_parse}"
+        )
+        hit_5 = hit_n(ranks_df["rank"].tolist(), 5)
+        logger.info(
+            f"Hit@5: {hit_5}, Question Level: {question_level}, Semantic Parse: {semantic_parse}"
+        )
+        hit_10 = hit_n(ranks_df["rank"].tolist(), 10)
+        logger.info(
+            f"Hit@10: {hit_10}, Question Level: {question_level}, Semantic Parse: {semantic_parse}"
+        )
+
+    def semantic_parse(self, questions_df: pd.DataFrame):
+        """
+        Filter the facts based on the entity
+        if it is candidate, mark as 1
+        if it is not candidate, mark as 0
+        Then use this to mask the similarity matrix
+        not candidate one set as -inf
+        Then do the top 30
+
+        Return will be a len(questions_df) x len(events_df) matrix, with 1 and 0
+        """
+
+        def extract_entities(events: List[str]):
+            """
+            Extract the entities from the event
+
+            Args:
+                events: The event string
+
+            Returns:
+                The entities in the event
+            """
+            the_entities = []
+            for event in events:
+                elements = event.split("|")
+                the_entities.append(elements[0])
+                the_entities.append(elements[2])
+
+            return the_entities
+
+        questions_df["entities"] = questions_df["events"].apply(
+            lambda x: extract_entities(x)
+        )
+        # get all value to be -2
+        result_matrix = np.zeros(
+            (len(questions_df), len(self.event_df)), dtype="float64"
+        )
+        result_matrix = result_matrix - 2
+        for index, row in tqdm(
+            questions_df.iterrows(), total=questions_df.shape[0], desc="Semantic Parse"
+        ):
+            entities = row["entities"]
+            for entity in entities:
+                result_matrix[index] = np.where(
+                    self.event_df["subject"] == entity, 1, result_matrix[index]
+                )
+                result_matrix[index] = np.where(
+                    self.event_df["object"] == entity, 1, result_matrix[index]
+                )
+        return result_matrix
 
 
 if __name__ == "__main__":
@@ -264,6 +357,7 @@ if __name__ == "__main__":
         password="tkgqa",
         db_name="tkgqa",
     )
+    metric_question_level = "complex"
     with timer(logger, "Add Embedding Column"):
         rag.add_embedding_column()
 
@@ -271,7 +365,10 @@ if __name__ == "__main__":
         rag.embed_facts()
 
     with timer(logger, "Embed Questions"):
-        rag.embed_questions()
+        rag.embed_questions(question_level=metric_question_level)
 
     with timer(logger, "Benchmark"):
-        rag.benchmark()
+        rag.benchmark(question_level=metric_question_level)
+
+    with timer(logger, "Benchmark with semantic parse"):
+        rag.benchmark(question_level=metric_question_level, semantic_parse=True)

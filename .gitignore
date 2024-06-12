@@ -119,3 +119,4 @@ dmypy.json
 .idea
 data
 site
+logs
