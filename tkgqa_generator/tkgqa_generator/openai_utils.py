@@ -1,5 +1,3 @@
-import os
-
 from openai import OpenAI
 
 from tkgqa_generator.utils import get_logger
@@ -34,7 +32,8 @@ def paraphrase_simple_question(
         # Which or what's the organization's name a specific guy is affiliated to.
         # When/During/when is start time ...
         # Etc.
-        # If there is a statement from beginning of time to the end of time, this will mean it is always true for the whole timeline.
+        # If there is a statement from beginning of time to the end of time,
+        # this will mean it is always true for the whole timeline.
         response = client.chat.completions.create(
             model=model_name,
             messages=[

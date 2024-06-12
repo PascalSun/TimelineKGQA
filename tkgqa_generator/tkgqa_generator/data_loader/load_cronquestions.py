@@ -5,12 +5,9 @@ from sqlalchemy import create_engine, text
 
 from tkgqa_generator.constants import (
     DATA_DIR,
-    DATA_ICEWS_DICTS_DATA_DIR,
-    DATA_ICEWS_EVENTS_DATA_DIR,
     DB_CONNECTION_STR,
-    DOC_DIR,
 )
-from tkgqa_generator.utils import API, get_logger, timer
+from tkgqa_generator.utils import get_logger, timer
 
 logger = get_logger(__name__)
 
