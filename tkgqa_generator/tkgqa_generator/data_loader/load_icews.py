@@ -5,23 +5,20 @@ import os
 import time
 import zipfile
 
-import matplotlib.pyplot as plt
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import torch
 from sentence_transformers import SentenceTransformer
 from sqlalchemy import create_engine, text
-from transformers import BertModel, BertTokenizer
 
 from tkgqa_generator.constants import (
     DATA_DIR,
     DATA_ICEWS_DICTS_DATA_DIR,
     DATA_ICEWS_EVENTS_DATA_DIR,
     DB_CONNECTION_STR,
-    DOC_DIR,
 )
-from tkgqa_generator.utils import API, get_logger, timer
+from tkgqa_generator.utils import API, get_logger
 
 logger = get_logger(__name__)
 
@@ -134,7 +131,7 @@ class ICEWSDataLoader:
                     # Update this level's last seen name
                     last_seen[level] = name
                     # If this name at this level is not already added, add it to the lists
-                    if not name in names or parents[names.index(name)] != parent:
+                    if (name not in names) or parents[names.index(name)] != parent:
                         names.append(name)
                         parents.append(parent)
                     break  # Move to the next row once the first non-empty cell is processed
@@ -253,7 +250,7 @@ class ICEWSDataLoader:
                         FROM icews_actors
                         WHERE {embedding_field_name} IS NULL
                         ORDER BY id
-                        DESC 
+                        DESC
                         ;
                         """
                 )
@@ -264,7 +261,7 @@ class ICEWSDataLoader:
             logger.info(model_name)
             for row in r.mappings():
                 logger.debug(row)
-                record_id = row["id"]
+                # record_id = row["id"]
                 subject = row["Actor Name"]
                 object = row["Affiliation To"]
                 prompt = f"{subject} affiliated to {object}"
@@ -282,6 +279,7 @@ class ICEWSDataLoader:
                     name=self.queue_name,
                 )
                 time.sleep(0.3)
+                logger.info(response)
 
     def icews_actor_queue_actor_name_embedding(
         self,
@@ -330,6 +328,7 @@ class ICEWSDataLoader:
                         model_name=model_name,
                         name=self.queue_name,
                     )
+                    logger.info(response)
                 time.sleep(0.3)
 
     def icews_actor_embedding_csv(
@@ -396,7 +395,7 @@ class ICEWSDataLoader:
         DO $$
         BEGIN
             IF NOT EXISTS (
-                SELECT FROM information_schema.columns 
+                SELECT FROM information_schema.columns
                 WHERE table_name = 'icews_actors' AND column_name = '{embedding_field_name}' AND table_schema = 'public'
             ) THEN
                 ALTER TABLE public.icews_actors ADD COLUMN {embedding_field_name} vector;
@@ -472,7 +471,7 @@ class ICEWSDataLoader:
         if not semantic_search:
             # SQL query to get all records for the specified actor_name
             get_all_records_for_actor_name = f"""
-            SELECT 
+            SELECT
             "Actor Name",
             "Affiliation Start Date",
             "Affiliation End Date",
@@ -510,7 +509,7 @@ class ICEWSDataLoader:
             vote_winner = related_actors["Actor Name"].value_counts().idxmax()
             logger.info(f"Vote Winner: {vote_winner}")
             get_all_records_for_actor_name = f"""
-                        SELECT 
+                        SELECT
                         "Actor Name",
                         "Affiliation Start Date",
                         "Affiliation End Date",

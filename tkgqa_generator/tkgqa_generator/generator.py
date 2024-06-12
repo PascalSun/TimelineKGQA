@@ -1,9 +1,8 @@
 import argparse
 import copy
-import json
 import random
 from datetime import datetime, timedelta
-from typing import List, Optional, Tuple, Union
+from typing import List, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -119,6 +118,7 @@ class TKGQAGenerator:
         user: str,
         password: str,
         db_name: str = "tkgqa",
+        first_draw_size: int = 100,
         paraphrased: bool = False,
         bulk_sql_size: int = 100,
     ):
@@ -140,6 +140,7 @@ class TKGQAGenerator:
         self.unified_kg_table_questions = f"{self.unified_kg_table}_questions"
         self.cursor = self.connection.cursor()
         self.bulk_sql_size = bulk_sql_size
+        self.first_draw_size = first_draw_size
         # create a table to store retrieval questions
         self.cursor.execute(
             f"""
@@ -161,7 +162,7 @@ class TKGQAGenerator:
         self.pharaphrased = paraphrased
         with timer(the_logger=logger, message="Getting the events from the database"):
             self.cursor.execute(
-                f"SELECT * FROM {self.unified_kg_table} ORDER BY RANDOM() LIMIT 1000;"
+                f"SELECT * FROM {self.unified_kg_table} ORDER BY RANDOM() LIMIT {self.first_draw_size};"
             )
             events_df = pd.DataFrame(self.cursor.fetchall())
             # set the column names
@@ -545,7 +546,7 @@ class TKGQAGenerator:
         medium_type_1_a_questions = []
         questions = []
         """
-        Timeline Position Retrieval => Temporal Constrained Retrieval Questions 
+        Timeline Position Retrieval => Temporal Constrained Retrieval Questions
         """
         # NOTES: question here actually is not used, because we will replace it with the template.
         # It is putting there to get the idea about the types of questions we are generating
@@ -557,7 +558,7 @@ class TKGQAGenerator:
         - Above are from allen temporal logic and intersection/union
         - We can also add the ranking ones, however, before/after is the same as first/last, under this category
         - Then the rest is the one for duration, question like 3 years before, 3 years after, etc.
-        
+
         So we have main two types of questions here:
         - Relation: Before, After, During ｜ Starts from the same time, Ends at the same time, Meets, Overlap
             - calculate the relation first, then generated based on template
@@ -619,9 +620,9 @@ class TKGQAGenerator:
 
         """
         Timeline Position Retrieval + Timeline Position Retrieval Questions
-        
+
         This one is mainly from numeric to temporal semantic
-        
+
         - Infer a new time range: Union/Intersection
         - Infer a temporal relation: Allen
         - Infer a list of time ranges: Ranking (not considered here)
@@ -634,7 +635,7 @@ class TKGQAGenerator:
         medium_type_2_questions = [
             {
                 "question": f"{first_event_subject} {first_event_predicate} {first_event_object} ???[Timeline Operation on ({first_event_start_time}, {first_event_end_time}) vs ({second_event_start_time}, {second_event_end_time})]??? {second_event_subject} {second_event_predicate} {second_event_object}?",
-                "answer": f"Union/Intersection of the time range",
+                "answer": "Union/Intersection of the time range",
                 "pharaphrased_question": None,
                 "events": [
                     f"{first_event_subject}|{first_event_predicate}|{first_event_object}|{first_event_start_time}|{first_event_end_time}",
@@ -647,7 +648,7 @@ class TKGQAGenerator:
             },
             {
                 "question": f"{first_event_subject} {first_event_predicate} {first_event_object} ???[Timeline Operation on ({first_event_start_time}, {first_event_end_time}) vs ({second_event_start_time}, {second_event_end_time})]??? {second_event_subject} {second_event_predicate} {second_event_object}?",
-                "answer": f"Union/Intersection of the time range",
+                "answer": "Union/Intersection of the time range",
                 "pharaphrased_question": None,
                 "events": [
                     f"{first_event_subject}|{first_event_predicate}|{first_event_object}|{first_event_start_time}|{first_event_end_time}",
@@ -675,7 +676,7 @@ class TKGQAGenerator:
             # },
             {
                 "question": f"{first_event_subject} {first_event_predicate} {first_event_object} ???[Timeline Operation on ({first_event_start_time}, {first_event_end_time}) vs ({second_event_start_time}, {second_event_end_time})]??? {second_event_subject} {second_event_predicate} {second_event_object}?",
-                "answer": f"Duration",
+                "answer": "Duration",
                 "pharaphrased_question": None,
                 "events": [
                     f"{first_event_subject}|{first_event_predicate}|{first_event_object}|{first_event_start_time}|{first_event_end_time}",
@@ -1167,7 +1168,7 @@ class TKGQAGenerator:
         complex_type_2_questions = [
             {
                 "question": f"{first_event_subject} {first_event_predicate} {first_event_object} {second_event_predicate} {second_event_object} {third_event_predicate} {third_event_object}?",
-                "answer": f"Union/Intersection of the time range",
+                "answer": "Union/Intersection of the time range",
                 "pharaphrased_question": None,
                 "events": [
                     f"{first_event_subject}|{first_event_predicate}|{first_event_object}|{first_event_start_time}|{first_event_end_time}",
@@ -1181,7 +1182,7 @@ class TKGQAGenerator:
             },
             {
                 "question": f"{first_event_subject} {first_event_predicate} {first_event_object} {second_event_predicate} {second_event_object} {third_event_predicate} {third_event_object}?",
-                "answer": f"Union/Intersection of the time range",
+                "answer": "Union/Intersection of the time range",
                 "pharaphrased_question": None,
                 "events": [
                     f"{first_event_subject}|{first_event_predicate}|{first_event_object}|{first_event_start_time}|{first_event_end_time}",
@@ -1195,7 +1196,7 @@ class TKGQAGenerator:
             },
             {
                 "question": f"{first_event_subject} {first_event_predicate} {first_event_object} {second_event_predicate} {second_event_object} {third_event_predicate} {third_event_object}?",
-                "answer": f"Duration",
+                "answer": "Duration",
                 "pharaphrased_question": None,
                 "events": [
                     f"{first_event_subject}|{first_event_predicate}|{first_event_object}|{first_event_start_time}|{first_event_end_time}",
@@ -1210,7 +1211,7 @@ class TKGQAGenerator:
             # add ranking one
             {
                 "question": f"Who is the xxx amony {first_event_subject}, {second_event_subject}, and {third_event_subject}?",
-                "answer": f"Ranking",
+                "answer": "Ranking",
                 "pharaphrased_question": None,
                 "events": [
                     f"{first_event_subject}|{first_event_predicate}|{first_event_object}|{first_event_start_time}|{first_event_end_time}",
@@ -2154,8 +2155,6 @@ class TKGQAGenerator:
         td = timedelta(seconds=np_date_delta / (np.timedelta64(1, "s")))
         days = td.days
         seconds = td.seconds
-        microseconds = td.microseconds
-
         # Compute hours, minutes, and remaining seconds
         hours, remainder = divmod(seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
@@ -2421,9 +2420,9 @@ class TKGQAGenerator:
                 )
 
             elif isinstance(sample_percentage, dict):
-                dimension_3_sample_percentage = sample_percentage.get("dimension_1", 0)
-                dimension_2_sample_percentage = sample_percentage.get("dimension_2", 0)
-                dimension_3_sample_percentage = sample_percentage.get("dimension_3", 0)
+                dimension_1_samples = sample_percentage.get("dimension_1", 0)
+                dimension_2_samples = sample_percentage.get("dimension_2", 0)
+                dimension_3_samples = sample_percentage.get("dimension_3", 0)
                 if (
                     dimension_1_samples == 0
                     or dimension_2_samples == 0
@@ -2443,8 +2442,8 @@ class TKGQAGenerator:
                     ]
                 ):
                     dimension_1_samples = np.random.choice(
-                        len(events_df),
-                        int(len(events_df) * dimension_1_samples),
+                        len(self.events_df),
+                        int(len(self.events_df) * dimension_1_samples),
                         p=dimension_1_matrix,
                     )
                     dimension_2_samples = self.random_selection(
@@ -2466,7 +2465,7 @@ class TKGQAGenerator:
                     ]
                 ):
                     dimension_1_samples = np.random.choice(
-                        len(events_df), dimension_1_samples, p=dimension_1_matrix
+                        len(self.events_df), dimension_1_samples, p=dimension_1_matrix
                     )
                     dimension_2_samples = self.random_selection(
                         dimension_2_matrix,
@@ -2491,7 +2490,7 @@ class TKGQAGenerator:
 
         """
         Examples of the output:
-        
+
         ```
         [  0  10  20  30  40  50  60  70  80  90 100]
         [(0, 10), (20, 30), (40, 50), (60, 70), (80, 90), (100, 110)]
@@ -2623,12 +2622,11 @@ class TKGQAGenerator:
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--table_name",
         type=str,
-        default="unified_kg_icews_actor",
+        default="unified_kg_cron",
         help="The table name for the unified knowledge graph",
     )
     parser.add_argument(
@@ -2691,27 +2689,29 @@ if __name__ == "__main__":
     parser.add_argument(
         "--sample_percentage",
         type=float,
-        default=0.1,
+        default=500,
         help="The sampling percentage for the events",
     )
 
+    args = parser.parse_args()
     generator = TKGQAGenerator(
-        table_name="unified_kg_icews_actor",
-        host="localhost",
-        port=5433,
-        user="tkgqa",
-        password="tkgqa",
-        db_name="tkgqa",
-        paraphrased=False,
-        bulk_sql_size=100,
+        table_name=args.table_name,
+        host=args.host,
+        port=args.port,
+        user=args.user,
+        password=args.password,
+        db_name=args.db_name,
+        first_draw_size=100,
+        paraphrased=args.paraphrased,
+        bulk_sql_size=args.bulk_sql_size,
     )
     """
     Question Types:
-    
+
     - Simple: Timeline and One Event Involved
         - Ask for the timeline
-            - Timeline Position Retrieval 
-        - Ask for the event    
+            - Timeline Position Retrieval
+        - Ask for the event
             - Temporal Constrained Retrieval
     - Medium: Timeline and Two Events Involved
         - Timeline Position Retrieval => Temporal Constrained Retrieval
@@ -2720,7 +2720,9 @@ if __name__ == "__main__":
         - Timeline Position Retrieval + Timeline Position Retrieval + Timeline Position Retrieval
         - Timeline Position Retrieval + Timeline Position Retrieval + Timeline Position Retrieval
     """
-    generator.sampling_events(sample_stragety="both", sample_percentage=5000)
+    generator.sampling_events(
+        sample_stragety=args.sample_stragety, sample_percentage=args.sample_percentage
+    )
 
     generator.simple_question_generation()
     generator.medium_question_generation()
