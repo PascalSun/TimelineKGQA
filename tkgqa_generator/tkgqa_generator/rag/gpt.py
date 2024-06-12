@@ -110,7 +110,7 @@ class RAGRank:
             self.connection,
         )
 
-        return facts
+        return df
 
 
 if __name__ == "__main__":
