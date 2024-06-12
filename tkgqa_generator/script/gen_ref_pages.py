@@ -22,7 +22,7 @@ for path in sorted(src.rglob("*.py")):
         full_doc_path = "Code" / module_path.parent / "index.md"
         if identifier == "":
             print(
-                f"::: tkgqa_generator",
+                "::: tkgqa_generator",
                 file=mkdocs_gen_files.open(full_doc_path, "w"),
             )
         else:

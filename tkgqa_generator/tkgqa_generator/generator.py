@@ -2,7 +2,7 @@ import argparse
 import copy
 import random
 from datetime import datetime, timedelta
-from typing import List, Tuple, Union, Optional
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -576,7 +576,7 @@ class TKGQAGenerator:
             },
             {
                 "question": f"[How long/What's the duration/etc] ??? for the statement "
-                            f"{subject} {predicate} {tail_object}",
+                f"{subject} {predicate} {tail_object}",
                 "answer": f"{end_time} - {start_time}",
                 "paraphrased_question": None,
                 "events": [
