@@ -161,7 +161,7 @@ class TKGQAGenerator:
         self.pharaphrased = paraphrased
         with timer(the_logger=logger, message="Getting the events from the database"):
             self.cursor.execute(
-                f"SELECT * FROM {self.unified_kg_table} ORDER BY RANDOM() LIMIT 1000;"
+                f"SELECT * FROM {self.unified_kg_table} ORDER BY RANDOM() LIMIT 100;"
             )
             events_df = pd.DataFrame(self.cursor.fetchall())
             # set the column names
@@ -2623,7 +2623,6 @@ class TKGQAGenerator:
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--table_name",
@@ -2696,7 +2695,7 @@ if __name__ == "__main__":
     )
 
     generator = TKGQAGenerator(
-        table_name="unified_kg_icews_actor",
+        table_name="unified_kg_cron",
         host="localhost",
         port=5433,
         user="tkgqa",
@@ -2720,7 +2719,7 @@ if __name__ == "__main__":
         - Timeline Position Retrieval + Timeline Position Retrieval + Timeline Position Retrieval
         - Timeline Position Retrieval + Timeline Position Retrieval + Timeline Position Retrieval
     """
-    generator.sampling_events(sample_stragety="both", sample_percentage=5000)
+    generator.sampling_events(sample_stragety="both", sample_percentage=500)
 
     generator.simple_question_generation()
     generator.medium_question_generation()
