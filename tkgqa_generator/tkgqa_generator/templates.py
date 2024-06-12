@@ -2,8 +2,8 @@ QUESTION_TEMPLATES = {
     "simple": {
         "temporal_constrained_retrieval": {
             "subject": [
-                "Who {predicate} {object} from {start_time} to {end_time}?",
-                "{object} is {predicate} by who from {start_time} to {end_time}?",
+                "Who {predicate} {tail_object} from {start_time} to {end_time}?",
+                "{tail_object} is {predicate} by who from {start_time} to {end_time}?",
             ],
             "object": [
                 "{subject} {predicate} which organisation from {start_time} to {end_time}?",
@@ -12,20 +12,20 @@ QUESTION_TEMPLATES = {
         },
         "timeline_position_retrieval": {
             "timestamp_start": [
-                "When did {subject} {predicate} {object} start?",
-                "At what time did {subject} start {predicate} {object}?",
+                "When did {subject} {predicate} {tail_object} start?",
+                "At what time did {subject} start {predicate} {tail_object}?",
             ],
             "timestamp_end": [
-                "When did {subject} end {predicate} {object}?",
-                "At what time did {subject} finish {predicate} {object}?",
+                "When did {subject} end {predicate} {tail_object}?",
+                "At what time did {subject} finish {predicate} {tail_object}?",
             ],
             "timestamp_range": [
-                "From when to when did {subject} {predicate} {object}?",
-                "During what time {subject} {predicate} {object}?",
+                "From when to when did {subject} {predicate} {tail_object}?",
+                "During what time {subject} {predicate} {tail_object}?",
             ],
             "duration": [
-                "How long did {subject} {predicate} {object}?",
-                "What is the duration of {subject} {predicate} {object}?",
+                "How long did {subject} {predicate} {tail_object}?",
+                "What is the duration of {subject} {predicate} {tail_object}?",
             ],
         },
     },
@@ -203,7 +203,7 @@ QUESTION_TEMPLATES = {
         },
     },
     "complex": {
-        "timeline_position_retrievel*2+temporal_constrained_retrieval": {
+        "timeline_position_retrieval*2+temporal_constrained_retrieval": {
             "subject": [
                 "Who {first_event_subject} {first_event_object}, {temporal_relation_12} {second_event_subject} {second_event_predicate} {second_event_object}, {temporal_relation_13} {third_event_subject} {third_event_predicate}, {third_event_object}?",
             ],
