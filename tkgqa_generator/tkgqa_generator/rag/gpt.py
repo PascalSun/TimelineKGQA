@@ -178,7 +178,8 @@ class RAGRank:
 
         """
         questions_df = pd.read_sql(
-            f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NOT NULL and question_level = 'complex' LIMIT 2000;",
+            f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NOT NULL "
+            f"and question_level = 'complex' LIMIT 2000;",
             self.engine,
         )
 
@@ -224,8 +225,8 @@ class RAGRank:
         ranks = []
         labels = {
             "complex": 3,
-            "simple": 1,
             "medium": 2,
+            "simple": 1,
         }
         for index, row in tqdm(
             questions_df.iterrows(), total=questions_df.shape[0], desc="Benchmark"
