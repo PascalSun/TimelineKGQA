@@ -357,7 +357,7 @@ if __name__ == "__main__":
         password="tkgqa",
         db_name="tkgqa",
     )
-    metric_question_level = "complex"
+    metric_question_level = "medium"
     with timer(logger, "Add Embedding Column"):
         rag.add_embedding_column()
 
