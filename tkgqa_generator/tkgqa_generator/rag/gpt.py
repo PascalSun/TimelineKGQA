@@ -181,9 +181,6 @@ class RAGRank:
                 self.engine,
             )
 
-        if df.shape[0] >= 2000 and question_level != "all":
-            return
-
         if question_level == "all":
             df = pd.read_sql(
                 f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NULL;",
@@ -207,11 +204,14 @@ class RAGRank:
                 df.iterrows(), total=df.shape[0], desc="Embedding Questions"
             ):
                 futures.append(executor.submit(self._process_question_row, row))
-                if index > 2000 and question_level != "all":
-                    break
             concurrent.futures.wait(futures)
 
-    def benchmark(self, question_level: str = "complex", semantic_parse: bool = False):
+    def benchmark(
+        self,
+        question_level: str = "complex",
+        random_eval: bool = False,
+        semantic_parse: bool = False,
+    ):
         """
         Benchmark the RAG model
 
@@ -225,10 +225,17 @@ class RAGRank:
 
         Args:
             question_level: The level of the question, can be complex, medium, simple
+            random_eval (bool): Whether to do the random evaluation
             semantic_parse: Whether to do the semantic parse
 
         """
-        if question_level == "all":
+
+        if random_eval:
+            questions_df = pd.read_sql(
+                f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NOT NULL ORDER BY RANDOM() LIMIT 2000;",
+                self.engine,
+            )
+        elif question_level == "all":
             questions_df = pd.read_sql(
                 f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NOT NULL;",
                 self.engine,
@@ -236,7 +243,7 @@ class RAGRank:
         else:
             questions_df = pd.read_sql(
                 f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NOT NULL "
-                f"AND question_level = '{question_level}'  LIMIT 2000;",
+                f"AND question_level = '{question_level}';",
                 self.engine,
             )
 
@@ -401,7 +408,7 @@ class RAGRank:
 if __name__ == "__main__":
     metric_question_level = "all"
     rag = RAGRank(
-        table_name="unified_kg_icews_actor",
+        table_name="unified_kg_cron",
         host="localhost",
         port=5433,
         user="tkgqa",
@@ -419,7 +426,9 @@ if __name__ == "__main__":
         rag.embed_questions(question_level=metric_question_level)
 
     with timer(logger, "Benchmark without semantic parse"):
-        rag.benchmark(question_level=metric_question_level)
+        rag.benchmark(question_level=metric_question_level, random_eval=True)
 
     with timer(logger, "Benchmark with semantic parse"):
-        rag.benchmark(question_level=metric_question_level, semantic_parse=True)
+        rag.benchmark(
+            question_level=metric_question_level, semantic_parse=True, random_eval=True
+        )
