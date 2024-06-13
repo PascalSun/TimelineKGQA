@@ -2715,7 +2715,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--table_name",
         type=str,
-        default="unified_kg_cron",
+        default="unified_kg_icews_actor",
         help="The table name for the unified knowledge graph",
     )
     parser.add_argument(
