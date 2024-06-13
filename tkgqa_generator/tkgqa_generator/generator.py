@@ -2,7 +2,7 @@ import argparse
 import copy
 import random
 from datetime import datetime, timedelta
-from typing import List, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -18,22 +18,213 @@ from tkgqa_generator.utils import get_logger, timer
 
 logger = get_logger(__name__)
 
+ALLEN_OPERATOR_DICT = {
+    (-1, -1, -1, -1, -1, -1): {
+        "relation": "X < Y",
+        "description": "X precedes Y",
+        "category": "tr",
+        "code": "tr-1",
+        "semantic": "before",
+    },
+    (-1, -1, -1, -1, 0, -1): {
+        "relation": "X m Y",
+        "description": "X meets Y",
+        "category": "tr",
+        "code": "tr-2",
+        "semantic": "meets",
+    },
+    (-1, -1, -1, -1, 1, -1): {
+        "relation": "X o Y",
+        "description": "X overlaps Y",
+        "category": "tr",
+        "code": "tr-3",
+        "semantic": "during",
+    },
+    (-1, -1, -1, -1, 1, 0): {
+        "relation": "X fi Y",
+        "description": "X is finished by Y",
+        "category": "tr",
+        "code": "tr-4",
+        "semantic": "finishedby",
+    },
+    (-1, -1, -1, -1, 1, 1): {
+        "relation": "X di Y",
+        "description": "X contains Y",
+        "category": "tr",
+        "code": "tr-5",
+        "semantic": "during",
+    },
+    (-1, -1, 0, -1, 1, -1): {
+        "relation": "X s Y",
+        "description": "X starts Y",
+        "category": "tr",
+        "code": "tr-6",
+        "semantic": "starts",
+    },
+    (-1, -1, 0, -1, 1, 0): {
+        "relation": "X = Y",
+        "description": "X equals Y",
+        "category": "tr",
+        "code": "tr-7",
+        "semantic": "equal",
+    },
+    (-1, -1, 0, -1, 1, 1): {
+        "relation": "X si Y",
+        "description": "X is started by Y",
+        "category": "tr",
+        "code": "tr-8",
+        "semantic": "startedby",
+    },
+    (-1, -1, 1, -1, 1, -1): {
+        "relation": "X d Y",
+        "description": "X during Y",
+        "category": "tr",
+        "code": "tr-9",
+        "semantic": "during",
+    },
+    (-1, -1, 1, -1, 1, 0): {
+        "relation": "X f Y",
+        "description": "X finishes Y",
+        "category": "tr",
+        "code": "tr-10",
+        "semantic": "finishes",
+    },
+    (-1, -1, 1, -1, 1, 1): {
+        "relation": "X oi Y",
+        "description": "X is overlapped by Y",
+        "category": "tr",
+        "code": "tr-11",
+        "semantic": "during",
+    },
+    (-1, -1, 1, 0, 1, 1): {
+        "relation": "X mi Y",
+        "description": "X is met by Y",
+        "category": "tr",
+        "code": "tr-12",
+        "semantic": "metby",
+    },
+    (-1, -1, 1, 1, 1, 1): {
+        "relation": "X > Y",
+        "description": "X is preceded by Y",
+        "category": "tr",
+        "code": "tr-13",
+        "semantic": "after",
+    },
+    (0, -1, -1, -1, -1, -1): {
+        "relation": "X < Y",
+        "description": "X is before Y",
+        "category": "tp&tr",
+        "code": "tptr-14",
+        "semantic": "before",
+    },
+    (0, -1, 0, -1, 0, -1): {
+        "relation": "X s Y",
+        "description": "X starts Y",
+        "category": "tp&tr",
+        "code": "tptr-15",
+        "semantic": "starts",
+    },
+    (0, -1, 1, -1, 1, -1): {
+        "relation": "X d Y",
+        "description": "X during Y",
+        "category": "tp&tr",
+        "code": "tptr-16",
+        "semantic": "during",
+    },
+    (0, -1, 1, 0, 1, 0): {
+        "relation": "X f Y",
+        "description": "X finishes Y",
+        "category": "tp&tr",
+        "code": "tptr-17",
+        "semantic": "finishes",
+    },
+    (0, -1, 1, 1, 1, 1): {
+        "relation": "X > Y",
+        "description": "X is after Y",
+        "category": "tp&tr",
+        "code": "tptr-18",
+        "semantic": "after",
+    },
+    (-1, 0, -1, -1, -1, -1): {
+        "relation": "X < Y",
+        "description": "X is before Y",
+        "category": "tr&tp",
+        "code": "trtp-19",
+        "semantic": "before",
+    },
+    (-1, 0, -1, -1, 0, 0): {
+        "relation": "X fi Y",
+        "description": "X finishes Y",
+        "category": "tr&tp",
+        "code": "trtp-20",
+        "semantic": "finishes",
+    },
+    (-1, 0, -1, -1, 1, 1): {
+        "relation": "X di Y",
+        "description": "X during Y",
+        "category": "tr&tp",
+        "code": "trtp-21",
+        "semantic": "during",
+    },
+    (-1, 0, 0, 0, 1, 1): {
+        "relation": "X si Y",
+        "description": "X starts Y",
+        "category": "tr&tp",
+        "code": "trtp-22",
+        "semantic": "starts",
+    },
+    (-1, 0, 1, 1, 1, 1): {
+        "relation": "X > Y",
+        "description": "X is after Y",
+        "category": "tr&tp",
+        "code": "trtp-23",
+        "semantic": "after",
+    },
+    (0, 0, -1, -1, -1, -1): {
+        "relation": "X < Y",
+        "description": "X is before Y",
+        "category": "tp",
+        "code": "tp-24",
+        "semantic": "before",
+    },
+    (0, 0, 0, 0, 0, 0): {
+        "relation": "X = Y",
+        "description": "X equals Y",
+        "category": "tp",
+        "code": "tp-25",
+        "semantic": "equal",
+    },
+    (0, 0, 1, 1, 1, 1): {
+        "relation": "X > Y",
+        "description": "X is after Y",
+        "category": "tp",
+        "code": "tp-26",
+        "semantic": "after",
+    },
+}
+
 
 class TKGQAGenerator:
     """
     **How human handle the temporal information and answer the temporal questions?**
 
     ## Information Indexing
-    When we see something, for example, an accident happen near our home in today morning.
+    When we see something, for example, an accident happen near our home in this morning.
     We need to first index this event into our brain.
     As we live in a three dimension space together with a time dimension,
-    when we want to store this in our memory, (we will treat our memory as a N dimension space)
+    when we want to store this in our memory, (we will treat our memory as an N dimension space)
     - Index the spatial dimensions: is this close to my home or close to one of the point of interest in my mind
     - Index the temporal dimension: Temporal have several aspects
-        - Treat temporal as Straight Homogenous(Objective) Timeline: Exact date when it happen, for example, [2023-05-01 10:00:00, 2023-05-01 10:30:00]
-        - Treat temporal as Cycle Homogenous(Objective) sTimeline: Monday, First day of Month, Spring, 21st Century, etc. (You can aslo cycle the timeline based on your own requirement)
-        - Treat temporal as Straight Hoterogenous(Subjective) Timeline: If you sleep during night, it will be fast for you in the 8 hours, however, if someone is working overnight, time will be slow for him.
-        - Treat temporal as Cycle Hoterogenous(Subjective) Timeline: Life has different turning points for everyone, until they reach the end of their life.
+        - Treat temporal as Straight Homogenous(Objective) Timeline: Exact date when it happens, for example,
+            [2023-05-01 10:00:00, 2023-05-01 10:30:00]
+        - Treat temporal as Cycle Homogenous(Objective) sTimeline:
+            Monday, First day of Month, Spring, 21st Century, etc.
+            (You can also cycle the timeline based on your own requirement)
+        - Treat temporal as Straight Heterogeneous(Subjective) Timeline:
+            If you sleep during night, it will be fast for you in the 8 hours, however,
+            if someone is working overnight, time will be slow for him.
+        - Treat temporal as Cycle Heterogeneous(Subjective) Timeline: Life has different turning points for everyone,
+        until they reach the end of their life.
     - Then index the information part: What happen, who is involved, what is the impact, etc.
 
     So in summary, we can say that in our mind, if we treat the event as embedding,
@@ -43,49 +234,58 @@ class TKGQAGenerator:
     This will help us to retrieve the information when we need it.
 
     ## Information Retrieval
-    So when we try to retrieval the information, espeically the temporal part of the information.
+    So when we try to retrieval the information, especially the temporal part of the information.
     Normally we have several types:
 
-    - Timeline Position Retrievaly: When Bush starts his term as president of US?
+    - Timeline Position Retrieval: When Bush starts his term as president of US?
         - First: **General Information Retrieval** [(Bush, start, president of US), (Bush, term, president of US)]
-        - Second: **Timeline Position Retrievaly Retrieval** [(Bush, start, president of US, 2000, 2000), (Bush, term, president of US, 2000, 2008)]
+        - Second: **Timeline Position Retrieval** [(Bush, start, president of US, 2000, 2000),
+                                                   (Bush, term, president of US, 2000, 2008)]
         - Third: Answer the question based on the timeline information
-    - Temporal Constrainted Retrieval: In 2009, who is the president of US?
-        - First: **General Information Retrieval** [(Bush, president of US), (Obama, president of US), (Trump, president of US)]
+    - Temporal Constrained Retrieval: In 2009, who is the president of US?
+        - First: **General Information Retrieval** [(Bush, president of US), (Obama, president of US),
+                                                   (Trump, president of US)]
         - Second: **Temporal Constraint Retrieval** [(Obama, president of US, 2009, 2016)]
         - Third: Answer the question based on the temporal constraint information
 
     Three key things here:
     - **General Information Retrieval**: Retrieve the general information from the knowledge graph based on the question
-    - **Temporal Constrainted Retrieval**: Filter on general information retrieval, apply the temporal constraint
-    - **Timeline Position Retrievaly Retrieval**: Based on general information retrieval, recover the timeline information
+    - **Temporal Constrained Retrieval**: Filter on general information retrieval, apply the temporal constraint
+    - **Timeline Position Retrieval**: Based on general information retrieval, recover the timeline information
 
     ## Temporal Questions
     We can try to classify the temporal questions from quite a few perspectives:
     - Based on Answer: Entity, Temporal
-    - Based on Temporal Relations in Question: Before, After, During , etc or First, Last, etc.
+    - Based on Temporal Relations in Question: Before, After, During , etc. or First, Last, etc.
     - Based on Temporal Representation Type: Point, Range, Duration, etc.
-    - Based on Complexity of Question: Simple (direct retrieval), Complex (Multiple hops with the three key things we mention above)
+    - Based on Complexity of Question: Simple (direct retrieval), Complex
+        (Multiple hops with the three key things we mention above)
 
     There is still no agreement or clear classification here, most of them stays in the first two.
-    However, it is obvious that they have overlaps, so will not be the best way to advance the temporal embedding algorithms development.
+    However, it is obvious that they have overlaps,
+        so will not be the best way to advance the temporal embedding algorithms development.
 
-    We are trying to decompose the question into the three key parts we mentioned above, so we can evaluate the ability of the models for this three key capabilities.
+    We are trying to decompose the question into the three key parts we mentioned above,
+        so we can evaluate the ability of the models for this three key capabilities.
 
     ### Simple: Timeline and One Event Involved
-    - Timeline Position Retrievaly: When Bush starts his term as president of US?
-        - General Information Retrieval => Timeline Position Retrievaly => Answer the question
+    - Timeline Position Retrieval: When Bush starts his term as president of US?
+        - General Information Retrieval => Timeline Position Retrieval => Answer the question
         - Question Focus can be: Timestamp Start, Timestamp End, Duration, Timestamp Start and End
-    - Temporal Constrainted Retrieval: In 2009, who is the president of US?
+    - Temporal Constrained Retrieval: In 2009, who is the president of US?
         - General Information Retrieval => Temporal Constraint Retrieval => Answer the question
         - Question Focus can be: Subject, Object, Predicate. Can be more complex if we want mask out more elements
 
     ### Medium: Timeline and Two Events Involved
-    - Timeline Position Retrievaly + Timeline Position Retrievaly: Is Bush president of US when 911 happen?
-        - (General Information Retrieval => Timeline Position Retrievaly) And (General Information Retrieval => Timeline Position Retrievaly) => Timeline Operation => Answer the question
-        - Question Focus can be: A new Time Range, A temporal relation (Before, After, During, etc.), A list of Time Range (Ranking), or Comparison of Duration
-    - Timeline Position Retrievaly + Temporal Constrainted Retrieval: When Bush is president of US, who is the president of China?
-        - (General Information Retrieval => Timeline Position Retrievaly) => Temporal Constraint Retrieval => Answer the question
+    - Timeline Position Retrieval + Timeline Position Retrieval: Is Bush president of US when 911 happen?
+        - (General Information Retrieval => Timeline Position Retrieval) And (General Information Retrieval
+            => Timeline Position Retrieval) => Timeline Operation => Answer the question
+        - Question Focus can be: A new Time Range, A temporal relation (Before, After, During, etc.),
+            A list of Time Range (Ranking), or Comparison of Duration
+    - Timeline Position Retrieval + Temporal Constrained Retrieval:
+        When Bush is president of US, who is the president of China?
+        - (General Information Retrieval => Timeline Position Retrieval) =>
+            Temporal Constraint Retrieval => Answer the question
         - This is same as above, Question Focus can be: Subject, Object
 
     ### Complex: Timeline and Multiple Events Involved
@@ -95,9 +295,13 @@ class TKGQAGenerator:
 
     So if we say Complex is 3 events and Timeline.
 
-    - Timeline Position Retrievaly + Timeline Position Retrievaly + Timeline Position Retrievaly: When Bush is president of US and Putin is President of Russion, is Hu the president of China?
-        - (General Information Retrieval => Timeline Position Retrievaly) And (General Information Retrieval => Timeline Position Retrievaly) And (General Information Retrieval => Timeline Position Retrievaly) => Timeline Operation => Answer the question
-    - Timeline Position Retrievaly + Timeline Position Retrievaly + Temporal Constrainted Retrieval: When Bush is president of US and Putin is President of Russion, who is the president of China?
+    - Timeline Position Retrieval + Timeline Position Retrieval + Timeline Position Retrieval:
+        When Bush is president of US and Putin is President of Russian, is Hu the president of China?
+        - (General Information Retrieval => Timeline Position Retrieval) And (General Information Retrieval
+            => Timeline Position Retrival) And (General Information Retrieval => Timeline Position Retrival)
+                => Timeline Operation => Answer the question
+    - Timeline Position Retrieval + Timeline Position Retrieval + Temporal Constrained Retrieval:
+        When Bush is president of US and Putin is President of Russian, who is the president of China?
 
     input will be a unified knowledge graph, it will be stored in a table
         subject
@@ -122,7 +326,7 @@ class TKGQAGenerator:
         paraphrased: bool = False,
         bulk_sql_size: int = 100,
     ):
-        # setup the db connection
+        # set up the db connection
         self.host = host
         self.port = port
         self.user = user
@@ -159,7 +363,7 @@ class TKGQAGenerator:
         """
         )
         self.cursor.connection.commit()
-        self.pharaphrased = paraphrased
+        self.paraphrased = paraphrased
         with timer(the_logger=logger, message="Getting the events from the database"):
             self.cursor.execute(
                 f"SELECT * FROM {self.unified_kg_table} ORDER BY RANDOM() LIMIT {self.first_draw_size};"
@@ -182,20 +386,20 @@ class TKGQAGenerator:
         This is used to generate the simple question, we will have two types of questions.
 
         For each type of questions, based on the answer or the question focus, we can further divide them into
-        - Timeline Position Retrievaly
+        - Timeline Position Retrival
             - Start TimePoint
             - End TimePoint
             - Time Range
             - Duration
-        - Temporal Constrainted Retrieval (Ignore predicate for now)
+        - Temporal Constrained Retrieval (Ignore predicate for now)
             - Subject
             - Object
 
         Simple: Timeline and One Event Involved
-        - Timeline Position Retrievaly: When Bush starts his term as president of US?
-            - General Information Retrieval => Timeline Position Retrievaly => Answer the question
+        - Timeline Position Retrival: When Bush starts his term as president of US?
+            - General Information Retrieval => Timeline Position Retrival => Answer the question
             - Question Focus can be: Timestamp Start, Timestamp End, Duration, Timestamp Start and End
-        - Temporal Constrainted Retrieval: In 2009, who is the president of US?
+        - Temporal Constrained Retrieval: In 2009, who is the president of US?
             - General Information Retrieval => Temporal Constraint Retrieval => Answer the question
             - Question Focus can be: Subject, Object, Predicate. Can be more complex if we want mask out more elements
 
@@ -203,21 +407,21 @@ class TKGQAGenerator:
         ## Templates
         To generate the questions, We can try to feed into the LLM, and generate the questions.
         However, the diversity of the questions is not guaranteed, so we can use the template to generate the questions.
-        Then use LLM to pharaphrase the questions.
+        Then use LLM to paraphrase the questions.
 
         Template examples:
-        - Timeline Position Retrievaly
+        - Timeline Position Retrival
             - Start TimePoint: When did {subject} start the term as {object}?
             - End TimePoint: When did {subject} end the term as {object}?
             - Time Range: When did {subject} serve as {object}?
             - Duration: How long did {subject} serve as {object}?
-        - Temporal Constrainted Retrieval
+        - Temporal Constrained Retrieval
             - Subject:
-                - Who is afficiated to {subject} from {timestamp start} to {timestamp end}?
-                - Who is afficiated to {subject} in {timestamp}?
+                - Who is affiliated to {subject} from {timestamp start} to {timestamp end}?
+                - Who is affiliated to {subject} in {timestamp}?
             - Object:
-                - {subject} is afficiated to which organisation from {timestamp start} to {timestamp end}?
-                - {subject} is afficiated to which organisation during {temporal representation}?
+                - {subject} is affiliated to which organisation from {timestamp start} to {timestamp end}?
+                - {subject} is affiliated to which organisation during {temporal representation}?
 
         ## Process
         - Extract {subject}, {predicate}, {object}, {start_time}, {end_time} from the unified graph
@@ -230,24 +434,23 @@ class TKGQAGenerator:
         - {paraphrased_question}
         - subject, predicate, object, start_time, end_time
         - {question_level} => Simple
-        - {question_type} => Timeline Position Retrievaly, Temporal Constrainted Retrieval
+        - {question_type} => Timeline Position Retrival, Temporal Constrained Retrieval
         - {answer_type} => Subject, Object | Timestamp Start, Timestamp End, Duration, Timestamp Start and End
         """
         # get records not yet generated questions
 
         insert_values_list = []
         bulk_sql_pointer = 0
-        # for index, event in events_df.iterrows():
         for item in self.sample_simple_events:
             event = self.events_df.iloc[item]
             questions = self.simple_question_generation_individual(
                 subject=event["subject"],
                 predicate=event["predicate"],
-                object=event["object"],
+                tail_object=event["object"],
                 start_time=event["start_time"],
                 end_time=event["end_time"],
                 template_based=True,
-                pharaphrased=self.pharaphrased,
+                paraphrased=self.paraphrased,
             )
 
             # insert each qa into the table, have a flat table
@@ -258,7 +461,7 @@ class TKGQAGenerator:
                     question_obj["source_kg_id"],
                     question_obj["question"],
                     question_obj["answer"],
-                    question_obj["pharaphrased_question"],
+                    question_obj["paraphrased_question"],
                     question_obj["events"],
                     question_obj["question_level"],
                     question_obj["question_type"],
@@ -277,12 +480,12 @@ class TKGQAGenerator:
     def simple_question_generation_individual(
         subject: str,
         predicate: str,
-        object: str,
+        tail_object: str,
         start_time: str,
         end_time: str,
         template_based: bool = False,
-        pharaphrased: bool = False,
-    ) -> dict:
+        paraphrased: bool = False,
+    ) -> List[dict]:
         """
         This will try to generate four questions belong to RE type
 
@@ -292,16 +495,16 @@ class TKGQAGenerator:
         - s p o from ? to end_time?
         - s p o from start_time to ?
         - s p o from ? to ?
-        - [How long/What's the duration/etc] ? for the statement s p o
+        - [How long/What's the duration, etc.] ? for the statement s p o
 
         Args:
             subject (str): The subject
             predicate (str): The predicate
-            object (str): The object
+            tail_object (str): The tail_object
             start_time (str): The start time
             end_time (str): The end time
-            template_based (bool): Whether use the template based question generation
-            pharaphrased (bool): Whether do the paraphrase for the question, if set to False,
+            template_based (bool): Whether you use the template based question generation
+            paraphrased (bool): Whether you do the paraphrase for the question, if set to False,
                     then the paraphrased_question will be the same as the question
 
         Returns:
@@ -317,55 +520,68 @@ class TKGQAGenerator:
 
         questions = [
             {
-                "question": f"??? {predicate} {object} during the time range from {start_time} to {end_time}?",
+                "question": f"??? {predicate} {tail_object} during the time range from {start_time} to {end_time}?",
                 "answer": f"{subject}",
-                "pharaphrased_question": None,
-                "events": [f"{subject}|{predicate}|{object}|{start_time}|{end_time}"],
+                "paraphrased_question": None,
+                "events": [
+                    f"{subject}|{predicate}|{tail_object}|{start_time}|{end_time}"
+                ],
                 "question_level": "simple",
                 "question_type": "temporal_constrained_retrieval",
                 "answer_type": "subject",
             },
             {
                 "question": f"{subject} {predicate} ??? during the time range from {start_time} to {end_time}?",
-                "answer": f"{object}",
-                "pharaphrased_question": None,
-                "events": [f"{subject}|{predicate}|{object}|{start_time}|{end_time}"],
+                "answer": f"{tail_object}",
+                "paraphrased_question": None,
+                "events": [
+                    f"{subject}|{predicate}|{tail_object}|{start_time}|{end_time}"
+                ],
                 "question_level": "simple",
                 "question_type": "temporal_constrained_retrieval",
                 "answer_type": "object",
             },
             {
-                "question": f"{subject} {predicate} {object} from ??? to {end_time}?",
+                "question": f"{subject} {predicate} {tail_object} from ??? to {end_time}?",
                 "answer": f"{start_time}",
-                "pharaphrased_question": None,
-                "events": [f"{subject}|{predicate}|{object}|{start_time}|{end_time}"],
+                "paraphrased_question": None,
+                "events": [
+                    f"{subject}|{predicate}|{tail_object}|{start_time}|{end_time}"
+                ],
                 "question_level": "simple",
                 "question_type": "timeline_position_retrieval",
                 "answer_type": "timestamp_start",
             },
             {
-                "question": f"{subject} {predicate} {object} from {start_time} to ???",
+                "question": f"{subject} {predicate} {tail_object} from {start_time} to ???",
                 "answer": f"{end_time}",
-                "pharaphrased_question": None,
-                "events": [f"{subject}|{predicate}|{object}|{start_time}|{end_time}"],
+                "paraphrased_question": None,
+                "events": [
+                    f"{subject}|{predicate}|{tail_object}|{start_time}|{end_time}"
+                ],
                 "question_level": "simple",
                 "question_type": "timeline_position_retrieval",
                 "answer_type": "timestamp_end",
             },
             {
-                "question": f"{subject} {predicate} {object} from ??? to ???",
+                "question": f"{subject} {predicate} {tail_object} from ??? to ???",
                 "answer": f"{start_time} and {end_time}",
-                "pharaphrased_question": None,
-                "events": [f"{subject}|{predicate}|{object}|{start_time}|{end_time}"],
+                "paraphrased_question": None,
+                "events": [
+                    f"{subject}|{predicate}|{tail_object}|{start_time}|{end_time}"
+                ],
                 "question_level": "simple",
                 "question_type": "timeline_position_retrieval",
                 "answer_type": "timestamp_range",
             },
             {
-                "question": f"[How long/What's the duration/etc] ??? for the statement {subject} {predicate} {object}",
+                "question": f"[How long/What's the duration/etc] ??? for the statement "
+                f"{subject} {predicate} {tail_object}",
                 "answer": f"{end_time} - {start_time}",
-                "pharaphrased_question": None,
-                "events": [f"{subject}|{predicate}|{object}|{start_time}|{end_time}"],
+                "paraphrased_question": None,
+                "events": [
+                    f"{subject}|{predicate}|{tail_object}|{start_time}|{end_time}"
+                ],
                 "question_level": "simple",
                 "question_type": "timeline_position_retrieval",
                 "answer_type": "duration",
@@ -379,22 +595,22 @@ class TKGQAGenerator:
                 ][question_draft["question_type"]][question_draft["answer_type"]]
                 logger.debug(f"this_type_templates: {this_type_templates}")
                 random_pick_template = random.choice(this_type_templates)
-                # replace {subject}, {predicate}, {object}, {start_time}, {end_time} with the real value
+                # replace {subject}, {predicate}, {tail_object}, {start_time}, {end_time} with the real value
                 question_draft["question"] = random_pick_template.format(
                     subject=subject,
                     predicate=predicate,
-                    object=object,
+                    tail_object=tail_object,
                     start_time=start_time,
                     end_time=end_time,
                 )
 
-        if pharaphrased:
+        if paraphrased:
             for question_obj in questions:
                 paraphrased_question = paraphrase_simple_question(
                     question=question_obj["question"]
                 )
                 logger.info(f"paraphrased_question: {paraphrased_question}")
-                question_obj["pharaphrased_question"] = paraphrased_question
+                question_obj["paraphrased_question"] = paraphrased_question
 
         return questions
 
@@ -402,8 +618,8 @@ class TKGQAGenerator:
         """
         This will involve mainly two types of questions
 
-        - **Timeline Position Retrievaly => Temporal Constrainted Retrieval**
-        - **Timeline Position Retrievaly + Timeline Position Retrievaly**
+        - **Timeline Position Retrival => Temporal Constrained Retrieval**
+        - **Timeline Position Retrival + Timeline Position Retrival**
 
         ---
 
@@ -436,7 +652,7 @@ class TKGQAGenerator:
                 first_event=first_event.to_dict(),
                 second_event=second_event.to_dict(),
                 template_based=True,
-                pharaphrased=self.pharaphrased,
+                paraphrased=self.paraphrased,
             )
 
             for question_obj in questions:
@@ -447,7 +663,7 @@ class TKGQAGenerator:
                     question_obj["source_kg_id"],
                     question_obj["question"],
                     question_obj["answer"],
-                    question_obj["pharaphrased_question"],
+                    question_obj["paraphrased_question"],
                     question_obj["events"],
                     question_obj["question_level"],
                     question_obj["question_type"],
@@ -466,15 +682,15 @@ class TKGQAGenerator:
         first_event: dict,
         second_event: dict,
         template_based: bool = True,
-        pharaphrased: bool = False,
-    ) -> dict:
+        paraphrased: bool = False,
+    ) -> List[dict]:
         """
 
         Args:
             first_event (dict): The first event
             second_event (dict): The second event
-            template_based (bool): Whether use the template based question generation
-            pharaphrased (bool): Whether do the paraphrase for the question, if set to False,
+            template_based (bool): Whether you use the template based question generation
+            paraphrased (bool): Whether you do the paraphrase for the question, if set to False,
                     then the paraphrased_question will be the same as the question
 
         Returns:
@@ -489,20 +705,26 @@ class TKGQAGenerator:
 
         - question_type:
             - timeline_position_retrieval_temporal_constrained_retrieval
-                - For this one, the logic/reasoning/math part will be like: **TimeRange** + Temporal Semantic Operation => "TimeRange**
-                - Then the interesting part will be the Timeline Operation, we have mentioned serveral types of operations below.
+                - For this one, the logic/reasoning/math part will be like: **TimeRange** +
+                    Temporal Semantic Operation => **TimeRange**
+                - Then the interesting part will be the Timeline Operation,
+                    we have mentioned several types of operations below.
                     - There are mostly from numeric to semantic perspective
                     - Here is the reverse process: name it Temporal Semantic Operation
-                    - So this is trying to convert the temporal semantic representation to a numeric operation and then get a new operation.
+                    - So this is trying to convert the temporal semantic representation to
+                        a numeric operation and then get a new operation.
             - timeline_position_retrieval_timeline_position_retrieval
                 - For the logic/reasoning/math side, it actually is **TimeRange** vs **TimeRange** => Timeline Operation
-                    - Get an way to ask about this comparision relations.
+                    - Get a way to ask about this comparison relations.
                     - So the question will mainly be about whether this relation is True, or which relation it is.
                     - For duration, we can ask about the duration of the two events, and then compare
                     - Or we can compare the event ranking based on the time range
-            - there is another types: Three years before 2019,  who is the president of China? => It is a valid question, but nobody will in this way.
-                - It will be normally classied into **simple**: in 2016, who is the president of China?
-                - Or it will be something like: Three years before bush end the term, who is the president of China? => This will be classifed into **Medium**, and belong to the timeline_position_retrieval_temporal_constrained_retrieval
+            - there is another types: Three years before 2019,  who is the president of China? =>
+                It is a valid question, but nobody will in this way.
+                - It will be normally classified into **simple**: in 2016, who is the president of China?
+                - Or it will be something like: Three years before bush end the term, who is the president of China?
+                    => This will be classified into **Medium**,
+                        and belong to the timeline_position_retrieval_temporal_constrained_retrieval
         - answer_type:
             - subject, object for timeline_position_retrieval_temporal_constrained_retrieval
                 - subject
@@ -554,7 +776,8 @@ class TKGQAGenerator:
         The key part of this type is:
         We need to cover as many temporal semantic operations as possible
         - Before, After, During, this is the most common one and shown in the literature
-        - Starts from the same time, Ends at the same time, Meets, Overlap, this is another way to add the temporal condition (inspired by the allen logic)
+        - Starts from the same time, Ends at the same time, Meets, Overlap, this is another way to add the
+            temporal condition (inspired by the allen logic)
         - Above are from allen temporal logic and intersection/union
         - We can also add the ranking ones, however, before/after is the same as first/last, under this category
         - Then the rest is the one for duration, question like 3 years before, 3 years after, etc.
@@ -564,8 +787,10 @@ class TKGQAGenerator:
             - calculate the relation first, then generated based on template
             - Before: Who is the president of US before the end of Bush's term?
             - After: Who is the president of US after the start of Bush's term?
-            - Starts from the same time: Who and Bush start their term as father and President of US respectively at the same time?
-            - Ends at the same time: Who and Bush end their term as father and President of US respectively at the same time?
+            - Starts from the same time: Who and Bush start their term as father and
+                President of US respectively at the same time?
+            - Ends at the same time: Who and Bush end their term as father and
+                President of US respectively at the same time?
             - Meets: ?
             - During: Who is the president of US during Bush's term?
             - Overlap: Bush as the president of US meets who when the guy become the father?
@@ -580,12 +805,17 @@ class TKGQAGenerator:
         # ask for first subject
         medium_type_1_a_questions.append(
             {
-                "question": f"??? {first_event_predicate} {first_event_object} [Timeline Operation on ({first_event_start_time}, {first_event_end_time}) vs ({second_event_start_time}, {second_event_end_time})] {second_event_subject} {second_event_predicate} {second_event_object}?",
+                "question": f"??? {first_event_predicate} {first_event_object} [Timeline Operation on "
+                f"({first_event_start_time}, {first_event_end_time}) vs ({second_event_start_time}, "
+                f"{second_event_end_time})] {second_event_subject}"
+                f"{second_event_predicate} {second_event_object}?",
                 "answer": f"{first_event_subject}",
-                "pharaphrased_question": None,
+                "paraphrased_question": None,
                 "events": [
-                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|{first_event_start_time}|{first_event_end_time}",
-                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|{second_event_start_time}|{second_event_end_time}",
+                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|"
+                    f"{first_event_start_time}|{first_event_end_time}",
+                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|"
+                    f"{second_event_start_time}|{second_event_end_time}",
                 ],
                 "question_level": "medium",
                 "question_type": "timeline_position_retrieval_temporal_constrained_retrieval",
@@ -597,12 +827,17 @@ class TKGQAGenerator:
         # ask for first object
         medium_type_1_a_questions.append(
             {
-                "question": f"{first_event_subject} {first_event_predicate} ??? [Timeline Operation on ({first_event_start_time}, {first_event_end_time}) vs ({second_event_start_time}, {second_event_end_time})] {second_event_subject} {second_event_predicate} {second_event_object}?",
+                "question": f"{first_event_subject} {first_event_predicate} ??? [Timeline Operation on "
+                f"({first_event_start_time}, {first_event_end_time}) vs ({second_event_start_time},"
+                f"{second_event_end_time})] {second_event_subject}"
+                f" {second_event_predicate} {second_event_object}?",
                 "answer": f"{first_event_object}",
-                "pharaphrased_question": None,
+                "paraphrased_question": None,
                 "events": [
-                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|{first_event_start_time}|{first_event_end_time}",
-                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|{second_event_start_time}|{second_event_end_time}",
+                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|"
+                    f"{first_event_start_time}|{first_event_end_time}",
+                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|"
+                    f"{second_event_start_time}|{second_event_end_time}",
                 ],
                 "question_level": "medium",
                 "question_type": "timeline_position_retrieval_temporal_constrained_retrieval",
@@ -629,17 +864,22 @@ class TKGQAGenerator:
         - Infer duration, and then compare
         """
         # Timeline Position Retrieval + Timeline Position Retrieval
-        medium_type_2_questions = []
+
         # ask for union/intersection of the time range
 
         medium_type_2_questions = [
             {
-                "question": f"{first_event_subject} {first_event_predicate} {first_event_object} ???[Timeline Operation on ({first_event_start_time}, {first_event_end_time}) vs ({second_event_start_time}, {second_event_end_time})]??? {second_event_subject} {second_event_predicate} {second_event_object}?",
+                "question": f"{first_event_subject} {first_event_predicate} {first_event_object} ???"
+                f"[Timeline Operation on ({first_event_start_time}, {first_event_end_time}) vs "
+                f"({second_event_start_time}, {second_event_end_time})]??? "
+                f"{second_event_subject} {second_event_predicate} {second_event_object}?",
                 "answer": "Union/Intersection of the time range",
-                "pharaphrased_question": None,
+                "paraphrased_question": None,
                 "events": [
-                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|{first_event_start_time}|{first_event_end_time}",
-                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|{second_event_start_time}|{second_event_end_time}",
+                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|"
+                    f"{first_event_start_time}|{first_event_end_time}",
+                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|"
+                    f"{second_event_start_time}|{second_event_end_time}",
                 ],
                 "question_level": "medium",
                 "question_type": "timeline_position_retrieval_timeline_position_retrieval",
@@ -647,40 +887,36 @@ class TKGQAGenerator:
                 "temporal_relation": "intersection",
             },
             {
-                "question": f"{first_event_subject} {first_event_predicate} {first_event_object} ???[Timeline Operation on ({first_event_start_time}, {first_event_end_time}) vs ({second_event_start_time}, {second_event_end_time})]??? {second_event_subject} {second_event_predicate} {second_event_object}?",
+                "question": f"{first_event_subject} {first_event_predicate} {first_event_object} "
+                f"???[Timeline Operation on ({first_event_start_time}, {first_event_end_time}) "
+                f"vs ({second_event_start_time}, {second_event_end_time})]??? "
+                f"{second_event_subject} {second_event_predicate} {second_event_object}?",
                 "answer": "Union/Intersection of the time range",
-                "pharaphrased_question": None,
+                "paraphrased_question": None,
                 "events": [
-                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|{first_event_start_time}|{first_event_end_time}",
-                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|{second_event_start_time}|{second_event_end_time}",
+                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|"
+                    f"{first_event_start_time}|{first_event_end_time}",
+                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|"
+                    f"{second_event_start_time}|{second_event_end_time}",
                 ],
                 "question_level": "medium",
                 "question_type": "timeline_position_retrieval_timeline_position_retrieval",
                 "answer_type": "relation_union_or_intersection",
                 "temporal_relation": "union",
             },
-            # {
-            #     "question": f"{first_event_subject} {first_event_predicate} {first_event_object} ???[Timeline Operation on ({first_event_start_time}, {first_event_end_time}) vs ({second_event_start_time}, {second_event_end_time})]??? {second_event_subject} {second_event_predicate} {second_event_object}?",
-            #     "answer": f"Temporal Relation",
-            #     "pharaphrased_question": None,
-            #     "events": [
-            #         f"{first_event_subject}|{first_event_predicate}|{first_event_object}|{first_event_start_time}|{first_event_end_time}",
-            #         f"{second_event_subject}|{second_event_predicate}|{second_event_object}|{second_event_start_time}|{second_event_end_time}",
-            #     ],
-            #     "question_level": "medium",
-            #     "question_type": "timeline_recovery_timeline_recovery",
-            #     "answer_type": "relation_allen",
-            #     "temporal_relation": None,
-            #     # under this, random choose choices question or yes/no question
-            #     # for yes/no question, we randomly generate yes or no answer questions.
-            # },
             {
-                "question": f"{first_event_subject} {first_event_predicate} {first_event_object} ???[Timeline Operation on ({first_event_start_time}, {first_event_end_time}) vs ({second_event_start_time}, {second_event_end_time})]??? {second_event_subject} {second_event_predicate} {second_event_object}?",
+                "question": f"{first_event_subject} {first_event_predicate} {first_event_object} "
+                f"???[Timeline Operation on ({first_event_start_time}, "
+                f"{first_event_end_time}) vs ({second_event_start_time}, "
+                f"{second_event_end_time})]??? {second_event_subject} "
+                f"{second_event_predicate} {second_event_object}?",
                 "answer": "Duration",
-                "pharaphrased_question": None,
+                "paraphrased_question": None,
                 "events": [
-                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|{first_event_start_time}|{first_event_end_time}",
-                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|{second_event_start_time}|{second_event_end_time}",
+                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|"
+                    f"{first_event_start_time}|{first_event_end_time}",
+                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|"
+                    f"{second_event_start_time}|{second_event_end_time}",
                 ],
                 "question_level": "medium",
                 "question_type": "timeline_position_retrieval_timeline_position_retrieval",
@@ -689,7 +925,7 @@ class TKGQAGenerator:
             },
         ]
         questions += medium_type_2_questions
-
+        temporal_answer = None
         if template_based:
             for question_draft in questions:
                 this_type_templates = QUESTION_TEMPLATES[
@@ -785,8 +1021,8 @@ class TKGQAGenerator:
                         )
                         temporal_answer = self.relation_union_or_intersection(
                             time_ranges=[
-                                [first_event_start_time_dt, first_event_end_time_dt],
-                                [second_event_start_time_dt, second_event_end_time_dt],
+                                (first_event_start_time_dt, first_event_end_time_dt),
+                                (second_event_start_time_dt, second_event_end_time_dt),
                             ],
                             temporal_operator=temporal_relation,
                         )
@@ -879,14 +1115,14 @@ class TKGQAGenerator:
                         if temporal_relation == "duration":
                             temporal_answer = self.relation_union_or_intersection(
                                 time_ranges=[
-                                    [
+                                    (
                                         first_event_start_time_dt,
                                         first_event_end_time_dt,
-                                    ],
-                                    [
+                                    ),
+                                    (
                                         second_event_start_time_dt,
                                         second_event_end_time_dt,
-                                    ],
+                                    ),
                                 ],
                                 temporal_operator="intersection",
                             )
@@ -969,13 +1205,13 @@ class TKGQAGenerator:
                         question_draft["temporal_relation"] = temporal_relation
 
         questions += medium_type_1_b_questions
-        if pharaphrased:
+        if paraphrased:
             for question_obj in questions:
                 paraphrased_question = paraphrase_medium_question(
                     question=question_obj["question"],
                 )
                 logger.info(f"paraphrased_question: {paraphrased_question}")
-                question_obj["pharaphrased_question"] = paraphrased_question
+                question_obj["paraphrased_question"] = paraphrased_question
 
         return questions
 
@@ -1006,7 +1242,7 @@ class TKGQAGenerator:
                 second_event=second_event.to_dict(),
                 third_event=third_event.to_dict(),
                 template_based=True,
-                pharaphrased=self.pharaphrased,
+                paraphrased=self.paraphrased,
             )
             for question_obj in questions:
                 question_obj["source_kg_id"] = int(source_kg_id)
@@ -1015,7 +1251,7 @@ class TKGQAGenerator:
                     question_obj["source_kg_id"],
                     question_obj["question"],
                     question_obj["answer"],
-                    question_obj["pharaphrased_question"],
+                    question_obj["paraphrased_question"],
                     question_obj["events"],
                     question_obj["question_level"],
                     question_obj["question_type"],
@@ -1036,15 +1272,15 @@ class TKGQAGenerator:
         second_event: dict,
         third_event: dict,
         template_based: bool = True,
-        pharaphrased: bool = True,
-    ) -> dict:
+        paraphrased: bool = True,
+    ) -> List[dict]:
         """
         Args:
             first_event (dict): The first event
             second_event (dict): The second event
             third_event (dict): The third event
-            template_based (bool): Whether use the template based question generation
-            pharaphrased (bool): Whether do the paraphrase for the question, if set to False,
+            template_based (bool): Whether you use the template based question generation
+            paraphrased (bool): Whether you do the paraphrase for the question, if set to False,
                     then the paraphrased_question will be the same as the question
 
         Returns:
@@ -1059,8 +1295,8 @@ class TKGQAGenerator:
 
 
         - question_type:
-            - timeline_position_retrievel *2 + temporal constrained retrieval
-            - timeline_position_retrievel *3
+            - timeline_position_retrieval *2 + temporal constrained retrieval
+            - timeline_position_retrieval *3
         - answer_type:
             - type1:
                 - subject
@@ -1077,7 +1313,7 @@ class TKGQAGenerator:
                     - If we ask for choice question, it will be between two events
                     - If we ask for true/false, event a,b,c; ab, ac, bc;  Question, ab+ac => is bc relation True
                 - Infer a list of time ranges: Ranking
-                    - Who is the {} amony a,b,c? => a
+                    - Who is the {} among a,b,c? => an
                 - Infer duration, and then compare
                     - Who is the president of US for the longest time among a, b, c? => a
 
@@ -1115,20 +1351,24 @@ class TKGQAGenerator:
         complex_type_1_a_questions = []
         questions = []
 
-        # timeline_position_retrievel *2 + temporal constrainted retrieval
+        # timeline_position_retrieval *2 + temporal constrained retrieval
         # ask for the first subject
         complex_type_1_a_questions.append(
             {
-                "question": f"??? {first_event_predicate} {first_event_object} {second_event_predicate} {second_event_object} {third_event_predicate} {third_event_object}?",
+                "question": f"??? {first_event_predicate} {first_event_object} {second_event_predicate} "
+                f"{second_event_object} {third_event_predicate} {third_event_object}?",
                 "answer": f"{first_event_subject}",
-                "pharaphrased_question": None,
+                "paraphrased_question": None,
                 "events": [
-                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|{first_event_start_time}|{first_event_end_time}",
-                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|{second_event_start_time}|{second_event_end_time}",
-                    f"{third_event_subject}|{third_event_predicate}|{third_event_object}|{third_event_start_time}|{third_event_end_time}",
+                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|"
+                    f"{first_event_start_time}|{first_event_end_time}",
+                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|"
+                    f"{second_event_start_time}|{second_event_end_time}",
+                    f"{third_event_subject}|{third_event_predicate}|{third_event_object}|"
+                    f"{third_event_start_time}|{third_event_end_time}",
                 ],
                 "question_level": "complex",
-                "question_type": "timeline_position_retrievel*2+temporal_constrained_retrieval",
+                "question_type": "timeline_position_retrieval*2+temporal_constrained_retrieval",
                 "answer_type": "subject",
                 "temporal_relation": None,
             }
@@ -1136,16 +1376,20 @@ class TKGQAGenerator:
         # ask for first object
         complex_type_1_a_questions.append(
             {
-                "question": f"{first_event_subject} {first_event_predicate} ??? {second_event_predicate} {second_event_object} {third_event_predicate} {third_event_object}?",
+                "question": f"{first_event_subject} {first_event_predicate} ??? {second_event_predicate} "
+                f"{second_event_object} {third_event_predicate} {third_event_object}?",
                 "answer": f"{first_event_object}",
-                "pharaphrased_question": None,
+                "paraphrased_question": None,
                 "events": [
-                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|{first_event_start_time}|{first_event_end_time}",
-                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|{second_event_start_time}|{second_event_end_time}",
-                    f"{third_event_subject}|{third_event_predicate}|{third_event_object}|{third_event_start_time}|{third_event_end_time}",
+                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|"
+                    f"{first_event_start_time}|{first_event_end_time}",
+                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|"
+                    f"{second_event_start_time}|{second_event_end_time}",
+                    f"{third_event_subject}|{third_event_predicate}|{third_event_object}|"
+                    f"{third_event_start_time}|{third_event_end_time}",
                 ],
                 "question_level": "complex",
-                "question_type": "timeline_position_retrievel*2+temporal_constrained_retrieval",
+                "question_type": "timeline_position_retrieval*2+temporal_constrained_retrieval",
                 "answer_type": "object",
                 "temporal_relation": None,
             }
@@ -1163,17 +1407,21 @@ class TKGQAGenerator:
         """
         Timeline Position Retrieval + Timeline Position Retrieval + Timeline Position Retrieval
         """
-        complex_type_2_questions = []
 
         complex_type_2_questions = [
             {
-                "question": f"{first_event_subject} {first_event_predicate} {first_event_object} {second_event_predicate} {second_event_object} {third_event_predicate} {third_event_object}?",
+                "question": f"{first_event_subject} {first_event_predicate} {first_event_object} "
+                f"{second_event_predicate} {second_event_object} "
+                f"{third_event_predicate} {third_event_object}?",
                 "answer": "Union/Intersection of the time range",
-                "pharaphrased_question": None,
+                "paraphrased_question": None,
                 "events": [
-                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|{first_event_start_time}|{first_event_end_time}",
-                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|{second_event_start_time}|{second_event_end_time}",
-                    f"{third_event_subject}|{third_event_predicate}|{third_event_object}|{third_event_start_time}|{third_event_end_time}",
+                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|"
+                    f"{first_event_start_time}|{first_event_end_time}",
+                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|"
+                    f"{second_event_start_time}|{second_event_end_time}",
+                    f"{third_event_subject}|{third_event_predicate}|{third_event_object}|"
+                    f"{third_event_start_time}|{third_event_end_time}",
                 ],
                 "question_level": "complex",
                 "question_type": "timeline_position_retrieval*3",
@@ -1181,13 +1429,18 @@ class TKGQAGenerator:
                 "temporal_relation": "intersection",
             },
             {
-                "question": f"{first_event_subject} {first_event_predicate} {first_event_object} {second_event_predicate} {second_event_object} {third_event_predicate} {third_event_object}?",
+                "question": f"{first_event_subject} {first_event_predicate} {first_event_object} "
+                f"{second_event_predicate} {second_event_object} "
+                f"{third_event_predicate} {third_event_object}?",
                 "answer": "Union/Intersection of the time range",
-                "pharaphrased_question": None,
+                "paraphrased_question": None,
                 "events": [
-                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|{first_event_start_time}|{first_event_end_time}",
-                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|{second_event_start_time}|{second_event_end_time}",
-                    f"{third_event_subject}|{third_event_predicate}|{third_event_object}|{third_event_start_time}|{third_event_end_time}",
+                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|"
+                    f"{first_event_start_time}|{first_event_end_time}",
+                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|"
+                    f"{second_event_start_time}|{second_event_end_time}",
+                    f"{third_event_subject}|{third_event_predicate}|{third_event_object}|"
+                    f"{third_event_start_time}|{third_event_end_time}",
                 ],
                 "question_level": "complex",
                 "question_type": "timeline_position_retrieval*3",
@@ -1195,13 +1448,18 @@ class TKGQAGenerator:
                 "temporal_relation": "union",
             },
             {
-                "question": f"{first_event_subject} {first_event_predicate} {first_event_object} {second_event_predicate} {second_event_object} {third_event_predicate} {third_event_object}?",
+                "question": f"{first_event_subject} {first_event_predicate} {first_event_object} "
+                f"{second_event_predicate} {second_event_object} "
+                f"{third_event_predicate} {third_event_object}?",
                 "answer": "Duration",
-                "pharaphrased_question": None,
+                "paraphrased_question": None,
                 "events": [
-                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|{first_event_start_time}|{first_event_end_time}",
-                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|{second_event_start_time}|{second_event_end_time}",
-                    f"{third_event_subject}|{third_event_predicate}|{third_event_object}|{third_event_start_time}|{third_event_end_time}",
+                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|"
+                    f"{first_event_start_time}|{first_event_end_time}",
+                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|"
+                    f"{second_event_start_time}|{second_event_end_time}",
+                    f"{third_event_subject}|{third_event_predicate}|{third_event_object}|"
+                    f"{third_event_start_time}|{third_event_end_time}",
                 ],
                 "question_level": "complex",
                 "question_type": "timeline_position_retrieval*3",
@@ -1210,13 +1468,17 @@ class TKGQAGenerator:
             },
             # add ranking one
             {
-                "question": f"Who is the xxx amony {first_event_subject}, {second_event_subject}, and {third_event_subject}?",
+                "question": f"Who is the xxx among {first_event_subject}, {second_event_subject}, "
+                f"and {third_event_subject}?",
                 "answer": "Ranking",
-                "pharaphrased_question": None,
+                "paraphrased_question": None,
                 "events": [
-                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|{first_event_start_time}|{first_event_end_time}",
-                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|{second_event_start_time}|{second_event_end_time}",
-                    f"{third_event_subject}|{third_event_predicate}|{third_event_object}|{third_event_start_time}|{third_event_end_time}",
+                    f"{first_event_subject}|{first_event_predicate}|{first_event_object}|"
+                    f"{first_event_start_time}|{first_event_end_time}",
+                    f"{second_event_subject}|{second_event_predicate}|{second_event_object}|"
+                    f"{second_event_start_time}|{second_event_end_time}",
+                    f"{third_event_subject}|{third_event_predicate}|{third_event_object}|"
+                    f"{third_event_start_time}|{third_event_end_time}",
                 ],
                 "question_level": "complex",
                 "question_type": "timeline_position_retrieval*3",
@@ -1226,6 +1488,7 @@ class TKGQAGenerator:
         ]
 
         questions += complex_type_2_questions
+        temporal_answer = None
 
         if template_based:
             for question_draft in questions:
@@ -1302,7 +1565,7 @@ class TKGQAGenerator:
                         temporal_relation_12_semantic = (
                             f"{duration} {temporal_relation_12_semantic}"
                         )
-                        logger.info(temporal_relation_12_semantic)
+                        logger.debug(temporal_relation_12_semantic)
                         can_generate_duration_question = True
                     if temporal_relation_13_semantic in ["before", "after"]:
                         duration = self.relation_duration_calculation(
@@ -1319,7 +1582,7 @@ class TKGQAGenerator:
                         temporal_relation_13_semantic = (
                             f"{duration} {temporal_relation_13_semantic}"
                         )
-                        logger.info(temporal_relation_13_semantic)
+                        logger.debug(temporal_relation_13_semantic)
                         can_generate_duration_question = True
                     if can_generate_duration_question:
                         # copy a new question draft
@@ -1355,9 +1618,9 @@ class TKGQAGenerator:
                         )
                         temporal_answer = self.relation_union_or_intersection(
                             time_ranges=[
-                                [first_event_start_time_dt, first_event_end_time_dt],
-                                [second_event_start_time_dt, second_event_end_time_dt],
-                                [third_event_start_time_dt, third_event_end_time_dt],
+                                (first_event_start_time_dt, first_event_end_time_dt),
+                                (second_event_start_time_dt, second_event_end_time_dt),
+                                (third_event_start_time_dt, third_event_end_time_dt),
                             ],
                             temporal_operator=temporal_relation,
                         )
@@ -1373,8 +1636,8 @@ class TKGQAGenerator:
                             third_event_predicate=third_event_predicate,
                             third_event_object=third_event_object,
                         )
-                        logger.info(question_draft["question"])
-                        logger.info(temporal_answer)
+                        logger.debug(question_draft["question"])
+                        logger.debug(temporal_answer)
                         if temporal_answer is None:
                             temporal_answer = "No Answer"
                         question_draft["answer"] = temporal_answer
@@ -1401,18 +1664,18 @@ class TKGQAGenerator:
                         if temporal_relation == "duration":
                             temporal_answer = self.relation_union_or_intersection(
                                 time_ranges=[
-                                    [
+                                    (
                                         first_event_start_time_dt,
                                         first_event_end_time_dt,
-                                    ],
-                                    [
+                                    ),
+                                    (
                                         second_event_start_time_dt,
                                         second_event_end_time_dt,
-                                    ],
-                                    [
+                                    ),
+                                    (
                                         third_event_start_time_dt,
                                         third_event_end_time_dt,
-                                    ],
+                                    ),
                                 ],
                                 temporal_operator="intersection",
                             )
@@ -1507,7 +1770,7 @@ class TKGQAGenerator:
                                 ],
                                 temporal_operator="average",
                             )
-                            logger.info(temporal_answer)
+                            logger.debug(temporal_answer)
                             question_draft["question"] = random_pick_template.format(
                                 first_event_subject=first_event_subject,
                                 first_event_predicate=first_event_predicate,
@@ -1554,20 +1817,18 @@ class TKGQAGenerator:
                         question_draft["temporal_relation"] = rank_by_what
 
         questions += complex_type_1_b_questions
-        if pharaphrased:
+        if paraphrased:
             for question_obj in questions:
                 paraphrased_question = paraphrase_medium_question(
                     question=question_obj["question"],
                 )
                 logger.info(f"paraphrased_question: {paraphrased_question}")
-                question_obj["pharaphrased_question"] = paraphrased_question
+                question_obj["paraphrased_question"] = paraphrased_question
 
         return questions
 
     @staticmethod
-    def relation_allen_time_range(
-        time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
-    ) -> dict:
+    def relation_allen_time_range(time_range_a: list, time_range_b: list) -> dict:
         """
         This function will return the allen temporal relation between two time ranges
 
@@ -1580,7 +1841,7 @@ class TKGQAGenerator:
 
         We will have "beginning of time" or "end of time" to represent the infinite time range
         We will need to convert it to a numerical value in np.inf
-        Ohters will be converted to a numerical value in the timestamp
+        Others will be converted to a numerical value in the timestamp
 
         Args:
             time_range_a (list[datetime, datetime]): The first time range
@@ -1631,7 +1892,7 @@ class TKGQAGenerator:
             - X >  Y => [-1, -1,  1,  1,  1,  1]
 
         10 for time point and time range operation
-        Amony the 10, 5 for X is a point, 5 for Y is a point
+        Among the 10, 5 for X is a point, 5 for Y is a point
         5 for X is a point, Y is a range, which means x_start = x_end, y_start < y_end
             - X <  Y => [0, -1, -1, -1, -1, -1]
             - X s  Y => [0, -1,  0, -1,  0, -1]
@@ -1650,191 +1911,6 @@ class TKGQAGenerator:
             - X = Y => [0, 0,  0,  0,  0,  0]
             - X > Y => [0, 0,  1,  1,  1,  1]
         """
-
-        ALLEN_OPERATOR_DICT = {
-            (-1, -1, -1, -1, -1, -1): {
-                "relation": "X < Y",
-                "description": "X precedes Y",
-                "category": "tr",
-                "code": "tr-1",
-                "semantic": "before",
-            },
-            (-1, -1, -1, -1, 0, -1): {
-                "relation": "X m Y",
-                "description": "X meets Y",
-                "category": "tr",
-                "code": "tr-2",
-                "semantic": "meets",
-            },
-            (-1, -1, -1, -1, 1, -1): {
-                "relation": "X o Y",
-                "description": "X overlaps Y",
-                "category": "tr",
-                "code": "tr-3",
-                "semantic": "during",
-            },
-            (-1, -1, -1, -1, 1, 0): {
-                "relation": "X fi Y",
-                "description": "X is finished by Y",
-                "category": "tr",
-                "code": "tr-4",
-                "semantic": "finishedby",
-            },
-            (-1, -1, -1, -1, 1, 1): {
-                "relation": "X di Y",
-                "description": "X contains Y",
-                "category": "tr",
-                "code": "tr-5",
-                "semantic": "during",
-            },
-            (-1, -1, 0, -1, 1, -1): {
-                "relation": "X s Y",
-                "description": "X starts Y",
-                "category": "tr",
-                "code": "tr-6",
-                "semantic": "starts",
-            },
-            (-1, -1, 0, -1, 1, 0): {
-                "relation": "X = Y",
-                "description": "X equals Y",
-                "category": "tr",
-                "code": "tr-7",
-                "semantic": "equal",
-            },
-            (-1, -1, 0, -1, 1, 1): {
-                "relation": "X si Y",
-                "description": "X is started by Y",
-                "category": "tr",
-                "code": "tr-8",
-                "semantic": "startedby",
-            },
-            (-1, -1, 1, -1, 1, -1): {
-                "relation": "X d Y",
-                "description": "X during Y",
-                "category": "tr",
-                "code": "tr-9",
-                "semantic": "during",
-            },
-            (-1, -1, 1, -1, 1, 0): {
-                "relation": "X f Y",
-                "description": "X finishes Y",
-                "category": "tr",
-                "code": "tr-10",
-                "semantic": "finishes",
-            },
-            (-1, -1, 1, -1, 1, 1): {
-                "relation": "X oi Y",
-                "description": "X is overlapped by Y",
-                "category": "tr",
-                "code": "tr-11",
-                "semantic": "during",
-            },
-            (-1, -1, 1, 0, 1, 1): {
-                "relation": "X mi Y",
-                "description": "X is met by Y",
-                "category": "tr",
-                "code": "tr-12",
-                "semantic": "metby",
-            },
-            (-1, -1, 1, 1, 1, 1): {
-                "relation": "X > Y",
-                "description": "X is preceded by Y",
-                "category": "tr",
-                "code": "tr-13",
-                "semantic": "after",
-            },
-            (0, -1, -1, -1, -1, -1): {
-                "relation": "X < Y",
-                "description": "X is before Y",
-                "category": "tp&tr",
-                "code": "tptr-14",
-                "semantic": "before",
-            },
-            (0, -1, 0, -1, 0, -1): {
-                "relation": "X s Y",
-                "description": "X starts Y",
-                "category": "tp&tr",
-                "code": "tptr-15",
-                "semantic": "starts",
-            },
-            (0, -1, 1, -1, 1, -1): {
-                "relation": "X d Y",
-                "description": "X during Y",
-                "category": "tp&tr",
-                "code": "tptr-16",
-                "semantic": "during",
-            },
-            (0, -1, 1, 0, 1, 0): {
-                "relation": "X f Y",
-                "description": "X finishes Y",
-                "category": "tp&tr",
-                "code": "tptr-17",
-                "semantic": "finishes",
-            },
-            (0, -1, 1, 1, 1, 1): {
-                "relation": "X > Y",
-                "description": "X is after Y",
-                "category": "tp&tr",
-                "code": "tptr-18",
-                "semantic": "after",
-            },
-            (-1, 0, -1, -1, -1, -1): {
-                "relation": "X < Y",
-                "description": "X is before Y",
-                "category": "tr&tp",
-                "code": "trtp-19",
-                "semantic": "before",
-            },
-            (-1, 0, -1, -1, 0, 0): {
-                "relation": "X fi Y",
-                "description": "X finishes Y",
-                "category": "tr&tp",
-                "code": "trtp-20",
-                "semantic": "finishes",
-            },
-            (-1, 0, -1, -1, 1, 1): {
-                "relation": "X di Y",
-                "description": "X during Y",
-                "category": "tr&tp",
-                "code": "trtp-21",
-                "semantic": "during",
-            },
-            (-1, 0, 0, 0, 1, 1): {
-                "relation": "X si Y",
-                "description": "X starts Y",
-                "category": "tr&tp",
-                "code": "trtp-22",
-                "semantic": "starts",
-            },
-            (-1, 0, 1, 1, 1, 1): {
-                "relation": "X > Y",
-                "description": "X is after Y",
-                "category": "tr&tp",
-                "code": "trtp-23",
-                "semantic": "after",
-            },
-            (0, 0, -1, -1, -1, -1): {
-                "relation": "X < Y",
-                "description": "X is before Y",
-                "category": "tp",
-                "code": "tp-24",
-                "semantic": "before",
-            },
-            (0, 0, 0, 0, 0, 0): {
-                "relation": "X = Y",
-                "description": "X equals Y",
-                "category": "tp",
-                "code": "tp-25",
-                "semantic": "equal",
-            },
-            (0, 0, 1, 1, 1, 1): {
-                "relation": "X > Y",
-                "description": "X is after Y",
-                "category": "tp",
-                "code": "tp-26",
-                "semantic": "after",
-            },
-        }
 
         allen_operator = [
             time_range_a_datetime[0] - time_range_a_datetime[1],
@@ -1858,13 +1934,17 @@ class TKGQAGenerator:
         # get it to be a tuple
         allen_operator = tuple(allen_operator)
         logger.debug(f"allen_operator: {allen_operator}")
-        logger.debug(f"ALLEN_OPERATOR_DICT: {ALLEN_OPERATOR_DICT[allen_operator]}")
-        return ALLEN_OPERATOR_DICT[allen_operator]
+        try:
+            logger.debug(f"ALLEN_OPERATOR_DICT: {ALLEN_OPERATOR_DICT[allen_operator]}")
+            return ALLEN_OPERATOR_DICT[allen_operator]
+        except KeyError:
+            logger.info(f"allen_operator: {allen_operator}")
+            logger.info(f"time_range_a: {time_range_a}")
+            logger.info(f"time_range_b: {time_range_b}")
+            raise ValueError("The allen operator is not found")
 
     @staticmethod
-    def relation_allen_time_duration(
-        time_range_a: list[datetime, datetime], time_range_b: list[datetime, datetime]
-    ) -> dict:
+    def relation_allen_time_duration(time_range_a: list, time_range_b: list) -> dict:
         """
 
         Args:
@@ -1903,9 +1983,9 @@ class TKGQAGenerator:
 
     @staticmethod
     def relation_union_or_intersection(
-        time_ranges: List[Tuple[datetime, datetime]],
+        time_ranges: List[Tuple[np.datetime64, np.datetime64]],
         temporal_operator: str = "intersection",
-    ) -> str:
+    ) -> Optional[str]:
         """
         This function will return the temporal operator between multiple time ranges
         The temporal operator can be:
@@ -1969,7 +2049,7 @@ class TKGQAGenerator:
         Returns:
             list: the list of sorted index for the time range
 
-        For example we have the time range:
+        For example, we have the time range:
 
         ```
         time_ranges = [
@@ -2012,7 +2092,7 @@ class TKGQAGenerator:
     @staticmethod
     def relation_duration(
         time_ranges: list[[datetime, datetime]], agg_temporal_operator: str = None
-    ) -> list:
+    ):
         """
         For the time range, it will do the rank operation, sort it
 
@@ -2069,10 +2149,10 @@ class TKGQAGenerator:
 
     @staticmethod
     def relation_duration_calculation(
-        time_range_a: list[datetime, datetime],
-        time_range_b: list[datetime, datetime],
+        time_range_a: list,
+        time_range_b: list,
         temporal_operator: str = None,
-    ) -> timedelta:
+    ) -> Optional[timedelta]:
         """
         We will calculate the time difference between two time ranges
 
@@ -2105,7 +2185,7 @@ class TKGQAGenerator:
         return None
 
     @staticmethod
-    def util_str_to_datetime(time_range: list[str, str]) -> list[datetime, datetime]:
+    def util_str_to_datetime(time_range: list) -> Tuple[np.datetime64, np.datetime64]:
         """
         Convert the string to datetime
 
@@ -2165,7 +2245,10 @@ class TKGQAGenerator:
             return "forever"
         months = (days % 365) // 30
         days = (days % 365) % 30
-        human_readable_format = f"{years} years, {months} months, {days} days, {hours} hours, {minutes} minutes, {seconds} seconds"
+        human_readable_format = (
+            f"{years} years, {months} months, "
+            f"{days} days, {hours} hours, {minutes} minutes, {seconds} seconds"
+        )
         return human_readable_format
 
     @property
@@ -2223,24 +2306,23 @@ class TKGQAGenerator:
     def sampling_events(
         self,
         sample_percentage: Union[float, dict, int] = 0.1,
-        sample_stragety: str = "temporal_close",
-    ) -> List[str]:
+        sample_strategy: str = "temporal_close",
+    ):
         """
         This function will sample the events from the list
 
         Args:
-            events_df (pd.DataFrame): The dataframe of the events
             sample_percentage (float): The sample percentage
-            sample_stragety (str): The sample strategy, can be random, temporal_close, degree_high, both
+            sample_strategy (str): The sample strategy, can be random, temporal_close, degree_high, both
 
         Returns:
             List[Tuple]: The list Tuples (event1_id, event2_id, event3_id)
 
         """
 
-        if sample_stragety not in ("random", "temporal_close", "degree_high", "both"):
+        if sample_strategy not in ("random", "temporal_close", "degree_high", "both"):
             raise ValueError(
-                "sample_stragety should be random, temporal_close, degree_high, or both"
+                "sample_strategy should be random, temporal_close, degree_high, or both"
             )
 
         """
@@ -2255,15 +2337,15 @@ class TKGQAGenerator:
         """
 
         num_events = len(self.events_df)
-        # for dimension 1 generate, first construct a matrix with len(event_df), using numpy
+        # for dimension 1 generate, first construct a matrix with len(event_df), using numpy,
         # and it is always sampling randomly
-        if sample_stragety == "degree_high" or sample_stragety == "both":
+        if sample_strategy == "degree_high" or sample_strategy == "both":
             degree_scores = self.calculate_degree_scores(self.events_df)
         else:
             degree_scores = None
 
         with timer(the_logger=logger, message="Generating the matrix D1"):
-            dimension_1_matrix = np.ones((num_events))
+            dimension_1_matrix = np.ones(num_events)
 
             # make sure every element in the matrix sum to 1
             dimension_1_matrix = dimension_1_matrix / dimension_1_matrix.sum()
@@ -2272,9 +2354,9 @@ class TKGQAGenerator:
             # for dimension 2 generate, first construct a matrix with len(event_df), using numpy
             dimension_2_matrix = np.zeros((num_events, num_events))
 
-            if sample_stragety == "random":
+            if sample_strategy == "random":
                 dimension_2_matrix = np.ones((num_events, num_events))
-            elif sample_stragety == "temporal_close":
+            elif sample_strategy == "temporal_close":
                 start_times = self.events_df["start_time"].values
                 end_times = self.events_df["end_time"].values
 
@@ -2289,7 +2371,7 @@ class TKGQAGenerator:
                         dimension_2_matrix[x, y] = score
                         dimension_2_matrix[y, x] = score  # Leverage symmetry
 
-            elif sample_stragety == "degree_high":
+            elif sample_strategy == "degree_high":
 
                 for x in range(num_events):
                     for y in range(x + 1, num_events):
@@ -2297,7 +2379,7 @@ class TKGQAGenerator:
                         dimension_2_matrix[x, y] = score
                         dimension_2_matrix[y, x] = score  # Leverage symmetry
 
-            elif sample_stragety == "both":
+            elif sample_strategy == "both":
                 # park here
                 start_times = self.events_df["start_time"].values
                 end_times = self.events_df["end_time"].values
@@ -2320,9 +2402,9 @@ class TKGQAGenerator:
         with timer(the_logger=logger, message="Generating the matrix D3"):
             # for dimension 3 generate, first construct a matrix with len(event_df), using numpy
             dimension_3_matrix = np.zeros((num_events, num_events, num_events))
-            if sample_stragety == "random":
+            if sample_strategy == "random":
                 dimension_3_matrix = np.ones((num_events, num_events, num_events))
-            elif sample_stragety == "temporal_close":
+            elif sample_strategy == "temporal_close":
                 start_times = self.events_df["start_time"].values
                 end_times = self.events_df["end_time"].values
 
@@ -2342,7 +2424,7 @@ class TKGQAGenerator:
                             dimension_3_matrix[y, z, x] = score
                             dimension_3_matrix[z, x, y] = score
                             dimension_3_matrix[z, y, x] = score
-            elif sample_stragety == "degree_high":
+            elif sample_strategy == "degree_high":
                 for x in range(num_events):
                     for y in range(x + 1, num_events):
                         for z in range(y + 1, num_events):
@@ -2355,7 +2437,7 @@ class TKGQAGenerator:
                             dimension_3_matrix[y, z, x] = score
                             dimension_3_matrix[z, x, y] = score
                             dimension_3_matrix[z, y, x] = score
-            elif sample_stragety == "both":
+            elif sample_strategy == "both":
                 # park here
                 start_times = self.events_df["start_time"].values
                 end_times = self.events_df["end_time"].values
@@ -2384,7 +2466,7 @@ class TKGQAGenerator:
             dimension_3_matrix = dimension_3_matrix / dimension_3_matrix.sum()
         # do the sampling based on the matrix
         # if sampling is a float value, then it means all three dimensions will be sampled based on the rate
-        # if samping is a int value, then it means all three dimension will have that many questions
+        # if samping is an int value, then it means all three dimension will have that many questions
         # if sampling is a dict value, then it means the sampling rate for each dimension
 
         with timer(the_logger=logger, message="Sampling the events"):
@@ -2431,7 +2513,10 @@ class TKGQAGenerator:
                     raise ValueError(
                         "The sample_percentage should have all three dimensions"
                     )
-                # if all types of dimension_1_sample_percentage, dimension_2_sample_percentage, dimension_3_sample_percentage are float
+                # if all types of
+                # dimension_1_sample_percentage,
+                # dimension_2_sample_percentage,
+                # dimension_3_sample_percentage are float
                 # then we will sample based on the rate
                 if all(
                     isinstance(i, float)
@@ -2454,7 +2539,10 @@ class TKGQAGenerator:
                         dimension_3_matrix,
                         int(dimension_3_matrix.size * dimension_3_samples),
                     )
-                # if all types of dimension_1_sample_percentage, dimension_2_sample_percentage, dimension_3_sample_percentage are int
+                # if all types of
+                # dimension_1_sample_percentage,
+                # dimension_2_sample_percentage,
+                # dimension_3_sample_percentage are int
                 # then we will sample based on the number
                 elif all(
                     isinstance(i, int)
@@ -2550,7 +2638,8 @@ class TKGQAGenerator:
             return 0
         return 1 / score
 
-    def calculate_degree_scores(self, event_df: pd.DataFrame):
+    @staticmethod
+    def calculate_degree_scores(event_df: pd.DataFrame):
         """
         group by subject, each subject will have a degree
         group by object, each object will have a degree
@@ -2679,7 +2768,7 @@ if __name__ == "__main__":
 
     # sampling the events strategy
     parser.add_argument(
-        "--sample_stragety",
+        "--sample_strategy",
         type=str,
         default="both",
         help="The sampling strategy for the events",
@@ -2689,7 +2778,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--sample_percentage",
         type=float,
-        default=500,
+        default=2000,
         help="The sampling percentage for the events",
     )
 
@@ -2701,7 +2790,7 @@ if __name__ == "__main__":
         user=args.user,
         password=args.password,
         db_name=args.db_name,
-        first_draw_size=100,
+        first_draw_size=1000,
         paraphrased=args.paraphrased,
         bulk_sql_size=args.bulk_sql_size,
     )
@@ -2721,7 +2810,7 @@ if __name__ == "__main__":
         - Timeline Position Retrieval + Timeline Position Retrieval + Timeline Position Retrieval
     """
     generator.sampling_events(
-        sample_stragety=args.sample_stragety, sample_percentage=args.sample_percentage
+        sample_strategy=args.sample_strategy, sample_percentage=args.sample_percentage
     )
 
     generator.simple_question_generation()

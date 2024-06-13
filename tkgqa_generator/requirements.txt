@@ -16,3 +16,4 @@ mkdocs-material
 mkdocs_gen_files
 mkdocs-encryptcontent-plugin
 flake8
+tqdm
