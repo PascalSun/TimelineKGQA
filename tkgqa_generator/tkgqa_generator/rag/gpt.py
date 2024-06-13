@@ -228,11 +228,17 @@ class RAGRank:
             semantic_parse: Whether to do the semantic parse
 
         """
-        questions_df = pd.read_sql(
-            f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NOT NULL "
-            f"and question_level = '{question_level}'  LIMIT 2000;",
-            self.engine,
-        )
+        if question_level == "all":
+            questions_df = pd.read_sql(
+                f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NOT NULL;",
+                self.engine,
+            )
+        else:
+            questions_df = pd.read_sql(
+                f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NOT NULL "
+                f"AND question_level = '{question_level}'  LIMIT 2000;",
+                self.engine,
+            )
 
         questions_df["embedding"] = questions_df["embedding"].apply(
             lambda x: list(map(float, x[1:-1].split(",")))
@@ -361,9 +367,12 @@ class RAGRank:
             """
             the_entities = []
             for event in events:
-                elements = event.split("|")
-                the_entities.append(elements[0])
-                the_entities.append(elements[2])
+                try:
+                    elements = event.split("|")
+                    the_entities.append(elements[0])
+                    the_entities.append(elements[2])
+                except Exception as e:
+                    logger.debug(e)
 
             return the_entities
 
@@ -409,7 +418,7 @@ if __name__ == "__main__":
     with timer(logger, "Embed Questions"):
         rag.embed_questions(question_level=metric_question_level)
 
-    with timer(logger, "Benchmark"):
+    with timer(logger, "Benchmark without semantic parse"):
         rag.benchmark(question_level=metric_question_level)
 
     with timer(logger, "Benchmark with semantic parse"):
