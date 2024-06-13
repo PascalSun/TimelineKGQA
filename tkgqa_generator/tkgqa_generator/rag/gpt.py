@@ -8,8 +8,30 @@ from tkgqa_generator.constants import LOGS_DIR
 from tkgqa_generator.openai_utils import embedding_content
 from tkgqa_generator.rag.metrics import mean_reciprocal_rank, hit_n
 from tkgqa_generator.utils import get_logger, timer
+from multiprocessing import Pool, cpu_count
 
 logger = get_logger(__name__)
+engine = create_engine(f"postgresql+psycopg2://tkgqa:tkgqa@localhost:5433/tkgqa")
+
+
+def process_row(args):
+    row, table_name = args
+    row = row[1]
+    content = f"{row['subject']} {row['predicate']} {row['object']} {row['start_time']} {row['end_time']}"
+    embedding = embedding_content(content)
+    return row["id"], embedding, table_name
+
+
+def update_database(row):
+
+    row_id, embedding, table_name = row
+    with engine.connect() as cursor:
+        cursor.execute(
+            text(
+                f"UPDATE {table_name} SET embedding = array{embedding}::vector WHERE id = {row_id};"
+            ),
+        )
+        cursor.commit()
 
 
 class RAGRank:
@@ -53,9 +75,10 @@ class RAGRank:
             self.event_df = pd.read_sql(
                 f"SELECT * FROM {self.table_name};", self.engine
             )
-            self.event_df["embedding"] = self.event_df["embedding"].apply(
-                lambda x: list(map(float, x[1:-1].split(",")))
-            )
+            # if "embedding" in self.event_df.columns:
+            #     self.event_df["embedding"] = self.event_df["embedding"].apply(
+            #         lambda x: list(map(float, x[1:-1].split(",")))
+            #     )
 
     def add_embedding_column(self):
         """
@@ -106,24 +129,40 @@ class RAGRank:
         """
         # get from embedding is None into dataframe
         df = pd.read_sql(
-            f"SELECT * FROM {self.table_name} WHERE embedding IS NULL;", self.engine
+            f"SELECT * FROM {self.table_name} WHERE embedding IS NULL;",
+            self.engine,
         )
         # embed the facts
         # check df size, if it is empty, then return
         if df.shape[0] == 0:
             return
-        for index, row in tqdm(
-            df.iterrows(), total=df.shape[0], desc="Embedding Facts"
-        ):
-            content = f"{row['subject']} {row['predicate']} {row['object']} {row['start_time']} {row['end_time']}"
-            # logger.info(content)
-            embedding = embedding_content(content)
-            # logger.info(len(embedding))
-            with self.connection.cursor() as cursor:
-                cursor.execute(
-                    f"UPDATE {self.table_name} SET embedding = array{embedding}::vector WHERE id = {row['id']};",
+
+        args_list = [(row, self.table_name) for row in df.iterrows()]
+        with Pool(cpu_count()) as pool:
+            # Use tqdm to display the progress bar
+            results = list(
+                tqdm(
+                    pool.imap(process_row, args_list),
+                    total=df.shape[0],
+                    desc="Embedding Facts",
                 )
-                self.connection.commit()
+            )
+
+        # Update the database with the results
+        with Pool(cpu_count()) as pool:
+            pool.map(update_database, results)
+        # for index, row in tqdm(
+        #     df.iterrows(), total=df.shape[0], desc="Embedding Facts"
+        # ):
+        #     content = f"{row['subject']} {row['predicate']} {row['object']} {row['start_time']} {row['end_time']}"
+        #     # logger.info(content)
+        #     embedding = embedding_content(content)
+        #     # logger.info(len(embedding))
+        #     with self.engine.connect() as cursor:
+        #         cursor.execute(
+        #             text(f"UPDATE {self.table_name} SET embedding = array{embedding}::vector WHERE id = {row['id']};"),
+        #         )
+        #         cursor.commit()
 
     def embed_questions(self, question_level: str = "complex"):
         """
@@ -350,13 +389,14 @@ class RAGRank:
 
 if __name__ == "__main__":
     rag = RAGRank(
-        table_name="unified_kg_icews_actor",
+        table_name="unified_kg_cron",
         host="localhost",
         port=5433,
         user="tkgqa",
         password="tkgqa",
         db_name="tkgqa",
     )
+
     metric_question_level = "medium"
     with timer(logger, "Add Embedding Column"):
         rag.add_embedding_column()

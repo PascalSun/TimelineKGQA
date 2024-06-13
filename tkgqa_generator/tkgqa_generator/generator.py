@@ -2778,7 +2778,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--sample_percentage",
         type=float,
-        default=500,
+        default=2000,
         help="The sampling percentage for the events",
     )
 
@@ -2790,7 +2790,7 @@ if __name__ == "__main__":
         user=args.user,
         password=args.password,
         db_name=args.db_name,
-        first_draw_size=100,
+        first_draw_size=1000,
         paraphrased=args.paraphrased,
         bulk_sql_size=args.bulk_sql_size,
     )
