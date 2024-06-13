@@ -1,3 +1,8 @@
+from tkgqa_generator.utils import get_logger
+
+logger = get_logger(__name__)
+
+
 def mean_reciprocal_rank(rs):
     """
     Calculate Mean Reciprocal Rank (MRR).
@@ -16,12 +21,6 @@ def mean_reciprocal_rank(rs):
         """
         rank = r["rank"]
         labels = r["labels"]
-        #
-        # for i in range(len(rank)):
-        #     if rank[i] == 1:
-        #         return 1 / (i + 1)
-        # return 0
-        # TODO: need to think about how should we do this?
         # if all rank = 0, then rr = 0
         if sum(rank) == 0:
             return 0
@@ -29,7 +28,8 @@ def mean_reciprocal_rank(rs):
         for i, val in enumerate(rank):
             if val:
                 rr += int(i / labels)
-        if sum(rank) != labels:
+
+        if sum(rank) < labels:
             # punishment for not all labels are in the top k
             # we will assume then rest are all rank 31
             rr += int(31 / labels) * (labels - sum(rank))

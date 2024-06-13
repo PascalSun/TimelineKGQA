@@ -1,37 +1,19 @@
+import concurrent.futures
+from multiprocessing import cpu_count
+from typing import List
+
 import numpy as np
 import pandas as pd
 import torch
-from typing import List
 from sqlalchemy import create_engine, text
 from tqdm import tqdm
+
 from tkgqa_generator.constants import LOGS_DIR
 from tkgqa_generator.openai_utils import embedding_content
-from tkgqa_generator.rag.metrics import mean_reciprocal_rank, hit_n
+from tkgqa_generator.rag.metrics import hit_n, mean_reciprocal_rank
 from tkgqa_generator.utils import get_logger, timer
-from multiprocessing import Pool, cpu_count
 
 logger = get_logger(__name__)
-engine = create_engine(f"postgresql+psycopg2://tkgqa:tkgqa@localhost:5433/tkgqa")
-
-
-def process_row(args):
-    row, table_name = args
-    row = row[1]
-    content = f"{row['subject']} {row['predicate']} {row['object']} {row['start_time']} {row['end_time']}"
-    embedding = embedding_content(content)
-    return row["id"], embedding, table_name
-
-
-def update_database(row):
-
-    row_id, embedding, table_name = row
-    with engine.connect() as cursor:
-        cursor.execute(
-            text(
-                f"UPDATE {table_name} SET embedding = array{embedding}::vector WHERE id = {row_id};"
-            ),
-        )
-        cursor.commit()
 
 
 class RAGRank:
@@ -75,10 +57,15 @@ class RAGRank:
             self.event_df = pd.read_sql(
                 f"SELECT * FROM {self.table_name};", self.engine
             )
-            # if "embedding" in self.event_df.columns:
-            #     self.event_df["embedding"] = self.event_df["embedding"].apply(
-            #         lambda x: list(map(float, x[1:-1].split(",")))
-            #     )
+
+            if "embedding" in self.event_df.columns:
+                try:
+                    self.event_df["embedding"] = self.event_df["embedding"].apply(
+                        lambda x: list(map(float, x[1:-1].split(",")))
+                    )
+                except Exception as e:
+                    logger.error(e)
+        self.max_workers = cpu_count()
 
     def add_embedding_column(self):
         """
@@ -118,6 +105,23 @@ class RAGRank:
 
                 cursor.commit()
 
+    def _process_fact_row(self, row):
+        """
+        Args:
+            row: The row of the fact
+
+        """
+        content = f"{row['subject']} {row['predicate']} {row['object']} {row['start_time']} {row['end_time']}"
+        embedding = embedding_content(content)
+        with self.engine.connect() as cursor:
+            cursor.execute(
+                text(
+                    f"UPDATE {self.table_name} SET embedding = array{embedding}::vector "
+                    f"WHERE id = {row['id']};"
+                ),
+            )
+            cursor.commit()
+
     def embed_facts(self):
         """
         Get all the facts into the embedding, and save the embedding
@@ -136,33 +140,26 @@ class RAGRank:
         # check df size, if it is empty, then return
         if df.shape[0] == 0:
             return
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=self.max_workers
+        ) as executor:
+            futures = []
+            for index, row in tqdm(
+                df.iterrows(), total=df.shape[0], desc="Embedding Facts"
+            ):
+                futures.append(executor.submit(self._process_fact_row, row))
+            concurrent.futures.wait(futures)
 
-        args_list = [(row, self.table_name) for row in df.iterrows()]
-        with Pool(cpu_count()) as pool:
-            # Use tqdm to display the progress bar
-            results = list(
-                tqdm(
-                    pool.imap(process_row, args_list),
-                    total=df.shape[0],
-                    desc="Embedding Facts",
-                )
+    def _process_question_row(self, row):
+        embedding = embedding_content(row["question"])
+        with self.engine.connect() as cursor:
+            cursor.execute(
+                text(
+                    f"UPDATE {self.table_name}_questions SET embedding = array{embedding}::vector "
+                    f"WHERE id = {row['id']};"
+                ),
             )
-
-        # Update the database with the results
-        with Pool(cpu_count()) as pool:
-            pool.map(update_database, results)
-        # for index, row in tqdm(
-        #     df.iterrows(), total=df.shape[0], desc="Embedding Facts"
-        # ):
-        #     content = f"{row['subject']} {row['predicate']} {row['object']} {row['start_time']} {row['end_time']}"
-        #     # logger.info(content)
-        #     embedding = embedding_content(content)
-        #     # logger.info(len(embedding))
-        #     with self.engine.connect() as cursor:
-        #         cursor.execute(
-        #             text(f"UPDATE {self.table_name} SET embedding = array{embedding}::vector WHERE id = {row['id']};"),
-        #         )
-        #         cursor.commit()
+            cursor.commit()
 
     def embed_questions(self, question_level: str = "complex"):
         """
@@ -172,44 +169,49 @@ class RAGRank:
             question_level: The level of the question, can be complex, medium, simple
         """
         # get whether the question with embedding total number = 2000, if yes, do not need to continue
+        if question_level == "all":
+            df = pd.read_sql(
+                f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NOT NULL;",
+                self.engine,
+            )
+        else:
+            df = pd.read_sql(
+                f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NOT NULL "
+                f"and question_level = '{question_level}';",
+                self.engine,
+            )
 
-        df = pd.read_sql(
-            f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NOT NULL "
-            f"and question_level = '{question_level}';",
-            self.engine,
-        )
-
-        if df.shape[0] >= 2000:
-            return
-
-        df = pd.read_sql(
-            f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NULL "
-            f"and question_level = '{question_level}';",
-            self.engine,
-        )
+        if question_level == "all":
+            df = pd.read_sql(
+                f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NULL;",
+                self.engine,
+            )
+        else:
+            df = pd.read_sql(
+                f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NULL "
+                f"and question_level = '{question_level}';",
+                self.engine,
+            )
         # embed the facts
         # check df size, if it is empty, then return
         if df.shape[0] == 0:
             return
-        for index, row in tqdm(
-            df.iterrows(), total=df.shape[0], desc="Embedding Questions"
-        ):
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=self.max_workers
+        ) as executor:
+            futures = []
+            for index, row in tqdm(
+                df.iterrows(), total=df.shape[0], desc="Embedding Questions"
+            ):
+                futures.append(executor.submit(self._process_question_row, row))
+            concurrent.futures.wait(futures)
 
-            # logger.info(content)
-            embedding = embedding_content(row["question"])
-            # logger.info(len(embedding))
-            with self.engine.connect() as cursor:
-                cursor.execute(
-                    text(
-                        f"UPDATE {self.table_name}_questions SET embedding = array{embedding}::vector "
-                        f"WHERE id = {row['id']};"
-                    ),
-                )
-                cursor.commit()
-            if index > 2000:
-                return
-
-    def benchmark(self, question_level: str = "complex", semantic_parse: bool = False):
+    def benchmark(
+        self,
+        question_level: str = "complex",
+        random_eval: bool = False,
+        semantic_parse: bool = False,
+    ):
         """
         Benchmark the RAG model
 
@@ -223,14 +225,27 @@ class RAGRank:
 
         Args:
             question_level: The level of the question, can be complex, medium, simple
+            random_eval (bool): Whether to do the random evaluation
             semantic_parse: Whether to do the semantic parse
 
         """
-        questions_df = pd.read_sql(
-            f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NOT NULL "
-            f"and question_level = '{question_level}'  LIMIT 2000;",
-            self.engine,
-        )
+
+        if random_eval:
+            questions_df = pd.read_sql(
+                f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NOT NULL ORDER BY RANDOM() LIMIT 2000;",
+                self.engine,
+            )
+        elif question_level == "all":
+            questions_df = pd.read_sql(
+                f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NOT NULL;",
+                self.engine,
+            )
+        else:
+            questions_df = pd.read_sql(
+                f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NOT NULL "
+                f"AND question_level = '{question_level}';",
+                self.engine,
+            )
 
         questions_df["embedding"] = questions_df["embedding"].apply(
             lambda x: list(map(float, x[1:-1].split(",")))
@@ -359,9 +374,12 @@ class RAGRank:
             """
             the_entities = []
             for event in events:
-                elements = event.split("|")
-                the_entities.append(elements[0])
-                the_entities.append(elements[2])
+                try:
+                    elements = event.split("|")
+                    the_entities.append(elements[0])
+                    the_entities.append(elements[2])
+                except Exception as e:
+                    logger.debug(e)
 
             return the_entities
 
@@ -388,6 +406,7 @@ class RAGRank:
 
 
 if __name__ == "__main__":
+    metric_question_level = "all"
     rag = RAGRank(
         table_name="unified_kg_cron",
         host="localhost",
@@ -397,7 +416,6 @@ if __name__ == "__main__":
         db_name="tkgqa",
     )
 
-    metric_question_level = "medium"
     with timer(logger, "Add Embedding Column"):
         rag.add_embedding_column()
 
@@ -407,8 +425,10 @@ if __name__ == "__main__":
     with timer(logger, "Embed Questions"):
         rag.embed_questions(question_level=metric_question_level)
 
-    with timer(logger, "Benchmark"):
-        rag.benchmark(question_level=metric_question_level)
+    with timer(logger, "Benchmark without semantic parse"):
+        rag.benchmark(question_level=metric_question_level, random_eval=True)
 
     with timer(logger, "Benchmark with semantic parse"):
-        rag.benchmark(question_level=metric_question_level, semantic_parse=True)
+        rag.benchmark(
+            question_level=metric_question_level, semantic_parse=True, random_eval=True
+        )
