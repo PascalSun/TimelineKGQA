@@ -161,15 +161,23 @@ class RAGRank:
             )
             cursor.commit()
 
-    def embed_questions(self, question_level: str = "complex"):
+    def embed_questions(
+        self, question_level: str = "complex", random_eval: bool = False
+    ):
         """
         Get all the questions into the embedding, and save the embedding
 
         Args:
             question_level: The level of the question, can be complex, medium, simple
+            random_eval (bool): Whether to do the random evaluation
         """
         # get whether the question with embedding total number = 2000, if yes, do not need to continue
-        if question_level == "all":
+        if random_eval:
+            df = pd.read_sql(
+                f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NOT NULL ORDER BY RANDOM() LIMIT 2000;",
+                self.engine,
+            )
+        elif question_level == "all":
             df = pd.read_sql(
                 f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NOT NULL;",
                 self.engine,
@@ -181,17 +189,6 @@ class RAGRank:
                 self.engine,
             )
 
-        if question_level == "all":
-            df = pd.read_sql(
-                f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NULL;",
-                self.engine,
-            )
-        else:
-            df = pd.read_sql(
-                f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NULL "
-                f"and question_level = '{question_level}';",
-                self.engine,
-            )
         # embed the facts
         # check df size, if it is empty, then return
         if df.shape[0] == 0:
@@ -423,7 +420,7 @@ if __name__ == "__main__":
         rag.embed_facts()
 
     with timer(logger, "Embed Questions"):
-        rag.embed_questions(question_level=metric_question_level)
+        rag.embed_questions(question_level=metric_question_level, random_eval=True)
 
     with timer(logger, "Benchmark without semantic parse"):
         rag.benchmark(question_level=metric_question_level, random_eval=True)
