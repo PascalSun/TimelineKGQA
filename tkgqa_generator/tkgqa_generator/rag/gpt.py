@@ -174,17 +174,17 @@ class RAGRank:
         # get whether the question with embedding total number = 2000, if yes, do not need to continue
         if random_eval:
             df = pd.read_sql(
-                f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NOT NULL ORDER BY RANDOM() LIMIT 2000;",
+                f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NULL ORDER BY RANDOM() LIMIT 2000;",
                 self.engine,
             )
         elif question_level == "all":
             df = pd.read_sql(
-                f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NOT NULL;",
+                f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NULL;",
                 self.engine,
             )
         else:
             df = pd.read_sql(
-                f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NOT NULL "
+                f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NULL "
                 f"and question_level = '{question_level}';",
                 self.engine,
             )
@@ -347,6 +347,123 @@ class RAGRank:
             f"Hit@10: {hit_10}, Question Level: {question_level}, Semantic Parse: {semantic_parse}"
         )
 
+        # summary based on the question level
+        mrr_simple = mean_reciprocal_rank(
+            [item for item in ranks_df["rank"].tolist() if item["labels"] == 1]
+        )
+        logger.info(
+            f"MRR: {mrr_simple}, Question Level: Simple, Semantic Parse: {semantic_parse}"
+        )
+
+        hit_1_simple = hit_n(
+            [item for item in ranks_df["rank"].tolist() if item["labels"] == 1], 1
+        )
+        logger.info(
+            f"Hit@1: {hit_1_simple}, Question Level: Simple, Semantic Parse: {semantic_parse}"
+        )
+
+        hit_3_simple = hit_n(
+            [item for item in ranks_df["rank"].tolist() if item["labels"] == 1], 3
+        )
+        logger.info(
+            f"Hit@3: {hit_3_simple}, Question Level: Simple, Semantic Parse: {semantic_parse}"
+        )
+
+        hit_5_simple = hit_n(
+            [item for item in ranks_df["rank"].tolist() if item["labels"] == 1], 5
+        )
+
+        logger.info(
+            f"Hit@5: {hit_5_simple}, Question Level: Simple, Semantic Parse: {semantic_parse}"
+        )
+
+        hit_10_simple = hit_n(
+            [item for item in ranks_df["rank"].tolist() if item["labels"] == 1], 10
+        )
+
+        logger.info(
+            f"Hit@10: {hit_10_simple}, Question Level: Simple, Semantic Parse: {semantic_parse}"
+        )
+
+        mrr_medium = mean_reciprocal_rank(
+            [item for item in ranks_df["rank"].tolist() if item["labels"] == 2]
+        )
+        logger.info(
+            f"MRR: {mrr_medium}, Question Level: Medium, Semantic Parse: {semantic_parse}"
+        )
+
+        hit_1_medium = hit_n(
+            [item for item in ranks_df["rank"].tolist() if item["labels"] == 2], 1
+        )
+
+        logger.info(
+            f"Hit@1: {hit_1_medium}, Question Level: Medium, Semantic Parse: {semantic_parse}"
+        )
+
+        hit_3_medium = hit_n(
+            [item for item in ranks_df["rank"].tolist() if item["labels"] == 2], 3
+        )
+
+        logger.info(
+            f"Hit@3: {hit_3_medium}, Question Level: Medium, Semantic Parse: {semantic_parse}"
+        )
+
+        hit_5_medium = hit_n(
+            [item for item in ranks_df["rank"].tolist() if item["labels"] == 2], 5
+        )
+
+        logger.info(
+            f"Hit@5: {hit_5_medium}, Question Level: Medium, Semantic Parse: {semantic_parse}"
+        )
+
+        hit_10_medium = hit_n(
+            [item for item in ranks_df["rank"].tolist() if item["labels"] == 2], 10
+        )
+
+        logger.info(
+            f"Hit@10: {hit_10_medium}, Question Level: Medium, Semantic Parse: {semantic_parse}"
+        )
+
+        mrr_complex = mean_reciprocal_rank(
+            [item for item in ranks_df["rank"].tolist() if item["labels"] == 3]
+        )
+
+        logger.info(
+            f"MRR: {mrr_complex}, Question Level: Complex, Semantic Parse: {semantic_parse}"
+        )
+
+        hit_1_complex = hit_n(
+            [item for item in ranks_df["rank"].tolist() if item["labels"] == 3], 1
+        )
+
+        logger.info(
+            f"Hit@1: {hit_1_complex}, Question Level: Complex, Semantic Parse: {semantic_parse}"
+        )
+
+        hit_3_complex = hit_n(
+            [item for item in ranks_df["rank"].tolist() if item["labels"] == 3], 3
+        )
+
+        logger.info(
+            f"Hit@3: {hit_3_complex}, Question Level: Complex, Semantic Parse: {semantic_parse}"
+        )
+
+        hit_5_complex = hit_n(
+            [item for item in ranks_df["rank"].tolist() if item["labels"] == 3], 5
+        )
+
+        logger.info(
+            f"Hit@5: {hit_5_complex}, Question Level: Complex, Semantic Parse: {semantic_parse}"
+        )
+
+        hit_10_complex = hit_n(
+            [item for item in ranks_df["rank"].tolist() if item["labels"] == 3], 10
+        )
+
+        logger.info(
+            f"Hit@10: {hit_10_complex}, Question Level: Complex, Semantic Parse: {semantic_parse}"
+        )
+
     def semantic_parse(self, questions_df: pd.DataFrame):
         """
         Filter the facts based on the entity
@@ -405,7 +522,7 @@ class RAGRank:
 if __name__ == "__main__":
     metric_question_level = "all"
     rag = RAGRank(
-        table_name="unified_kg_cron",
+        table_name="unified_kg_icews_actor",
         host="localhost",
         port=5433,
         user="tkgqa",
@@ -420,12 +537,12 @@ if __name__ == "__main__":
         rag.embed_facts()
 
     with timer(logger, "Embed Questions"):
-        rag.embed_questions(question_level=metric_question_level, random_eval=True)
+        rag.embed_questions(question_level=metric_question_level, random_eval=False)
 
     with timer(logger, "Benchmark without semantic parse"):
-        rag.benchmark(question_level=metric_question_level, random_eval=True)
+        rag.benchmark(question_level=metric_question_level, random_eval=False)
 
     with timer(logger, "Benchmark with semantic parse"):
         rag.benchmark(
-            question_level=metric_question_level, semantic_parse=True, random_eval=True
+            question_level=metric_question_level, semantic_parse=True, random_eval=False
         )
