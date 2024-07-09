@@ -39,14 +39,14 @@ when we want to store this in our memory, (we will treat our memory as a N dimen
 1. Index the spatial dimensions: is this close to my home or close to one of the point of interest in my mind
 2. Index the temporal dimension: Temporal have several aspects
     - Treat temporal as **Straight Homogenous(Objective)** Timeline:
-        - Exact date when it happen, for example, [2023-05-01 10:00:00, 2023-05-01 10:30:00]
+        - Exact date when it happens, for example, [2023-05-01 10:00:00, 2023-05-01 10:30:00]
     - Treat temporal as **Cycle Homogenous(Objective)** Timeline:
         - Monday, First day of Month, Spring, 21st Century, etc.
         - (You can aslo cycle the timeline based on your own requirement)
-    - Treat temporal as **Straight Hoterogenous(Subjective)** Timeline:
+    - Treat temporal as **Straight Homogenous(Subjective)** Timeline:
         - If you sleep during night, it will be fast for you in the 8 hours, however, if someone is working overnight,
           time will be slow for him.
-    - Treat temporal as **Cycle Hoterogenous(Subjective)** Timeline:
+    - Treat temporal as **Cycle Heterogeneous(Subjective)** Timeline:
         - Life has different turning points for everyone, until they reach the end of their life.
 3. Then index the information part: What happen, who is involved, what is the impact, etc.
 
@@ -69,7 +69,7 @@ Normally we have several types:
         - Second: **Timeline Position Retrieval** => [(Bush, start, president of US, 2000, 2000),
           (Bush, term, president of US, 2000, 2008)]
         - Third: Answer the question based on the timeline information
-- **Temporal Constrainted Retrieval**:
+- **Temporal Constrained Retrieval**:
     - In 2009, who is the president of US?
         - First: **General Information Retrieval**  => [(Bush, president of US),
           (Obama, president of US), (Trump, president of US)]
@@ -79,7 +79,7 @@ Normally we have several types:
 Three key things here:
 
 - **General Information Retrieval**: Retrieve the general information from the knowledge graph based on the question
-- **Temporal Constrainted Retrieval**: Filter on general information retrieval, apply the temporal constraint
+- **Temporal Constrained Retrieval**: Filter on general information retrieval, apply the temporal constraint
 - **Timeline Position Retrieval**: Based on general information retrieval, recover the timeline information
 
 ### Temporal Questions
@@ -107,7 +107,7 @@ the models for this three key capabilities.
     - When Bush starts his term as president of US?
         - General Information Retrieval => Timeline Recovery => Answer the question
         - Question Focus can be: *Timestamp Start, Timestamp End, Duration, Timestamp Start and End*
-- Temporal Constrainted Retrieval:
+- Temporal Constrained Retrieval:
     - In 2009, who is the president of US?
         - General Information Retrieval => Temporal Constraint Retrieval => Answer the question
         - Question Focus can be: *Subject, Object, Predicate*. Can be more complex if we want mask out more elements
@@ -124,7 +124,7 @@ the models for this three key capabilities.
             - A list of Time Range (Ranking)
             - or Comparison of Duration
         - Key ability here is: **Timeline Operation**
-- Timeline Position Retrieval + Temporal Constrainted Retrieval:
+- Timeline Position Retrieval + Temporal Constrained Retrieval:
     - When Bush is president of US, who is the president of China?
         - *(General Information Retrieval => Timeline Position Retrieval)* => *Temporal Semantic Operation* => *Temporal
           Constraint Retrieval* => Answer the question
@@ -146,7 +146,7 @@ So if we say Complex is 3 or n events and Timeline.
 #### Key ability required
 
 - **General Information Retrieval**: Retrieve the general information from the knowledge graph based on the question
-- **Temporal Constrainted Retrieval**: Filter on general information retrieval, apply the temporal constraint
+- **Temporal Constrained Retrieval**: Filter on general information retrieval, apply the temporal constraint
 - **Timeline Position Retrieval**: Based on general information retrieval, recover the timeline information
 - **Timeline Operation**: From numeric to semantic
 - **Temporal Semantic Operation**: From Semantic to Numeric
@@ -192,7 +192,7 @@ docker-compose up -d
 
 # After this we need to load the data
 
-# for iceews_dict
+# for icews_dict
 source venv/bin/activate
 export OPENAI_API_KEY=sk-proj-xxx
 # this will load the icews_dicts data into the database
