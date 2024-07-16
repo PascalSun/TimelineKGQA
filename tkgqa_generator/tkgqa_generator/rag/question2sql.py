@@ -20,13 +20,13 @@ class Question2SQL:
     """
 
     def __init__(
-        self,
-        table_name: str,
-        host: str,
-        port: int,
-        user: str,
-        password: str,
-        db_name: str,
+            self,
+            table_name: str,
+            host: str,
+            port: int,
+            user: str,
+            password: str,
+            db_name: str,
     ):
         """
         Args:
@@ -91,6 +91,29 @@ class Question2SQL:
         """
         return prompt
 
+    def process_question_to_prompt_with_semantic_parse(self, question: str, table_schema: str):
+        # TODO: and question mark, should we do this? and How?
+        """
+        Process the question to the prompt
+
+        Args:
+            question: The question
+            table_schema: The table schema
+
+        Returns:
+            The prompt
+        """
+        prompt = f"""question: {question}
+        The related knowledge to answer this question is in table {table_schema},
+        the table name is {self.table_name},
+        table_schema:
+        {table_schema}
+        Generate the sql query to retrieve the relevant information from the table to answer the question.
+        Return all columns for the rows that satisfy the condition.
+        Return the SQL query  in json format with the key "sql_query"
+        """
+        return prompt
+
     @staticmethod
     def text2sql_gpt(prompt: str, model_name: str = "gpt-3.5-turbo"):
         """
@@ -127,9 +150,9 @@ class Question2SQL:
             return ""
 
     def benchmark(
-        self,
-        question_level: str = "complex",
-        random_eval: bool = False,
+            self,
+            question_level: str = "complex",
+            random_eval: bool = False,
     ):
         """
 
