@@ -29,6 +29,7 @@ class Question2SQL:
         user: str,
         password: str,
         db_name: str,
+        text2sql_table_name: str = None,
     ):
         """
         Args:
@@ -53,12 +54,18 @@ class Question2SQL:
             f"postgresql://{user}:{password}@{host}:{port}/{db_name}"
         )
 
+        if text2sql_table_name is None:
+            self.text2sql_table_name = f"{table_name}_text2sql"
+        else:
+            self.text2sql_table_name = f"{table_name}_{text2sql_table_name}"
+        logger.info(f"Text2SQL Table Name: {self.text2sql_table_name}")
+
         # create a table if not exists to store the text2sql questions and results
         with self.engine.connect() as connection:
             connection.execute(
                 text(
                     f"""
-                    CREATE TABLE IF NOT EXISTS {table_name}_text2sql (
+                    CREATE TABLE IF NOT EXISTS {self.text2sql_table_name} (
                         id SERIAL PRIMARY KEY,
                         question TEXT,
                         question_level TEXT,
@@ -94,7 +101,7 @@ class Question2SQL:
         logger.info(f"Table Schema: {table_schema}")
 
         prompt_df = pd.read_sql(
-            f"SELECT * FROM {self.table_name}_text2sql",
+            f"SELECT * FROM {self.text2sql_table_name}",
             self.engine,
         )
 
@@ -104,15 +111,17 @@ class Question2SQL:
                 continue
 
             events = row["events"]
-            prompt_semantic = self.process_question_to_prompt_with_semantic_parse(
-                question, events, table_schema
+            prompt_semantic = (
+                self.process_question_to_prompt_with_semantic_parse_few_shot(
+                    question, events, table_schema
+                )
             )
 
             prompt = self.process_question_to_prompt(question, table_schema)
 
             query = text(
                 f"""
-                              INSERT INTO {self.table_name}_text2sql (question, question_level, prompt, prompt_semantic)
+                              INSERT INTO {self.text2sql_table_name} (question, question_level, prompt, prompt_semantic)
                               VALUES (:question, :question_level, :prompt, :prompt_semantic)
                           """
             )
@@ -131,7 +140,7 @@ class Question2SQL:
                 connection.commit()
 
         prompt_df = pd.read_sql(
-            f"SELECT * FROM {self.table_name}_text2sql",
+            f"SELECT * FROM {self.text2sql_table_name}",
             self.engine,
         )
 
@@ -223,6 +232,49 @@ class Question2SQL:
         """
         return prompt
 
+    def process_question_to_prompt_with_semantic_parse_few_shot(
+        self, question: str, events: List, table_schema: str
+    ):
+        # TODO: and question mark, should we do this? and How?
+        """
+        Process the question to the prompt
+
+        Args:
+            question: The question
+            events: The events
+            table_schema: The table schema
+
+        Returns:
+            The prompt
+        """
+
+        related_entities = []
+
+        for event in events:
+            items = event.split("|")
+            if len(items) != 5:
+                continue
+            subject, predicate, tail_object, start_time, end_time = event.split("|")
+            if subject in question:
+                related_entities.append(subject)
+            if tail_object in question:
+                related_entities.append(tail_object)
+        related_entities = ",".join(related_entities)
+        prompt = f"""question: {question}
+        The related knowledge to answer this question is in table {table_schema},
+        the table name is {self.table_name},        
+        entities can be used as where clause: {related_entities}
+        Generate the sql query to retrieve the relevant information from the table to answer the question.
+        To achieve that, you will need to find a record where the subject and/or object matches the entities in the question.
+        For example, for question
+        From when to when, Assef Shawkat Affiliation To Military (Syria), at the same time, Lisa Ibrahim Affiliation To Brunei, at the same time, Salman Khurshid Affiliation To Elite (India)?
+        The answer is
+        SELECT * FROM unified_kg_icews_actor WHERE (subject = 'Assef Shawkat' AND object = 'Military (Syria)') OR (subject = 'Lisa Ibrahim' AND object = 'Brunei') OR (subject = 'Salman Khurshid' AND object = 'Elite (India)')
+        Return all columns for the rows that satisfy the condition.
+        Return the SQL query in json format with the key "sql_query"
+        """
+        return prompt
+
     def text2sql_generation(
         self,
         prompt: str,
@@ -286,7 +338,7 @@ class Question2SQL:
         if semantic_parse:
             query = text(
                 f"""
-                      UPDATE {self.table_name}_text2sql
+                      UPDATE {self.text2sql_table_name}
                       SET sql_query_semantic = :sql_query
                       WHERE question = :question
                   """
@@ -294,7 +346,7 @@ class Question2SQL:
         else:
             query = text(
                 f"""
-                          UPDATE {self.table_name}_text2sql
+                          UPDATE {self.text2sql_table_name}
                           SET sql_query = :sql_query
                           WHERE question = :question
                       """
@@ -313,12 +365,12 @@ class Question2SQL:
     def verify_results(self, semantic_parse: bool = False):
         if semantic_parse:
             prompts_df = pd.read_sql(
-                f"SELECT * FROM {self.table_name}_text2sql WHERE sql_query_semantic IS NOT NULL",
+                f"SELECT * FROM {self.text2sql_table_name} WHERE sql_query_semantic IS NOT NULL",
                 self.engine,
             )
         else:
             prompts_df = pd.read_sql(
-                f"SELECT * FROM {self.table_name}_text2sql WHERE sql_query IS NOT NULL",
+                f"SELECT * FROM {self.text2sql_table_name} WHERE sql_query IS NOT NULL",
                 self.engine,
             )
         questions_df = pd.read_sql(
@@ -387,7 +439,7 @@ class Question2SQL:
         if semantic_parse:
             query = text(
                 f"""
-                      UPDATE {self.table_name}_text2sql
+                      UPDATE {self.text2sql_table_name}
                       SET correct_semantic = :correct
                       WHERE question = :question
                   """
@@ -395,7 +447,7 @@ class Question2SQL:
         else:
             query = text(
                 f"""
-                              UPDATE {self.table_name}_text2sql
+                              UPDATE {self.text2sql_table_name}
                               SET correct = :correct
                               WHERE question = :question
                           """
@@ -437,6 +489,7 @@ if __name__ == "__main__":
         user="tkgqa",
         password="tkgqa",
         db_name="tkgqa",
+        text2sql_table_name="text2sql_few_shot",
     )
 
     with timer(logger, "Benchmarking"):
