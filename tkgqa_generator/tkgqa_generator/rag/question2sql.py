@@ -431,7 +431,7 @@ class Question2SQL:
 if __name__ == "__main__":
     metric_question_level = "all"
     rag = Question2SQL(
-        table_name="unified_kg_cron",
+        table_name="unified_kg_icews_actor",
         host="localhost",
         port=5433,
         user="tkgqa",
