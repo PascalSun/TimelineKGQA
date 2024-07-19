@@ -229,7 +229,7 @@ class FinetuneLLM:
         """
         simple_vs_medium_query = f"""
         SELECT * FROM unified_kg_icews_actor_questions
-        WHERE question_level = 'simple' or question_level = 'medium'
+        WHERE question_level = 'medium'
         ORDER BY events
         LIMIT {number_of_questions} * 3;
         """
@@ -246,27 +246,52 @@ class FinetuneLLM:
         ):
             question = row["question"]
             answer = row["answer"]
-            if row["question_level"] == "medium":
-                evaluation_data.append(
-                    {
-                        "question": question,
-                        "answer": answer,
-                    }
-                )
-                continue
 
-            fine_tune_data.append(
+            evaluation_data.append(
                 {
-                    "messages": [
-                        {
-                            "role": "system",
-                            "content": "You are a QA robot expert in temporal related questions.",
-                        },
-                        {"role": "user", "content": question},
-                        {"role": "assistant", "content": answer},
-                    ]
+                    "question": question,
+                    "answer": answer,
                 }
             )
+
+            events = row["events"]
+            for event in events:
+                logger.info(event)
+                # query the db for simple question with this event
+                simple_query = (
+                    """
+                SELECT * FROM unified_kg_icews_actor_questions
+                WHERE events = '{"""
+                    + event.replace("'", "''")
+                    + """}'
+                AND question_level = 'simple'
+                LIMIT 3;
+                """
+                )
+                logger.info(simple_query)
+                simple_question_df = pd.read_sql(
+                    simple_query,
+                    self.engine,
+                )
+                logger.info(simple_question_df)
+                if simple_question_df.empty:
+                    continue
+
+                for _, simple_row in simple_question_df.iterrows():
+                    simple_question = simple_row["question"]
+                    simple_answer = simple_row["answer"]
+                    fine_tune_data.append(
+                        {
+                            "messages": [
+                                {
+                                    "role": "system",
+                                    "content": "You are a QA robot expert in temporal related questions.",
+                                },
+                                {"role": "user", "content": simple_question},
+                                {"role": "assistant", "content": simple_answer},
+                            ]
+                        }
+                    )
 
         # dump it into a jsonl file
         with open(
