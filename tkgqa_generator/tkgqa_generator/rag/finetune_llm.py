@@ -36,13 +36,13 @@ class FinetuneLLM:
     """
 
     def __init__(
-            self,
-            table_name: str,
-            host: str,
-            port: int,
-            user: str,
-            password: str,
-            db_name: str,
+        self,
+        table_name: str,
+        host: str,
+        port: int,
+        user: str,
+        password: str,
+        db_name: str,
     ):
         """
         Args:
@@ -67,7 +67,7 @@ class FinetuneLLM:
         )
 
     def generate_finetune_data_paraphrased_questions(
-            self, number_of_questions: int = 10, identifier_file_name: str = "paraphrased"
+        self, number_of_questions: int = 10, identifier_file_name: str = "paraphrased"
     ):
         """
         Args:
@@ -88,9 +88,9 @@ class FinetuneLLM:
         evaluation_data = []
 
         for index, row in tqdm(
-                questions_df.iterrows(),
-                total=questions_df.shape[0],
-                desc="Generating finetune data",
+            questions_df.iterrows(),
+            total=questions_df.shape[0],
+            desc="Generating finetune data",
         ):
             question = row["question"]
             answer = row["answer"]
@@ -121,29 +121,29 @@ class FinetuneLLM:
 
         # dump it into a jsonl file
         with open(
-                FINE_TUNE_LOGS_DIR / f"finetune_data_{identifier_file_name}.jsonl", "w"
+            FINE_TUNE_LOGS_DIR / f"finetune_data_{identifier_file_name}.jsonl", "w"
         ) as f:
             for line in fine_tune_data:
                 f.write(json.dumps(line) + "\n")
 
         with open(
-                FINE_TUNE_LOGS_DIR / f"evaluation_data_{identifier_file_name}.jsonl", "w"
+            FINE_TUNE_LOGS_DIR / f"evaluation_data_{identifier_file_name}.jsonl", "w"
         ) as f:
             for line in evaluation_data:
                 f.write(json.dumps(line) + "\n")
 
         self.create_fine_tune_task(
             train_filename=(
-                    FINE_TUNE_LOGS_DIR / f"finetune_data_{identifier_file_name}.jsonl"
+                FINE_TUNE_LOGS_DIR / f"finetune_data_{identifier_file_name}.jsonl"
             ).as_posix(),
             eval_filename=(
-                    FINE_TUNE_LOGS_DIR / f"evaluation_data_{identifier_file_name}.jsonl"
+                FINE_TUNE_LOGS_DIR / f"evaluation_data_{identifier_file_name}.jsonl"
             ).as_posix(),
             identifier_file_name=identifier_file_name,
         )
 
     def generate_finetune_data_answer_as_question(
-            self, number_of_questions: int = 10, identifier_file_name: str = "a_as_q"
+        self, number_of_questions: int = 10, identifier_file_name: str = "a_as_q"
     ):
         """
         Generate the finetune data
@@ -166,9 +166,9 @@ class FinetuneLLM:
         evaluation_data = []
 
         for index, row in tqdm(
-                questions_df.iterrows(),
-                total=questions_df.shape[0],
-                desc="Generating finetune data",
+            questions_df.iterrows(),
+            total=questions_df.shape[0],
+            desc="Generating finetune data",
         ):
             question = row["question"]
             answer = row["answer"]
@@ -195,29 +195,104 @@ class FinetuneLLM:
             )
         # dump it into a jsonl file
         with open(
-                FINE_TUNE_LOGS_DIR / f"finetune_data_{identifier_file_name}.jsonl", "w"
+            FINE_TUNE_LOGS_DIR / f"finetune_data_{identifier_file_name}.jsonl", "w"
         ) as f:
             for line in fine_tune_data:
                 f.write(json.dumps(line) + "\n")
 
         with open(
-                FINE_TUNE_LOGS_DIR / f"evaluation_data_{identifier_file_name}.jsonl", "w"
+            FINE_TUNE_LOGS_DIR / f"evaluation_data_{identifier_file_name}.jsonl", "w"
         ) as f:
             for line in evaluation_data:
                 f.write(json.dumps(line) + "\n")
 
         self.create_fine_tune_task(
             train_filename=(
-                    FINE_TUNE_LOGS_DIR / f"finetune_data_{identifier_file_name}.jsonl"
+                FINE_TUNE_LOGS_DIR / f"finetune_data_{identifier_file_name}.jsonl"
             ).as_posix(),
             eval_filename=(
-                    FINE_TUNE_LOGS_DIR / f"evaluation_data_{identifier_file_name}.jsonl"
+                FINE_TUNE_LOGS_DIR / f"evaluation_data_{identifier_file_name}.jsonl"
+            ).as_posix(),
+            identifier_file_name=identifier_file_name,
+        )
+
+    def generate_finetune_data_simple_vs_medium(
+        self,
+        number_of_questions: int = 30,
+        identifier_file_name: str = "simple_vs_medium",
+    ):
+        """
+        Args:
+            number_of_questions (int): The number of questions
+            identifier_file_name (str): The identifier file name
+
+        """
+        simple_vs_medium_query = f"""
+        SELECT * FROM unified_kg_icews_actor_questions
+        WHERE question_level = 'simple' or question_level = 'medium'
+        ORDER BY events
+        LIMIT {number_of_questions} * 3;
+        """
+        questions_df = pd.read_sql(
+            simple_vs_medium_query,
+            self.engine,
+        )
+        fine_tune_data = []
+        evaluation_data = []
+        for index, row in tqdm(
+            questions_df.iterrows(),
+            total=questions_df.shape[0],
+            desc="Generating finetune data",
+        ):
+            question = row["question"]
+            answer = row["answer"]
+            if row["question_level"] == "medium":
+                evaluation_data.append(
+                    {
+                        "question": question,
+                        "answer": answer,
+                    }
+                )
+                continue
+
+            fine_tune_data.append(
+                {
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": "You are a QA robot expert in temporal related questions.",
+                        },
+                        {"role": "user", "content": question},
+                        {"role": "assistant", "content": answer},
+                    ]
+                }
+            )
+
+        # dump it into a jsonl file
+        with open(
+            FINE_TUNE_LOGS_DIR / f"finetune_data_{identifier_file_name}.jsonl", "w"
+        ) as f:
+            for line in fine_tune_data:
+                f.write(json.dumps(line) + "\n")
+
+        with open(
+            FINE_TUNE_LOGS_DIR / f"evaluation_data_{identifier_file_name}.jsonl", "w"
+        ) as f:
+            for line in evaluation_data:
+                f.write(json.dumps(line) + "\n")
+
+        self.create_fine_tune_task(
+            train_filename=(
+                FINE_TUNE_LOGS_DIR / f"finetune_data_{identifier_file_name}.jsonl"
+            ).as_posix(),
+            eval_filename=(
+                FINE_TUNE_LOGS_DIR / f"evaluation_data_{identifier_file_name}.jsonl"
             ).as_posix(),
             identifier_file_name=identifier_file_name,
         )
 
     def create_fine_tune_task(
-            self, train_filename: str, eval_filename: str, identifier_file_name: str
+        self, train_filename: str, eval_filename: str, identifier_file_name: str
     ):
         """
         Fine tune the LLM
@@ -264,7 +339,7 @@ class FinetuneLLM:
 
     @staticmethod
     def evaluation_fine_tune_task(
-            eval_filename: str, fine_tuned_model: str, output_filename: str
+        eval_filename: str, fine_tuned_model: str, output_filename: str
     ):
         # Evaluation
         evl_df = pd.read_json(eval_filename, lines=True)
@@ -327,5 +402,6 @@ if __name__ == "__main__":
         password="tkgqa",
         db_name="tkgqa",
     )
-    fine_tune_llm.generate_finetune_data_answer_as_question(number_of_questions=30)
-    fine_tune_llm.generate_finetune_data_paraphrased_questions(number_of_questions=30)
+    # fine_tune_llm.generate_finetune_data_answer_as_question(number_of_questions=30)
+    # fine_tune_llm.generate_finetune_data_paraphrased_questions(number_of_questions=30)
+    fine_tune_llm.generate_finetune_data_simple_vs_medium(number_of_questions=30)
