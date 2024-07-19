@@ -84,11 +84,13 @@ class Question2SQL:
     def benchmark(
         self,
         semantic_parse: bool = False,
+        model_name: str = "gpt-3.5-turbo",
     ):
         """
 
         Args:
             semantic_parse: If True, use the semantic parse to generate the prompt
+            model_name: The model name
         """
         questions_df = pd.read_sql(
             f"SELECT * FROM {self.table_name}_questions",
@@ -167,7 +169,7 @@ class Question2SQL:
                         self.text2sql_generation,
                         prompt=prompt,
                         question=question,
-                        model_name="gpt-3.5-turbo",
+                        model_name=model_name,
                         semantic_parse=semantic_parse,
                     )
                 )
@@ -483,14 +485,14 @@ class Question2SQL:
 if __name__ == "__main__":
     metric_question_level = "all"
     rag = Question2SQL(
-        table_name="unified_kg_icews_actor",
+        table_name="unified_kg_cron",
         host="localhost",
         port=5433,
         user="tkgqa",
         password="tkgqa",
         db_name="tkgqa",
-        text2sql_table_name="text2sql_few_shot",
+        text2sql_table_name="text2sql_few_shot_gpt4o",
     )
 
     with timer(logger, "Benchmarking"):
-        rag.benchmark(semantic_parse=True)
+        rag.benchmark(semantic_parse=True, model_name="gpt-4o")

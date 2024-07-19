@@ -28,6 +28,11 @@ class FinetuneLLM:
     And if the LLM do not have the knowledge, it will not make sense even you fine tune it.
     So what we propose should be, we ingest the information to the LLM, and ask it from other perspective.
 
+    Comparison of experiments:
+
+    - Fine tuned QA with paraphrased questions
+    - Fine tuned QA, answer as question
+    - Fine tuned with simple QA, and ask the relevant medium question
     """
 
     def __init__(
@@ -61,16 +66,99 @@ class FinetuneLLM:
             f"postgresql://{self.user}:{self.password}@{self.host}:{self.port}/{self.db_name}"
         )
 
-    def generate_finetune_data(self):
+    def generate_finetune_data_paraphrased_questions(
+        self, number_of_questions: int = 10, identifier_file_name: str = "paraphrased"
+    ):
+        """
+        Args:
+            number_of_questions (int): The number of questions
+            identifier_file_name (str): The identifier file name
+
+        """
+        paraphrased_finetune_query = f"""
+        SELECT * FROM unified_kg_icews_actor_questions
+        WHERE question_type = 'timeline_recovery'
+              or question_type = 'temporal_constrainted_retrieval'
+        ORDER BY events
+        LIMIT {number_of_questions} * 3;
+        """
+
+        questions_df = pd.read_sql(paraphrased_finetune_query, self.engine)
+        fine_tune_data = []
+        evaluation_data = []
+
+        for index, row in tqdm(
+            questions_df.iterrows(),
+            total=questions_df.shape[0],
+            desc="Generating finetune data",
+        ):
+            question = row["question"]
+            answer = row["answer"]
+
+            fine_tune_data.append(
+                {
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": "You are a QA robot expert in temporal related questions.",
+                        },
+                        {"role": "user", "content": question},
+                        {"role": "assistant", "content": answer},
+                    ]
+                }
+            )
+
+            # paraphrased question
+            paraphrased_question = self.paraphrased_question(question)
+            if paraphrased_question:
+                evaluation_data.append(
+                    {
+                        "question": question,
+                        "paraphrased_question": paraphrased_question,
+                        "answer": answer,
+                    }
+                )
+
+        # dump it into a jsonl file
+        with open(
+            FINE_TUNE_LOGS_DIR / f"finetune_data_{identifier_file_name}.jsonl", "w"
+        ) as f:
+            for line in fine_tune_data:
+                f.write(json.dumps(line) + "\n")
+
+        with open(
+            FINE_TUNE_LOGS_DIR / f"evaluation_data_{identifier_file_name}.jsonl", "w"
+        ) as f:
+            for line in evaluation_data:
+                f.write(json.dumps(line) + "\n")
+
+        self.create_fine_tune_task(
+            train_filename=(
+                FINE_TUNE_LOGS_DIR / f"finetune_data_{identifier_file_name}.jsonl"
+            ).as_posix(),
+            eval_filename=(
+                FINE_TUNE_LOGS_DIR / f"evaluation_data_{identifier_file_name}.jsonl"
+            ).as_posix(),
+            identifier_file_name=identifier_file_name,
+        )
+
+    def generate_finetune_data_answer_as_question(
+        self, number_of_questions: int = 10, identifier_file_name: str = "a_as_q"
+    ):
         """
         Generate the finetune data
 
+        Args:
+            number_of_questions (int): The number of questions
+            identifier_file_name (str): The identifier file name
+
         """
-        simple_finetune_query = """
+        simple_finetune_query = f"""
         SELECT * FROM unified_kg_icews_actor_questions
         WHERE question_type = 'timeline_recovery'
            or question_type = 'temporal_constrainted_retrieval'
-        ORDER BY events;
+        ORDER BY events
+        LIMIT {number_of_questions} * 3;
         """
 
         questions_df = pd.read_sql(simple_finetune_query, self.engine)
@@ -105,29 +193,139 @@ class FinetuneLLM:
                     ]
                 }
             )
-            if index > 40:
-                break
         # dump it into a jsonl file
-        with open(FINE_TUNE_LOGS_DIR / "finetune_data.jsonl", "w") as f:
+        with open(
+            FINE_TUNE_LOGS_DIR / f"finetune_data_{identifier_file_name}.jsonl", "w"
+        ) as f:
             for line in fine_tune_data:
                 f.write(json.dumps(line) + "\n")
 
-        with open(FINE_TUNE_LOGS_DIR / "evaluation_data.jsonl", "w") as f:
+        with open(
+            FINE_TUNE_LOGS_DIR / f"evaluation_data_{identifier_file_name}.jsonl", "w"
+        ) as f:
             for line in evaluation_data:
                 f.write(json.dumps(line) + "\n")
 
         self.create_fine_tune_task(
-            train_filename=(FINE_TUNE_LOGS_DIR / "finetune_data.jsonl").as_posix(),
-            eval_filename=(FINE_TUNE_LOGS_DIR / "evaluation_data.jsonl").as_posix(),
+            train_filename=(
+                FINE_TUNE_LOGS_DIR / f"finetune_data_{identifier_file_name}.jsonl"
+            ).as_posix(),
+            eval_filename=(
+                FINE_TUNE_LOGS_DIR / f"evaluation_data_{identifier_file_name}.jsonl"
+            ).as_posix(),
+            identifier_file_name=identifier_file_name,
         )
 
-    def create_fine_tune_task(self, train_filename: str, eval_filename: str):
+    def generate_finetune_data_simple_vs_medium(
+        self,
+        number_of_questions: int = 30,
+        identifier_file_name: str = "simple_vs_medium",
+    ):
+        """
+        Args:
+            number_of_questions (int): The number of questions
+            identifier_file_name (str): The identifier file name
+
+        """
+        simple_vs_medium_query = f"""
+        SELECT * FROM unified_kg_icews_actor_questions
+        WHERE question_level = 'medium'
+        ORDER BY events
+        LIMIT {number_of_questions} * 3;
+        """
+        questions_df = pd.read_sql(
+            simple_vs_medium_query,
+            self.engine,
+        )
+        fine_tune_data = []
+        evaluation_data = []
+        for index, row in tqdm(
+            questions_df.iterrows(),
+            total=questions_df.shape[0],
+            desc="Generating finetune data",
+        ):
+            question = row["question"]
+            answer = row["answer"]
+
+            evaluation_data.append(
+                {
+                    "question": question,
+                    "answer": answer,
+                }
+            )
+
+            events = row["events"]
+            for event in events:
+                logger.info(event)
+                # query the db for simple question with this event
+                simple_query = (
+                    """
+                SELECT * FROM unified_kg_icews_actor_questions
+                WHERE events = '{"""
+                    + event.replace("'", "''")
+                    + """}'
+                AND question_level = 'simple'
+                LIMIT 3;
+                """
+                )
+                logger.info(simple_query)
+                simple_question_df = pd.read_sql(
+                    simple_query,
+                    self.engine,
+                )
+                logger.info(simple_question_df)
+                if simple_question_df.empty:
+                    continue
+
+                for _, simple_row in simple_question_df.iterrows():
+                    simple_question = simple_row["question"]
+                    simple_answer = simple_row["answer"]
+                    fine_tune_data.append(
+                        {
+                            "messages": [
+                                {
+                                    "role": "system",
+                                    "content": "You are a QA robot expert in temporal related questions.",
+                                },
+                                {"role": "user", "content": simple_question},
+                                {"role": "assistant", "content": simple_answer},
+                            ]
+                        }
+                    )
+
+        # dump it into a jsonl file
+        with open(
+            FINE_TUNE_LOGS_DIR / f"finetune_data_{identifier_file_name}.jsonl", "w"
+        ) as f:
+            for line in fine_tune_data:
+                f.write(json.dumps(line) + "\n")
+
+        with open(
+            FINE_TUNE_LOGS_DIR / f"evaluation_data_{identifier_file_name}.jsonl", "w"
+        ) as f:
+            for line in evaluation_data:
+                f.write(json.dumps(line) + "\n")
+
+        self.create_fine_tune_task(
+            train_filename=(
+                FINE_TUNE_LOGS_DIR / f"finetune_data_{identifier_file_name}.jsonl"
+            ).as_posix(),
+            eval_filename=(
+                FINE_TUNE_LOGS_DIR / f"evaluation_data_{identifier_file_name}.jsonl"
+            ).as_posix(),
+            identifier_file_name=identifier_file_name,
+        )
+
+    def create_fine_tune_task(
+        self, train_filename: str, eval_filename: str, identifier_file_name: str
+    ):
         """
         Fine tune the LLM
 
         Args:
             train_filename (str): The filename
             eval_filename (str): The evaluation filename
+            identifier_file_name (str): The identifier, output csv file identifier
         """
         # Upload the training file
         response = client.files.create(
@@ -159,7 +357,9 @@ class FinetuneLLM:
             return
 
         self.evaluation_fine_tune_task(
-            eval_filename, fine_tuned_model, output_filename="evaluation_results.csv"
+            eval_filename,
+            fine_tuned_model,
+            output_filename=f"evaluation_results_{identifier_file_name}.csv",
         )
 
     @staticmethod
@@ -176,12 +376,46 @@ class FinetuneLLM:
                 messages=[
                     {"role": "user", "content": question},
                 ],
+                temperature=0.0,
             )
             logger.info(question)
             logger.info(response.choices[0].message.content)
             fine_tune_ans = response.choices[0].message.content
             evl_df.loc[index, "fine_tune_ans"] = fine_tune_ans
         evl_df.to_csv(FINE_TUNE_LOGS_DIR / output_filename, index=False)
+
+    @staticmethod
+    def paraphrased_question(question: str):
+        """
+        Args:
+            question (str): The question
+
+        Returns:
+            str: The paraphrased question
+
+        """
+
+        try:
+            prompt = f"""
+            Please paraphrase the following question with the same meaning but another way to ask:
+            {question}
+            Return it in json format with the key "paraphrased_question"
+            """
+            response = client.chat.completions.create(
+                model="gpt-3.5-turbo-1106",
+                messages=[
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0.0,
+            )
+            paraphrased_question_str = response.choices[0].message.content
+            paraphrased_question = json.loads(paraphrased_question_str).get(
+                "paraphrased_question", ""
+            )
+            return paraphrased_question
+        except Exception as e:
+            logger.exception(e)
+            return ""
 
 
 if __name__ == "__main__":
@@ -193,9 +427,6 @@ if __name__ == "__main__":
         password="tkgqa",
         db_name="tkgqa",
     )
-    # fine_tune_llm.generate_finetune_data()
-    fine_tune_llm.evaluation_fine_tune_task(
-        eval_filename=(FINE_TUNE_LOGS_DIR / "evaluation_data.jsonl").as_posix(),
-        fine_tuned_model="ft:gpt-3.5-turbo-0125:ai4wa::9m2ejgUI",
-        output_filename="evaluation_results.csv",
-    )
+    # fine_tune_llm.generate_finetune_data_answer_as_question(number_of_questions=30)
+    # fine_tune_llm.generate_finetune_data_paraphrased_questions(number_of_questions=30)
+    fine_tune_llm.generate_finetune_data_simple_vs_medium(number_of_questions=30)
