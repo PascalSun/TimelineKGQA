@@ -1,14 +1,46 @@
-# TKGQA Generator
+# TimelineKGQA
 
-We plan to generate temporal question answering pairs from knowledge graphs from three different perspectives:
+A universal temporal question-answering pair generator for any temporal knowledge graph, revealing the landscape of
+Temporal Knowledge Graph Question Answering beyond the Great Dividing Range of Large Language Models.
+
+---
+
+- [Motivation](#motivation)
+- [Temporal Question Categorisation](#temporal-question-categorisation)
+
+---
+
+## Motivation
+
+Since the release of ChatGPT in late 2022, one of the most successful applications of large language models (LLMs), the
+entire field of Question Answering (QA) research has undergone a significant transformation.
+Researchers in the QA field now face a crucial question:
+
+**What unique value does your QA research offer when compared to LLMs?**
+
+The underlying challenge is:
+
+**If your research cannot surpass or effectively leverage LLMs, what is its purpose?**
+
+These same questions are also pressing the Knowledge Graph QA research community.
+
+Knowledge graphs provide a simple, yet powerful and natural format to organize complex information. Performing QA over
+knowledge graphs is a natural extension of their use, especially when you want to fully exploit their potential.
+Temporal question answering over knowledge graphs allows us to retrieve information based on temporal constraints,
+enabling historical analysis, causal analysis, and making predictions—an essential aspect of AI research.
+
+So we are wondering:
+
+**What's the landscape of Temporal Knowledge Graph Question Answering beyond the Great Dividing Range of Large Language
+Models after 2022?**
+
+The literature seems have not provided a clear answer to this question.
+
+## Temporal Question Categorisation
 
 - **Temporal Logic**
 - **Temporal Pattern**
 - **Temporal Modifier**
-
-Overall MindMap will be like this:
-
-![MindMap](./docs/imgs/Statement_Type.png)
 
 ## Unified Knowledge Graph
 
@@ -228,7 +260,3 @@ tkgqa_generator/
 └── LICENSE
 ```
 
-
-# Note:
-
-How old roughly is my Grandfather?
