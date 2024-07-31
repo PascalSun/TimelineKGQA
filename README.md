@@ -36,32 +36,55 @@ Models after 2022?**
 
 The literature seems have not provided a clear answer to this question.
 
+---
+
 ## Temporal Question Categorisation
 
-- **Temporal Logic**
-- **Temporal Pattern**
-- **Temporal Modifier**
+We will begin with question answering datasets, as they are fundamental to any progress in this field. Without datasets,
+we can't do anything. They are our climbing rope, guiding us to the other side of the Great Dividing Range.
 
-## Unified Knowledge Graph
+Current available datasets for the Temporal Knowledge Graph Question Answering are limited.
+For example, the most latest and popular TKGQA dataset: CronQuestions, containing limited types of questions, temporal
+relations, temporal granularity is only to year level.
 
-There are a lot of ways to represent temporal information within the knowledge graph.
-How should best represent the temporal information within knowledge graph?
-I believe we do not have a clear conclusion here in the literature.
+Our real world temporal questions is way more comphrehensive than this.
 
-At the same time, the purpose of this project is to generate all possible types of the temporal question answering
-pairs.
-Therefore, the goal for us will be finding a way to efficiently represent the temporal information, also
-generate the temporal statements for the question answering pairs.
+We all know that we are living on top of the timeline, and it only goes forward, no way looking back.
+The questions we are asking are all related to the timeline, which is totally underesimated in current TKGQA research.
 
-So we propose to represent the temporal information as the attribute of a SPO triple NODE in our unified knowledge
-graph.
-This is similar to the event knowledge graph representation in the literature.
+If we view all the temporal questions from the timeline perspective, we have this following types of timelines:
 
-## Question Classification
+- **Straight Homogenous(Objective)** Timeline:
+    - Exact date when it happens, for example, [2023-05-01 10:00:00, 2023-05-01 10:30:00]
+    - This is normally asking question about the facts, and upon the facts, we can do the analysis.
+    - For example, crime analysis, historical analysis, etc.
+    - Under this timeline, human will focus more on **Temporal Logic**
+- **Cycle Homogenous(Objective)** Timeline:
+    - Monday, First day of Month, Spring, 21st Century, etc.
+    - This is normally asking question about the patterns.
+    - Under this timeline, human will focus more on **Temporal Pattern**
+- **Straight Homogenous(Subjective)** Timeline:
+    - If you sleep during night, it will be fast for you in the 8 hours, however, if someone is working overnight,
+      time will be slow for him.
+    - This is normally asking question about the perception of time.
+    - How is your recent life goes?
+    - Depending on the person, the perception of the meaning for the "recent" will be different.
+    - Under this timeline, human will focus more on **Temporal Modifier**
+- **Cycle Heterogeneous(Subjective)** Timeline:
+    - History has its trend, however, it takes thousands years get the whole world into industrialization.
+    - And then it only takes 100 years to get the whole world into information age.
+    - So the spiaral speed of the timeline is not homogenous.
+    - Under this timeline, human will focus more on **Temporal Modifier** also, but more trying to understand the
+      development of human society, universe, etc.
 
-**How human handle the temporal information and answer the temporal questions?**
+We can not handle them all in a one go, and current TKGQA research is in front of the door of the **Straight Homogenous(
+Objective)** Timeline.
 
-### Information Indexing
+We will try to advance the research in this area first, and then try to extend to the other areas.
+
+### How human brain do the temporal question answering?
+
+#### Information Indexing via Human Brain
 
 When we see something, for example, an accident happen near our home in today morning.
 We need to first index this event into our brain.
@@ -90,12 +113,12 @@ So in summary, we can say that in our mind, if we treat the event as embedding i
 
 This will help us to retrieve the information when we need it.
 
-### Information Retrieval
+#### Information Retrieval
 
 So when we try to retrieval the information, espeically the temporal part of the information.
 Normally we have several types:
 
-- **Timeline Position Retrieval**:
+- **Timeline Retrieval**:
     - When Bush starts his term as president of US?
         - First: **General Information Retrieval**  => [(Bush, start, president of US), (Bush, term, president of US)]
         - Second: **Timeline Position Retrieval** => [(Bush, start, president of US, 2000, 2000),
@@ -112,7 +135,14 @@ Three key things here:
 
 - **General Information Retrieval**: Retrieve the general information from the knowledge graph based on the question
 - **Temporal Constrained Retrieval**: Filter on general information retrieval, apply the temporal constraint
-- **Timeline Position Retrieval**: Based on general information retrieval, recover the timeline information
+- **Timeline Retrieval**: Based on general information retrieval, recover the timeline information
+
+Extend from this, it is retrieve the information for one fact, or you can name it event/truth, etc.
+If we have multiple facts, or events, or truths, etc, after the retrieval, we need to comparison: set operation,
+ranking, semantic extraction, etc.
+
+And whether the question is complex or not is depending on how much information our brain need to process, and the
+different capabilities of the brain needed to process the information.
 
 ### Temporal Questions
 
