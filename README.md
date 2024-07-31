@@ -6,7 +6,15 @@ Temporal Knowledge Graph Question Answering beyond the Great Dividing Range of L
 ---
 
 - [Motivation](#motivation)
-- [Temporal Question Categorisation](#temporal-question-categorisation)
+- [Timelines](#timelines)
+- [How human brain do the temporal question answering?](#how-human-brain-do-the-temporal-question-answering)
+    - [Information Indexing](#information-indexing)
+    - [Information Retrieval](#information-retrieval)
+- [Temporal Questions Categorisation](#temporal-questions-categorisation)
+    - [Simple: Timeline and One Event Involved](#simple-timeline-and-one-event-involved)
+    - [Medium: Timeline and Two Events Involved](#medium-timeline-and-two-events-involved)
+    - [Complex: Timeline and Multiple Events Involved](#complex-timeline-and-multiple-events-involved)
+    - [Other perspectives](#other-perspectives)
 
 ---
 
@@ -38,7 +46,7 @@ The literature seems have not provided a clear answer to this question.
 
 ---
 
-## Temporal Question Categorisation
+## Timelines
 
 We will begin with question answering datasets, as they are fundamental to any progress in this field. Without datasets,
 we can't do anything. They are our climbing rope, guiding us to the other side of the Great Dividing Range.
@@ -82,9 +90,12 @@ Objective)** Timeline.
 
 We will try to advance the research in this area first, and then try to extend to the other areas.
 
-### How human brain do the temporal question answering?
 
-#### Information Indexing via Human Brain
+---
+
+## How human brain do the temporal question answering?
+
+### Information Indexing
 
 When we see something, for example, an accident happen near our home in today morning.
 We need to first index this event into our brain.
@@ -113,7 +124,7 @@ So in summary, we can say that in our mind, if we treat the event as embedding i
 
 This will help us to retrieve the information when we need it.
 
-#### Information Retrieval
+### Information Retrieval
 
 So when we try to retrieval the information, espeically the temporal part of the information.
 Normally we have several types:
@@ -144,19 +155,20 @@ ranking, semantic extraction, etc.
 And whether the question is complex or not is depending on how much information our brain need to process, and the
 different capabilities of the brain needed to process the information.
 
-### Temporal Questions
+---
+
+## Temporal Questions Categorisation
+
+![timeline](./docs/imgs/timeline_categorization.jpg)
 
 So when we try to classify the temporal questions, especially from the **difficulty** perspective, we classify the level
-of
-difficulty based on how many events involved in the question.
+of difficulty based on how many events involved in the question.
 
 - **Simple**: Timeline and One Event Involved
 - **Medium**: Timeline and Two Events Involved
 - **Complex**: Timeline and Multiple Events Involved
 
-![timeline](./docs/imgs/timeline_categorization.jpg)
-
-#### Simple: Timeline and One Event Involved
+### Simple: Timeline and One Event Involved
 
 - Timeline Retrieval:
     - When Bush starts his term as president of US?
@@ -167,7 +179,7 @@ difficulty based on how many events involved in the question.
         - General Information Retrieval => Temporal Constraint Retrieval => Answer the question
         - Question Focus can be: *Subject, Object, Predicate*. Can be more complex if we want mask out more elements
 
-#### Medium: Timeline and Two Events Involved
+### Medium: Timeline and Two Events Involved
 
 - Timeline Retrieval + Timeline Retrieval:
     - Is Bush president of US when 911 happen?
@@ -186,7 +198,7 @@ difficulty based on how many events involved in the question.
         - This is same as above, Question Focus can be: *Subject, Object*
         - Key ability here is: **Temporal Semantic Operation**
 
-#### Complex: Timeline and Multiple Events Involved
+### Complex: Timeline and Multiple Events Involved
 
 In general, question focus (answer type) will only be two types when we extend from Medium Level
 
@@ -198,50 +210,40 @@ So if we say Complex is 3 or n events and Timeline.
 - Timeline Retrieval * n
 - Timeline Retrieval * (n -1) => Semantic Operation * (n - 1)? => Temporal Constrainted Retrieval
 
-And based on the answer type, we can classify them into:
+### Other perspectives
+
+And based on the **Answer Type**, we can classify them into:
 
 - Factual
 - Temporal
 
-Based on the temporal relations in the question, we can classify them into:
+Based on the **Temporal Relations** in the question, we can classify them into:
 
 - Set Operation
 - Allen Temporal Relations
 - Ranking
 - Duration
 
-Based on the temporal related capabilities, we can classify them into:
+Based on the **Temporal Capabilities**, we can classify them into:
 
-- Timeline Retrieval: Retrieve the timeline information, for example a time range, or a time point
-- Temporal Constrained Retrieval: Based on the temporal constraint, retrieve the information
-- Timeline Arithmetic Operation: Compare time intervals, do set operation, ranking, allen temporal relations, duration,
-  etc
-- Temporal Semantic Operation: Given a semnatic word and a time range, operate to get another time range
-
-#### Key ability required
-
-- **General Information Retrieval**: Retrieve the general information from the knowledge graph based on the question
 - **Temporal Constrained Retrieval**: Filter on general information retrieval, apply the temporal constraint
 - **Timeline Retrieval**: Based on general information retrieval, recover the timeline information
 - **Timeline Operation**: From numeric to semantic
 - **Temporal Semantic Operation**: From Semantic to Numeric
 
-## Workflow
+To be able to answer the temporal question, we need to have the following key abilities:
 
-The workflow of the temporal logic question answering pairs over knowledge graph is as follows:
+- **General Information Retrieval**: Retrieve the general information from the knowledge graph based on the question,
+  you can call this semantic parsing, or semantic retrieval
 
-1. **Unified Knowledge Graph**: Transform the knowledge graph into a unified format, where **SPO** are nodes,
-   and [start_time, end_time] are attributes.
-2. Generate questions based on the template, then use LLM to get it more natural.
-    - **Simple**
-    - **Medium**
-    - **Complex**
+---
 
-## Datasets
+## TimelineKGQA Generator
 
-We are exploring the following datasets for the temporal question answering pairs:
+With the above understanding, it will not be hard to programmatically generate the temporal question answering pairs for
+any temporal knowledge graph, as shown in the following figure:
 
-- [ICEWS](./docs/data/ICEWS.md)
+![tkg](./docs/imgs/tkg.jpg)
 
 ## Development Setup
 
