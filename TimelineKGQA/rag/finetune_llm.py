@@ -6,8 +6,8 @@ from openai import OpenAI
 from sqlalchemy import create_engine, text
 from tqdm import tqdm
 
-from tkgqa_generator.constants import LOGS_DIR
-from tkgqa_generator.utils import get_logger
+from TimelineKGQA.constants import LOGS_DIR
+from TimelineKGQA.utils import get_logger
 
 logger = get_logger(__name__)
 

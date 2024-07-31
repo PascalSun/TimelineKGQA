@@ -1,6 +1,6 @@
 from openai import OpenAI
 
-from tkgqa_generator.utils import get_logger
+from TimelineKGQA.utils import get_logger
 
 logger = get_logger(__name__)
 

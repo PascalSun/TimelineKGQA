@@ -22,15 +22,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd ./tkgqa_generator
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
       - name: Deploy to GitHub Pages
         run: |
-          cd ./tkgqa_generator
-          ls
-          pwd
           mkdocs gh-deploy --force
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

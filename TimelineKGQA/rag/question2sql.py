@@ -9,7 +9,7 @@ from openai import OpenAI, RateLimitError
 from sqlalchemy import create_engine, text
 from tqdm import tqdm
 
-from tkgqa_generator.utils import get_logger, timer
+from TimelineKGQA.utils import get_logger, timer
 
 logger = get_logger(__name__)
 
