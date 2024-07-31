@@ -245,6 +245,20 @@ any temporal knowledge graph, as shown in the following figure:
 
 ![tkg](./docs/imgs/tkg.jpg)
 
+And then we can follow the following steps to generate the question answering pairs:
+
+- Unify the temporal knowledge graph into the above format
+- Sampling the facts/events from the knowledge graph
+- Generate the question answer pairs based on the facts/events
+- Question paraphrasing via LLM
+
+Generating process is like:
+
+![generator](./docs/imgs/temporal_generation.jpg)
+
+---
+
+
 ## Development Setup
 
 ### Install the package
