@@ -154,7 +154,7 @@ difficulty based on how many events involved in the question.
 - **Medium**: Timeline and Two Events Involved
 - **Complex**: Timeline and Multiple Events Involved
 
-![timeline](./docs/imgs/timeline_categorization.png)
+![timeline](./docs/imgs/timeline_categorization.jpg)
 
 #### Simple: Timeline and One Event Involved
 
