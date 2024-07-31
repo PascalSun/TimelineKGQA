@@ -121,7 +121,7 @@ Normally we have several types:
 - **Timeline Retrieval**:
     - When Bush starts his term as president of US?
         - First: **General Information Retrieval**  => [(Bush, start, president of US), (Bush, term, president of US)]
-        - Second: **Timeline Position Retrieval** => [(Bush, start, president of US, 2000, 2000),
+        - Second: **Timeline Retrieval** => [(Bush, start, president of US, 2000, 2000),
           (Bush, term, president of US, 2000, 2008)]
         - Third: Answer the question based on the timeline information
 - **Temporal Constrained Retrieval**:
@@ -146,26 +146,17 @@ different capabilities of the brain needed to process the information.
 
 ### Temporal Questions
 
-We can try to classify the temporal questions from quite a few perspectives:
+So when we try to classify the temporal questions, especially from the **difficulty** perspective, we classify the level
+of
+difficulty based on how many events involved in the question.
 
-- Based on Answer: Entity, Temporal
-- Based on Temporal Relations in Question: Before, After, During , etc or First, Last, etc.
-- Based on Temporal Representation Type: Point, Range, Duration, etc.
-- Based on Complexity of Question: Simple (direct retrieval), Complex (Multiple hops with the three key things we
-  mention above)
-
-There is still no agreement or clear classification here, most of them stays in the first two.
-However, it is obvious that they have overlaps, so will not be the best way to advance the temporal embedding
-algorithms development.
-
-We are trying to decompose the question into the three key parts we mentioned above, so we can evaluate the ability of
-the models for this three key capabilities.
-
-![Question Classification](./docs/imgs/TimelineQA.jpg)
+- **Simple**: Timeline and One Event Involved
+- **Medium**: Timeline and Two Events Involved
+- **Complex**: Timeline and Multiple Events Involved
 
 #### Simple: Timeline and One Event Involved
 
-- Timeline Position Retrieval:
+- Timeline Retrieval:
     - When Bush starts his term as president of US?
         - General Information Retrieval => Timeline Recovery => Answer the question
         - Question Focus can be: *Timestamp Start, Timestamp End, Duration, Timestamp Start and End*
@@ -176,7 +167,7 @@ the models for this three key capabilities.
 
 #### Medium: Timeline and Two Events Involved
 
-- Timeline Position Retrieval + Timeline Position Retrieval:
+- Timeline Retrieval + Timeline Retrieval:
     - Is Bush president of US when 911 happen?
         - *(General Information Retrieval => Timeline Recovery)* And *(General Information Retrieval => Timeline
           Recovery)* => *Timeline Operation* => Answer the question
@@ -186,9 +177,9 @@ the models for this three key capabilities.
             - A list of Time Range (Ranking)
             - or Comparison of Duration
         - Key ability here is: **Timeline Operation**
-- Timeline Position Retrieval + Temporal Constrained Retrieval:
+- Timeline Retrieval + Temporal Constrained Retrieval:
     - When Bush is president of US, who is the president of China?
-        - *(General Information Retrieval => Timeline Position Retrieval)* => *Temporal Semantic Operation* => *Temporal
+        - *(General Information Retrieval => Timeline Retrieval)* => *Temporal Semantic Operation* => *Temporal
           Constraint Retrieval* => Answer the question
         - This is same as above, Question Focus can be: *Subject, Object*
         - Key ability here is: **Temporal Semantic Operation**
@@ -202,14 +193,34 @@ In general, question focus (answer type) will only be two types when we extend f
 
 So if we say Complex is 3 or n events and Timeline.
 
-- Timeline Position Retrieval * n
-- Timeline Position Retrieval * (n -1) => Semantic Operation * (n - 1)? => Temporal Constrainted Retrieval
+- Timeline Retrieval * n
+- Timeline Retrieval * (n -1) => Semantic Operation * (n - 1)? => Temporal Constrainted Retrieval
+
+And based on the answer type, we can classify them into:
+
+- Factual
+- Temporal
+
+Based on the temporal relations in the question, we can classify them into:
+
+- Set Operation
+- Allen Temporal Relations
+- Ranking
+- Duration
+
+Based on the temporal related capabilities, we can classify them into:
+
+- Timeline Retrieval: Retrieve the timeline information, for example a time range, or a time point
+- Temporal Constrained Retrieval: Based on the temporal constraint, retrieve the information
+- Timeline Arithmetic Operation: Compare time intervals, do set operation, ranking, allen temporal relations, duration,
+  etc
+- Temporal Semantic Operation: Given a semnatic word and a time range, operate to get another time range
 
 #### Key ability required
 
 - **General Information Retrieval**: Retrieve the general information from the knowledge graph based on the question
 - **Temporal Constrained Retrieval**: Filter on general information retrieval, apply the temporal constraint
-- **Timeline Position Retrieval**: Based on general information retrieval, recover the timeline information
+- **Timeline Retrieval**: Based on general information retrieval, recover the timeline information
 - **Timeline Operation**: From numeric to semantic
 - **Temporal Semantic Operation**: From Semantic to Numeric
 
