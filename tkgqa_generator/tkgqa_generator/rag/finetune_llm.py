@@ -43,6 +43,8 @@ class FinetuneLLM:
         user: str,
         password: str,
         db_name: str,
+        fine_tune_model: str = "gpt-3.5-turbo-1106",
+        paraphrased_model: str = "gpt-3.5-turbo-1106",
     ):
         """
         Args:
@@ -52,6 +54,8 @@ class FinetuneLLM:
             user (str): The user
             password (str): The password
             db_name (str): The db name
+            fine_tune_model (str): The fine tune model
+            paraphrased_model (str): The paraphrased model
 
 
         """
@@ -65,6 +69,9 @@ class FinetuneLLM:
         self.engine = create_engine(
             f"postgresql://{self.user}:{self.password}@{self.host}:{self.port}/{self.db_name}"
         )
+
+        self.fine_tune_model = fine_tune_model
+        self.paraphrased_model = paraphrased_model
 
     def generate_finetune_data_paraphrased_questions(
         self, number_of_questions: int = 10, identifier_file_name: str = "paraphrased"
@@ -260,8 +267,8 @@ class FinetuneLLM:
                 # query the db for simple question with this event
                 simple_query = (
                     """
-                SELECT * FROM unified_kg_icews_actor_questions
-                WHERE events = '{"""
+                    SELECT * FROM unified_kg_icews_actor_questions
+                    WHERE events = '{"""
                     + event.replace("'", "''")
                     + """}'
                 AND question_level = 'simple'
@@ -334,7 +341,7 @@ class FinetuneLLM:
         logger.info(response.id)
         # logger.info(f"Uploaded training file: {response['id']}")
         fine_tune_res = client.fine_tuning.jobs.create(
-            training_file=response.id, model="gpt-3.5-turbo-1106"
+            training_file=response.id, model=self.fine_tune_model
         )
         logger.info(fine_tune_res.id)
 
@@ -384,8 +391,7 @@ class FinetuneLLM:
             evl_df.loc[index, "fine_tune_ans"] = fine_tune_ans
         evl_df.to_csv(FINE_TUNE_LOGS_DIR / output_filename, index=False)
 
-    @staticmethod
-    def paraphrased_question(question: str):
+    def paraphrased_question(self, question: str):
         """
         Args:
             question (str): The question
@@ -402,12 +408,14 @@ class FinetuneLLM:
             Return it in json format with the key "paraphrased_question"
             """
             response = client.chat.completions.create(
-                model="gpt-3.5-turbo-1106",
+                model=self.paraphrased_model,
                 messages=[
                     {"role": "user", "content": prompt},
                 ],
                 temperature=0.0,
+                response_format={"type": "json_object"},
             )
+            logger.info(response.choices[0].message.content)
             paraphrased_question_str = response.choices[0].message.content
             paraphrased_question = json.loads(paraphrased_question_str).get(
                 "paraphrased_question", ""
@@ -426,7 +434,9 @@ if __name__ == "__main__":
         user="tkgqa",
         password="tkgqa",
         db_name="tkgqa",
+        fine_tune_model="gpt-4o-mini-2024-07-18",
+        paraphrased_model="gpt-4o-mini",
     )
     # fine_tune_llm.generate_finetune_data_answer_as_question(number_of_questions=30)
-    # fine_tune_llm.generate_finetune_data_paraphrased_questions(number_of_questions=30)
-    fine_tune_llm.generate_finetune_data_simple_vs_medium(number_of_questions=30)
+    fine_tune_llm.generate_finetune_data_paraphrased_questions(number_of_questions=30)
+    # fine_tune_llm.generate_finetune_data_simple_vs_medium(number_of_questions=30)
