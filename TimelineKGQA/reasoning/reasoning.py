@@ -6,8 +6,8 @@ import pandas as pd
 import tqdm
 from sqlalchemy import create_engine
 
-from tkgqa_generator.reasoning.openai_reasoning import reasoning_temporal_questions
-from tkgqa_generator.utils import get_logger, timer
+from TimelineKGQA.reasoning.openai_reasoning import reasoning_temporal_questions
+from TimelineKGQA.utils import get_logger, timer
 
 logger = get_logger(__name__)
 

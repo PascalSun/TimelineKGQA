@@ -5,7 +5,7 @@ from pathlib import Path
 import mkdocs_gen_files
 
 root = Path(__file__).parent.parent
-src = root / "tkgqa_generator"
+src = root / "TimelineKGQA"
 
 for path in sorted(src.rglob("*.py")):
     module_path = path.relative_to(src).with_suffix("")
@@ -22,12 +22,12 @@ for path in sorted(src.rglob("*.py")):
         full_doc_path = "Code" / module_path.parent / "index.md"
         if identifier == "":
             print(
-                "::: tkgqa_generator",
+                "::: TimelineKGQA",
                 file=mkdocs_gen_files.open(full_doc_path, "w"),
             )
         else:
             print(
-                f"::: tkgqa_generator.{identifier}",
+                f"::: TimelineKGQA.{identifier}",
                 file=mkdocs_gen_files.open(full_doc_path, "w"),
             )
         continue
@@ -36,6 +36,6 @@ for path in sorted(src.rglob("*.py")):
 
     with mkdocs_gen_files.open(full_doc_path, "w") as fd:
         identifier = ".".join(parts)
-        print(f"::: tkgqa_generator.{identifier}", file=fd)
+        print(f"::: TimelineKGQA.{identifier}", file=fd)
 
     mkdocs_gen_files.set_edit_path(full_doc_path, path.relative_to(root))

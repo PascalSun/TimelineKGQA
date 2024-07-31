@@ -12,7 +12,7 @@ theme:
 plugins:
   - search
   - encryptcontent:
-      global_password: 'EventTimelineQA'
+      global_password: 'TimelineKGQA'
   - gen-files:
       scripts:
         - script/gen_ref_pages.py

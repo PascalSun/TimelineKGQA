@@ -13,8 +13,8 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - postgis_data:/var/lib/postgresql/data
+      - tkgqa_generator_postgis_data:/var/lib/postgresql/data
 
 volumes:
-  postgis_data:
-
+  tkgqa_generator_postgis_data:
+    external: true

@@ -12,13 +12,13 @@ import torch
 from sentence_transformers import SentenceTransformer
 from sqlalchemy import create_engine, text
 
-from tkgqa_generator.constants import (
+from TimelineKGQA.constants import (
     DATA_DIR,
     DATA_ICEWS_DICTS_DATA_DIR,
     DATA_ICEWS_EVENTS_DATA_DIR,
     DB_CONNECTION_STR,
 )
-from tkgqa_generator.utils import API, get_logger
+from TimelineKGQA.utils import API, get_logger
 
 logger = get_logger(__name__)
 
@@ -45,7 +45,7 @@ class ICEWSDataLoader:
             https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/28075
 
         After downloading the data, extract the zip file and put the data in the following directory:
-            tkgqa_generator/tkgqa_generator/data/icews_events_data/ICEWS/ICEWS Coded Event Data
+            TimelineKGQA/TimelineKGQA/data/icews_events_data/ICEWS/ICEWS Coded Event Data
 
         :return:
         """

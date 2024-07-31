@@ -8,10 +8,10 @@ import torch
 from sqlalchemy import create_engine, text
 from tqdm import tqdm
 
-from tkgqa_generator.constants import LOGS_DIR
-from tkgqa_generator.openai_utils import embedding_content
-from tkgqa_generator.rag.metrics import hit_n, mean_reciprocal_rank
-from tkgqa_generator.utils import get_logger, timer
+from TimelineKGQA.constants import LOGS_DIR
+from TimelineKGQA.openai_utils import embedding_content
+from TimelineKGQA.rag.metrics import hit_n, mean_reciprocal_rank
+from TimelineKGQA.utils import get_logger, timer
 
 logger = get_logger(__name__)
 

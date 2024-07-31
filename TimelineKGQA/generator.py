@@ -9,12 +9,12 @@ import pandas as pd
 import psycopg2
 from tqdm import tqdm
 
-from tkgqa_generator.openai_utils import (
+from TimelineKGQA.openai_utils import (
     paraphrase_medium_question,
     paraphrase_simple_question,
 )
-from tkgqa_generator.templates import QUESTION_TEMPLATES
-from tkgqa_generator.utils import get_logger, timer
+from TimelineKGQA.templates import QUESTION_TEMPLATES
+from TimelineKGQA.utils import get_logger, timer
 
 logger = get_logger(__name__)
 
