@@ -1,33 +1,99 @@
-# TKGQA Generator
+# TimelineKGQA
 
-We plan to generate temporal question answering pairs from knowledge graphs from three different perspectives:
+A universal temporal question-answering pair generator for any temporal knowledge graph, revealing the landscape of
+Temporal Knowledge Graph Question Answering beyond the Great Dividing Range of Large Language Models.
 
-- **Temporal Logic**
-- **Temporal Pattern**
-- **Temporal Modifier**
+---
 
-Overall MindMap will be like this:
+- [Motivation](#motivation)
+- [Timelines](#timelines)
+- [How human brain do the temporal question answering?](#how-human-brain-do-the-temporal-question-answering)
+    - [Information Indexing](#information-indexing)
+    - [Information Retrieval](#information-retrieval)
+- [Temporal Questions Categorisation](#temporal-questions-categorisation)
+    - [Simple: Timeline and One Event Involved](#simple-timeline-and-one-event-involved)
+    - [Medium: Timeline and Two Events Involved](#medium-timeline-and-two-events-involved)
+    - [Complex: Timeline and Multiple Events Involved](#complex-timeline-and-multiple-events-involved)
+    - [Other perspectives](#other-perspectives)
 
-![MindMap](./docs/imgs/Statement_Type.png)
+---
 
-## Unified Knowledge Graph
+## Motivation
 
-There are a lot of ways to represent temporal information within the knowledge graph.
-How should best represent the temporal information within knowledge graph?
-I believe we do not have a clear conclusion here in the literature.
+Since the release of ChatGPT in late 2022, one of the most successful applications of large language models (LLMs), the
+entire field of Question Answering (QA) research has undergone a significant transformation.
+Researchers in the QA field now face a crucial question:
 
-At the same time, the purpose of this project is to generate all possible types of the temporal question answering
-pairs.
-Therefore, the goal for us will be finding a way to efficiently represent the temporal information, also
-generate the temporal statements for the question answering pairs.
+**What unique value does your QA research offer when compared to LLMs?**
 
-So we propose to represent the temporal information as the attribute of a SPO triple NODE in our unified knowledge
-graph.
-This is similar to the event knowledge graph representation in the literature.
+The underlying challenge is:
 
-## Question Classification
+**If your research cannot surpass or effectively leverage LLMs, what is its purpose?**
 
-**How human handle the temporal information and answer the temporal questions?**
+These same questions are also pressing the Knowledge Graph QA research community.
+
+Knowledge graphs provide a simple, yet powerful and natural format to organize complex information. Performing QA over
+knowledge graphs is a natural extension of their use, especially when you want to fully exploit their potential.
+Temporal question answering over knowledge graphs allows us to retrieve information based on temporal constraints,
+enabling historical analysis, causal analysis, and making predictions—an essential aspect of AI research.
+
+So we are wondering:
+
+**What's the landscape of Temporal Knowledge Graph Question Answering beyond the Great Dividing Range of Large Language
+Models after 2022?**
+
+The literature seems have not provided a clear answer to this question.
+
+---
+
+## Timelines
+
+We will begin with question answering datasets, as they are fundamental to any progress in this field. Without datasets,
+we can't do anything. They are our climbing rope, guiding us to the other side of the Great Dividing Range.
+
+Current available datasets for the Temporal Knowledge Graph Question Answering are limited.
+For example, the most latest and popular TKGQA dataset: CronQuestions, containing limited types of questions, temporal
+relations, temporal granularity is only to year level.
+
+Our real world temporal questions is way more comphrehensive than this.
+
+We all know that we are living on top of the timeline, and it only goes forward, no way looking back.
+The questions we are asking are all related to the timeline, which is totally underesimated in current TKGQA research.
+
+If we view all the temporal questions from the timeline perspective, we have this following types of timelines:
+
+- **Straight Homogenous(Objective)** Timeline:
+    - Exact date when it happens, for example, [2023-05-01 10:00:00, 2023-05-01 10:30:00]
+    - This is normally asking question about the facts, and upon the facts, we can do the analysis.
+    - For example, crime analysis, historical analysis, etc.
+    - Under this timeline, human will focus more on **Temporal Logic**
+- **Cycle Homogenous(Objective)** Timeline:
+    - Monday, First day of Month, Spring, 21st Century, etc.
+    - This is normally asking question about the patterns.
+    - Under this timeline, human will focus more on **Temporal Pattern**
+- **Straight Homogenous(Subjective)** Timeline:
+    - If you sleep during night, it will be fast for you in the 8 hours, however, if someone is working overnight,
+      time will be slow for him.
+    - This is normally asking question about the perception of time.
+    - How is your recent life goes?
+    - Depending on the person, the perception of the meaning for the "recent" will be different.
+    - Under this timeline, human will focus more on **Temporal Modifier**
+- **Cycle Heterogeneous(Subjective)** Timeline:
+    - History has its trend, however, it takes thousands years get the whole world into industrialization.
+    - And then it only takes 100 years to get the whole world into information age.
+    - So the spiaral speed of the timeline is not homogenous.
+    - Under this timeline, human will focus more on **Temporal Modifier** also, but more trying to understand the
+      development of human society, universe, etc.
+
+We can not handle them all in a one go, and current TKGQA research is in front of the door of the **Straight Homogenous(
+Objective)** Timeline.
+
+We will try to advance the research in this area first, and then try to extend to the other areas.
+
+
+---
+
+## How human brain do the temporal question answering?
 
 ### Information Indexing
 
@@ -63,10 +129,10 @@ This will help us to retrieve the information when we need it.
 So when we try to retrieval the information, espeically the temporal part of the information.
 Normally we have several types:
 
-- **Timeline Position Retrieval**:
+- **Timeline Retrieval**:
     - When Bush starts his term as president of US?
         - First: **General Information Retrieval**  => [(Bush, start, president of US), (Bush, term, president of US)]
-        - Second: **Timeline Position Retrieval** => [(Bush, start, president of US, 2000, 2000),
+        - Second: **Timeline Retrieval** => [(Bush, start, president of US, 2000, 2000),
           (Bush, term, president of US, 2000, 2008)]
         - Third: Answer the question based on the timeline information
 - **Temporal Constrained Retrieval**:
@@ -80,30 +146,31 @@ Three key things here:
 
 - **General Information Retrieval**: Retrieve the general information from the knowledge graph based on the question
 - **Temporal Constrained Retrieval**: Filter on general information retrieval, apply the temporal constraint
-- **Timeline Position Retrieval**: Based on general information retrieval, recover the timeline information
+- **Timeline Retrieval**: Based on general information retrieval, recover the timeline information
 
-### Temporal Questions
+Extend from this, it is retrieve the information for one fact, or you can name it event/truth, etc.
+If we have multiple facts, or events, or truths, etc, after the retrieval, we need to comparison: set operation,
+ranking, semantic extraction, etc.
 
-We can try to classify the temporal questions from quite a few perspectives:
+And whether the question is complex or not is depending on how much information our brain need to process, and the
+different capabilities of the brain needed to process the information.
 
-- Based on Answer: Entity, Temporal
-- Based on Temporal Relations in Question: Before, After, During , etc or First, Last, etc.
-- Based on Temporal Representation Type: Point, Range, Duration, etc.
-- Based on Complexity of Question: Simple (direct retrieval), Complex (Multiple hops with the three key things we
-  mention above)
+---
 
-There is still no agreement or clear classification here, most of them stays in the first two.
-However, it is obvious that they have overlaps, so will not be the best way to advance the temporal embedding
-algorithms development.
+## Temporal Questions Categorisation
 
-We are trying to decompose the question into the three key parts we mentioned above, so we can evaluate the ability of
-the models for this three key capabilities.
+![timeline](./docs/imgs/timeline_categorization.jpg)
 
-![Question Classification](./docs/imgs/TimelineQA.jpg)
+So when we try to classify the temporal questions, especially from the **difficulty** perspective, we classify the level
+of difficulty based on how many events involved in the question.
 
-#### Simple: Timeline and One Event Involved
+- **Simple**: Timeline and One Event Involved
+- **Medium**: Timeline and Two Events Involved
+- **Complex**: Timeline and Multiple Events Involved
 
-- Timeline Position Retrieval:
+### Simple: Timeline and One Event Involved
+
+- Timeline Retrieval:
     - When Bush starts his term as president of US?
         - General Information Retrieval => Timeline Recovery => Answer the question
         - Question Focus can be: *Timestamp Start, Timestamp End, Duration, Timestamp Start and End*
@@ -112,9 +179,9 @@ the models for this three key capabilities.
         - General Information Retrieval => Temporal Constraint Retrieval => Answer the question
         - Question Focus can be: *Subject, Object, Predicate*. Can be more complex if we want mask out more elements
 
-#### Medium: Timeline and Two Events Involved
+### Medium: Timeline and Two Events Involved
 
-- Timeline Position Retrieval + Timeline Position Retrieval:
+- Timeline Retrieval + Timeline Retrieval:
     - Is Bush president of US when 911 happen?
         - *(General Information Retrieval => Timeline Recovery)* And *(General Information Retrieval => Timeline
           Recovery)* => *Timeline Operation* => Answer the question
@@ -124,14 +191,14 @@ the models for this three key capabilities.
             - A list of Time Range (Ranking)
             - or Comparison of Duration
         - Key ability here is: **Timeline Operation**
-- Timeline Position Retrieval + Temporal Constrained Retrieval:
+- Timeline Retrieval + Temporal Constrained Retrieval:
     - When Bush is president of US, who is the president of China?
-        - *(General Information Retrieval => Timeline Position Retrieval)* => *Temporal Semantic Operation* => *Temporal
+        - *(General Information Retrieval => Timeline Retrieval)* => *Temporal Semantic Operation* => *Temporal
           Constraint Retrieval* => Answer the question
         - This is same as above, Question Focus can be: *Subject, Object*
         - Key ability here is: **Temporal Semantic Operation**
 
-#### Complex: Timeline and Multiple Events Involved
+### Complex: Timeline and Multiple Events Involved
 
 In general, question focus (answer type) will only be two types when we extend from Medium Level
 
@@ -140,33 +207,57 @@ In general, question focus (answer type) will only be two types when we extend f
 
 So if we say Complex is 3 or n events and Timeline.
 
-- Timeline Position Retrieval * n
-- Timeline Position Retrieval * (n -1) => Semantic Operation * (n - 1)? => Temporal Constrainted Retrieval
+- Timeline Retrieval * n
+- Timeline Retrieval * (n -1) => Semantic Operation * (n - 1)? => Temporal Constrainted Retrieval
 
-#### Key ability required
+### Other perspectives
 
-- **General Information Retrieval**: Retrieve the general information from the knowledge graph based on the question
+And based on the **Answer Type**, we can classify them into:
+
+- Factual
+- Temporal
+
+Based on the **Temporal Relations** in the question, we can classify them into:
+
+- Set Operation
+- Allen Temporal Relations
+- Ranking
+- Duration
+
+Based on the **Temporal Capabilities**, we can classify them into:
+
 - **Temporal Constrained Retrieval**: Filter on general information retrieval, apply the temporal constraint
-- **Timeline Position Retrieval**: Based on general information retrieval, recover the timeline information
+- **Timeline Retrieval**: Based on general information retrieval, recover the timeline information
 - **Timeline Operation**: From numeric to semantic
 - **Temporal Semantic Operation**: From Semantic to Numeric
 
-## Workflow
+To be able to answer the temporal question, we need to have the following key abilities:
 
-The workflow of the temporal logic question answering pairs over knowledge graph is as follows:
+- **General Information Retrieval**: Retrieve the general information from the knowledge graph based on the question,
+  you can call this semantic parsing, or semantic retrieval
 
-1. **Unified Knowledge Graph**: Transform the knowledge graph into a unified format, where **SPO** are nodes,
-   and [start_time, end_time] are attributes.
-2. Generate questions based on the template, then use LLM to get it more natural.
-    - **Simple**
-    - **Medium**
-    - **Complex**
+---
 
-## Datasets
+## TimelineKGQA Generator
 
-We are exploring the following datasets for the temporal question answering pairs:
+With the above understanding, it will not be hard to programmatically generate the temporal question answering pairs for
+any temporal knowledge graph, as shown in the following figure:
 
-- [ICEWS](./docs/data/ICEWS.md)
+![tkg](./docs/imgs/tkg.jpg)
+
+And then we can follow the following steps to generate the question answering pairs:
+
+- Unify the temporal knowledge graph into the above format
+- Sampling the facts/events from the knowledge graph
+- Generate the question answer pairs based on the facts/events
+- Question paraphrasing via LLM
+
+Generating process is like:
+
+![generator](./docs/imgs/temporal_generation.jpg)
+
+---
+
 
 ## Development Setup
 
@@ -228,7 +319,3 @@ tkgqa_generator/
 └── LICENSE
 ```
 
-
-# Note:
-
-How old roughly is my Grandfather?
