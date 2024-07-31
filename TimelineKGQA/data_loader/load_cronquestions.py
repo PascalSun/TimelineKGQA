@@ -3,8 +3,8 @@ import pickle
 import pandas as pd
 from sqlalchemy import create_engine, text
 
-from tkgqa_generator.constants import DATA_DIR, DB_CONNECTION_STR
-from tkgqa_generator.utils import get_logger, timer
+from TimelineKGQA.constants import DATA_DIR, DB_CONNECTION_STR
+from TimelineKGQA.utils import get_logger, timer
 
 logger = get_logger(__name__)
 
