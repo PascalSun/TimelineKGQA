@@ -361,6 +361,25 @@ The Hit@N metric, used to evaluate the accuracy of event retrieval, is defined b
 
 where `n` is the number of events in the question, `N` is the number of retrieved events, and `r_i` is the indicator
 
+The Mean Reciprocal Rank (MRR) is defined as follows:
+
+$$
+\text{MRR} = \frac{1}{Q} \sum_{q=1}^Q \frac{1}{\text{rank}_q + 1}
+$$
+
+where $Q$ denotes the number of queries, and $\text{rank}_q$ is defined as the position of the first relevant document, i.e., $\text{rank}_q = \min \{ i : r_i = 1 \}$.
+
+In our scenario, the definition of $\text{rank}_q$ needs to be adjusted to accommodate multiple relevance within the same set of results. 
+It is defined as:
+
+$$
+\text{rank}_q = \sum_{i=0}^{\|\mathcal{F}\|} \left\lfloor \frac{i}{n} \right\rfloor r_i
+$$
+
+where $\|\mathcal{F}\|$ is the number of facts.
+
+For the finetuning tasks, we will evaluate the accuracy of the question answer pairs in the evaluation split via human annotation.
+
 ---
 
 ## Development Setup
