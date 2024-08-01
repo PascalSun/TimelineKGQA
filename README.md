@@ -272,6 +272,95 @@ Generating process is like:
 |                     |         |            |            |            | Temporal Semantic Operation    | 15,720 |
 | **Total**           |         | **25,032** | **8,344**  | **8,344**  |                                | 41,720 |
 
+| Answers Detailed Types         | ICEWS Actor | CronQuestions KG |
+|--------------------------------|-------------|------------------|
+| Subject                        | 17,249      | 9,860            |
+| Object                         | 17,249      | 9,860            |
+| Timestamp Start                | 4,995       | 2,000            |
+| Timestamp End                  | 4,995       | 2,000            |
+| Timestamp Range                | 4,995       | 2,000            |
+| Duration                       | 4,995       | 2,000            |
+| Relation Duration              | 9,971       | 4,000            |
+| Relation Ranking               | 4,981       | 2,000            |
+| Relation Union or Intersection | 19,942      | 8,000            |
+
+For comparison, here is the statistics for the CronQuestions dataset:
+
+| Difficulty | Template Count | Question Count | Question Categorization | Count       |
+|------------|----------------|----------------|-------------------------|-------------|
+| Simple     | 158            | 177,922        | Simple.Factual          | 106,208     |
+| Medium     | 165            | 90,641         | Simple.Temporal         | 71,714      |
+| Complex    | 331            | 141,437        | Medium.Factual          | 90,641      |
+|            |                |                | Medium.Temporal         | 0           |
+|            |                |                | Complex.Factual         | 67,709      |
+|            |                |                | Complex.Temporal        | 73,728      |
+| **Total**  | **654**        | **410,000**    |                         | **410,000** |
+
+---
+
+## Temporal Question Answering Solutions
+
+![solution](./docs/imgs/solutions.jpg)
+
+### RAG
+
+The first hot spot is the *Retrieval Augmented Generation(RAG)*, which will use the large language model embedding as
+the semantic index, to retrieve question relevant information from the knowledge graph, and then generate the answer
+based on the retrieved information.
+
+**Really this will be the dominant solution in the future?**
+
+### TKGQA Embedding
+
+On this side of the Great Dividing Range, people focused on the graph embedding ways to solve the question answering
+over the knowledge graph.
+However, due to the challenge from the LLMs, people are tend to ignore LLM in their research for this stream, or just
+give up this area.
+There is not much work released in the past years regarding this area.
+
+**Are this way really out of dated?**
+
+From the technical perspective, current temporal knowledge graph embedding ways will not fit with our proposed and
+generated dataset, because for the complex questions, the relevant fact will be 3, and they should have no difference between this three.
+If all three hit, then the Hits@1 is True.
+
+So we developed a contrastive learning based temporal knowledge graph embedding way to solve this problem.
+
+### Text2SQL
+
+The third way may never think about being a competitor in the KGQA area, but the LLMs provide this potential, as the
+knowledge graph in theory is just one table with a lot of interconnections.
+So generate a sql to retrieve related information will be not that hard for the LLM.
+
+**Will it really perform well in this area?**
+
+### Finetuning
+
+The last way in theory should be the easiest way for application if you have QA pairs, because if you want to fine tune
+the ChatGPT, they will do it for you, all you need to do is to provide the QA pairs.
+However, one of the main problem is lacking of QA pairs.
+Which we have solved the problem above.
+
+**So what's the real performance of this way if you do have enough QA pairs?**
+
+
+### Evaluation Metrics
+
+- **Hits@K**: The percentage of questions where the correct answer is within the top K retrieved answers.
+- **MRR**: The mean reciprocal rank of the correct answer.
+
+The Hit@N metric, used to evaluate the accuracy of event retrieval, is defined by the following criteria in our scenario:
+
+```math
+\text{Hit@N} = 
+\begin{cases} 
+  1 & \text{if } \sum_{i=0}^{nN-1}r_i = n \\
+  0 & \text{otherwise},
+\end{cases}
+```
+
+where `n` is the number of events in the question, `N` is the number of retrieved events, and `r_i` is the indicator
+
 ---
 
 ## Development Setup
