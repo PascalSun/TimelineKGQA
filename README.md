@@ -15,6 +15,7 @@ Temporal Knowledge Graph Question Answering beyond the Great Dividing Range of L
     - [Medium: Timeline and Two Events Involved](#medium-timeline-and-two-events-involved)
     - [Complex: Timeline and Multiple Events Involved](#complex-timeline-and-multiple-events-involved)
     - [Other perspectives](#other-perspectives)
+- [TimelineKGQA Generator](#timelinekgqa-generator)
 
 ---
 
@@ -256,8 +257,22 @@ Generating process is like:
 
 ![generator](./docs/imgs/temporal_generation.jpg)
 
----
+### Generated Question Answering Pairs for ICEWS Actor and CronQuestion KG
 
+| Source KG           |         | Train      | Val        | Test       | Temporal Capabilities          | Count  |
+|---------------------|---------|------------|------------|------------|--------------------------------|--------|
+| **ICEWS Actor**     | Simple  | 17,982     | 5,994      | 5,994      | Temporal Constrained Retrieval | 34,498 |
+|                     | Medium  | 15,990     | 5,330      | 5,330      | Timeline Position Retrieval    | 79,382 |
+|                     | Complex | 19,652     | 6,550      | 6,550      | Timeline Operation             | 34,894 |
+|                     |         |            |            |            | Temporal Semantic Operation    | 24,508 |
+| **Total**           |         | **53,624** | **17,874** | **17,874** |                                | 89,372 |
+| **CronQuestion KG** | Simple  | 7,200      | 2,400      | 2,400      | Temporal Constrained Retrieval | 19,720 |
+|                     | Medium  | 8,252      | 2,751      | 2,751      | Timeline Position Retrieval    | 37,720 |
+|                     | Complex | 9,580      | 3,193      | 3,193      | Timeline Arithmetic Operation  | 21,966 |
+|                     |         |            |            |            | Temporal Semantic Operation    | 15,720 |
+| **Total**           |         | **25,032** | **8,344**  | **8,344**  |                                | 41,720 |
+
+---
 
 ## Development Setup
 
