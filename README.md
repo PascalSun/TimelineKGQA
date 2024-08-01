@@ -349,18 +349,30 @@ Which we have solved the problem above.
 - **Hits@K**: The percentage of questions where the correct answer is within the top K retrieved answers.
 - **MRR**: The mean reciprocal rank of the correct answer.
 
-The Hit@N metric, used to evaluate the accuracy of event retrieval, is defined by the following criteria in our
+The Hits@K metric, used to evaluate the accuracy of event retrieval, is defined by the following criteria in our
 scenario:
 
 ```math
-\text{Hit@N} = 
+\text{Hits@K} = 
 \begin{cases} 
   1 & \text{if } \sum_{i=0}^{nN-1}r_i = n \\
   0 & \text{otherwise},
 \end{cases}
 ```
 
-where `n` is the number of events in the question, `N` is the number of retrieved events, and `r_i` is the indicator
+where $r_i$ is an indicator function described as:
+
+```math
+r_i = 
+\begin{cases}
+  1 & \text{if the $i$-th retrieved triplet matches an event} \\
+  0 & \text{otherwise}.
+\end{cases}
+```
+
+The $n$ represents the number of involved events for the question.
+In this framework, $r_i$ functions as an indicator that takes the value 1 if the $i$-th retrieved triplet corresponds to
+one of the designated events, and 0 otherwise. The indexing for $r_i$ begins at 0.
 
 The Mean Reciprocal Rank (MRR) is defined as follows:
 
@@ -380,15 +392,6 @@ It is defined as:
 ```
 
 where $|\mathcal{F}|$ is the number of facts.
-For the finetuning tasks, we will evaluate the accuracy of the question answer pairs in the evaluation split via human
-annotation.
-Copy
-In this version, I've used ```math code blocks for the equations instead of double dollar signs. The inline math
-expressions are still enclosed in single dollar signs ($). This format is often used in platforms that support
-GitHub-flavored markdown or similar variants.
-
-Would you like me to explain any part of this markdown or the equations it contains?
-
 
 ---
 
