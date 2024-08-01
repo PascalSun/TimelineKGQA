@@ -16,6 +16,19 @@ Temporal Knowledge Graph Question Answering beyond the Great Dividing Range of L
     - [Complex: Timeline and Multiple Events Involved](#complex-timeline-and-multiple-events-involved)
     - [Other perspectives](#other-perspectives)
 - [TimelineKGQA Generator](#timelinekgqa-generator)
+- [Temporal Question Answering Solutions](#temporal-question-answering-solutions)
+    - [RAG](#rag)
+    - [TKGQA Embedding](#tkgqa-embedding)
+    - [Text2SQL](#text2sql)
+    - [Finetuning](#finetuning)
+    - [Evaluation Metrics](#evaluation-metrics)
+    - [Evaluation Results](#evaluation-results)
+        - [Systematic Comparison between RAG and TKGQA Embedding](#systematic-comparison-between-rag-and-tkgqa-embedding)
+        - [Hits@1 for Text2SQL](#hits1-for-text2sql)
+        - [Finetuning accuracy](#finetuning-accuracy)
+- [Development Setup](#development-setup)
+    - [Install the package](#install-the-package)
+    - [Folder Structure](#folder-structure)
 
 ---
 
@@ -393,6 +406,43 @@ It is defined as:
 
 where $|\mathcal{F}|$ is the number of facts.
 
+### Evaluation Results
+
+#### Systematic Comparison between RAG and TKGQA Embedding
+
+As these two are similar approaches, so we will evaluate them together.
+
+| Dataset              | Model         | MRR (Overall) | MRR (Simple) | MRR (Medium) | MRR (Complex) | Hits@1 (Overall) | Hits@1 (Simple) | Hits@1 (Medium) | Hits@1 (Complex) | Hits@3 (Overall) | Hits@3 (Simple) | Hits@3 (Medium) | Hits@3 (Complex) |
+|----------------------|---------------|---------------|--------------|--------------|---------------|------------------|-----------------|-----------------|------------------|------------------|-----------------|-----------------|------------------|
+| **ICEWS Actor**      | RAG           | 0.365         | 0.726        | 0.274        | 0.106         | 0.265            | 0.660           | 0.128           | 0.011            | 0.391            | 0.776           | 0.331           | 0.086            |
+|                      | RAG\_semantic | 0.427         | 0.794        | 0.337        | 0.162         | 0.301            | 0.723           | 0.164           | 0.022            | 0.484            | 0.852           | 0.424           | 0.195            |
+|                      | TimelineKGQA  | **0.660**     | **0.861**    | **0.632**    | **0.497**     | **0.486**        | **0.782**       | **0.435**       | **0.257**        | **0.858**        | **0.929**       | **0.845**       | **0.805**        |
+| **CronQuestions KG** | RAG           | 0.331         | 0.771        | 0.218        | 0.101         | 0.235            | 0.704           | 0.092           | 0.009            | 0.348            | 0.824           | 0.249           | 0.077            |
+|                      | RAG\_semantic | 0.344         | 0.775        | 0.229        | 0.122         | 0.237            | **0.707**       | 0.094           | 0.010            | 0.371            | **0.828**       | 0.267           | 0.122            |
+|                      | TimelineKGQA  | **0.522**     | **0.788**    | **0.510**    | **0.347**     | **0.319**        | 0.676           | **0.283**       | **0.103**        | **0.758**        | 0.759           | **0.667**       | **0.834**        |
+
+#### Hits@1 for Text2SQL
+
+| Dataset              | Model                    | Hits@1 (Overall) | Hits@1 (Simple) | Hits@1 (Medium) | Hits@1 (Complex) |
+|----------------------|--------------------------|------------------|-----------------|-----------------|------------------|
+| **ICEWS Actor**      | GPT3.5\_base             | 0.179            | 0.268           | 0.170           | 0.105            |
+|                      | GPT3.5\_semantic         | 0.358            | 0.537           | 0.311           | 0.232            |
+|                      | GPT3.5\_semantic.oneshot | 0.432            | 0.611           | 0.354           | 0.328            |
+|                      | GPT4o\_semantic.oneshot  | 0.485            | 0.650           | 0.392           | **0.408**        |
+|                      | TimelineKGQA             | **0.486**        | **0.782**       | **0.435**       | 0.257            |
+| **CronQuestions KG** | GPT3.5\_base             | 0.158            | 0.393           | 0.079           | 0.052            |
+|                      | GPT3.5\_semantic         | 0.236            | 0.573           | 0.130           | 0.076            |
+|                      | GPT3.5\_semantic.oneshot | 0.281            | 0.583           | 0.179           | 0.143            |
+|                      | GPT4o\_semantic.oneshot  | **0.324**        | 0.623           | 0.201           | **0.207**        |
+|                      | TimelineKGQA             | 0.319            | **0.676**       | **0.283**       | 0.103            |
+
+#### Finetuning accuracy
+
+| Model         | Rephrased | Question_as_answer | Simple_for_medium |
+|---------------|-----------|--------------------|-------------------|
+| GPT-3.5-Turbo | 0.60      | 0.18               | 0.36              |
+| GPT-4o-mini   | 0.62      | 0.00               | 0.25              |
+
 ---
 
 ## Development Setup
@@ -401,7 +451,7 @@ where $|\mathcal{F}|$ is the number of facts.
 
 ```bash
 # cd to current directory
-cd tkgqa_generator
+cd TimelineKGQA
 python3 -m venv venv
 pip install -r requirements.txt
 # if you are doing development
@@ -423,20 +473,20 @@ docker-compose up -d
 source venv/bin/activate
 export OPENAI_API_KEY=sk-proj-xxx
 # this will load the icews_dicts data into the database
-python3 -m tkgqa_generator.data_loader.load_icews --mode load_data --data_name icews_dicts
+python3 -m TimelineKGQA.data_loader.load_icews --mode load_data --data_name icews_dicts
 # this will create the unified knowledge graph
-python3 -m tkgqa_generator.data_loader.load_icews --mode actor_unified_kg
+python3 -m TimelineKGQA.data_loader.load_icews --mode actor_unified_kg
 
 # this will generate the question answering pairs
-python3 -m tkgqa_generator.generator
+python3 -m TimelineKGQA.generator
 
 ```
 
 ### Folder Structure
 
 ```bash
-tkgqa_generator/
-├── tkgqa_generator/
+TimelineKGQA/
+├── TimelineKGQA/
 │   ├── __init__.py
 │   ├── generator.py
 │   ├── processor.py
