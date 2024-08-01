@@ -321,7 +321,8 @@ There is not much work released in the past years regarding this area.
 **Are this way really out of dated?**
 
 From the technical perspective, current temporal knowledge graph embedding ways will not fit with our proposed and
-generated dataset, because for the complex questions, the relevant fact will be 3, and they should have no difference between this three.
+generated dataset, because for the complex questions, the relevant fact will be 3, and they should have no difference
+between this three.
 If all three hit, then the Hits@1 is True.
 
 So we developed a contrastive learning based temporal knowledge graph embedding way to solve this problem.
@@ -343,13 +344,13 @@ Which we have solved the problem above.
 
 **So what's the real performance of this way if you do have enough QA pairs?**
 
-
 ### Evaluation Metrics
 
 - **Hits@K**: The percentage of questions where the correct answer is within the top K retrieved answers.
 - **MRR**: The mean reciprocal rank of the correct answer.
 
-The Hit@N metric, used to evaluate the accuracy of event retrieval, is defined by the following criteria in our scenario:
+The Hit@N metric, used to evaluate the accuracy of event retrieval, is defined by the following criteria in our
+scenario:
 
 ```math
 \text{Hit@N} = 
@@ -363,22 +364,31 @@ where `n` is the number of events in the question, `N` is the number of retrieve
 
 The Mean Reciprocal Rank (MRR) is defined as follows:
 
-$$
+```math
 \text{MRR} = \frac{1}{Q} \sum_{q=1}^Q \frac{1}{\text{rank}_q + 1}
-$$
+```
 
-where $Q$ denotes the number of queries, and $\text{rank}_q$ is defined as the position of the first relevant document, i.e., $\text{rank}_q = \min \{ i : r_i = 1 \}$.
+where $Q$ denotes the number of queries, and $\text{rank}_q$ is defined as the position of the first relevant document,
+i.e., $\text{rank}_q = \min { i : r_i = 1 }$.
+In our scenario, the definition of $\text{rank}_q$ needs to be adjusted to accommodate multiple relevance within the
+same set of results.
 
-In our scenario, the definition of $\text{rank}_q$ needs to be adjusted to accommodate multiple relevance within the same set of results. 
 It is defined as:
 
-$$
+```math
 \text{rank}_q = \sum_{i=0}^{\|\mathcal{F}\|} \left\lfloor \frac{i}{n} \right\rfloor r_i
-$$
+```
 
-where $\|\mathcal{F}\|$ is the number of facts.
+where $|\mathcal{F}|$ is the number of facts.
+For the finetuning tasks, we will evaluate the accuracy of the question answer pairs in the evaluation split via human
+annotation.
+Copy
+In this version, I've used ```math code blocks for the equations instead of double dollar signs. The inline math
+expressions are still enclosed in single dollar signs ($). This format is often used in platforms that support
+GitHub-flavored markdown or similar variants.
 
-For the finetuning tasks, we will evaluate the accuracy of the question answer pairs in the evaluation split via human annotation.
+Would you like me to explain any part of this markdown or the equations it contains?
+
 
 ---
 
