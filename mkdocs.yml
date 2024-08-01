@@ -2,8 +2,6 @@ site_name: TimelineKGQA
 
 theme:
   name: material
-  logo: imgs/AI4WA.png
-  favicon: imgs/favicon.ico
   features:
     - search.suggest
     - navigation.tabs
