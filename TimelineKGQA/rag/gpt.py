@@ -209,33 +209,20 @@ class RAGRank:
                 futures.append(executor.submit(self._process_kg_row, row))
             concurrent.futures.wait(futures)
 
-    def embed_questions(
-        self, question_level: str = "complex", random_eval: bool = False
-    ):
+    def embed_questions(self):
         """
         Get all the questions into the embedding, and save the embedding
 
         Args:
-            question_level: The level of the question, can be complex, medium, simple
+
             random_eval (bool): Whether to do the random evaluation
         """
         # get whether the question with embedding total number = 2000, if yes, do not need to continue
-        if random_eval:
-            df = pd.read_sql(
-                f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NULL ORDER BY RANDOM() LIMIT 2000;",
-                self.engine,
-            )
-        elif question_level == "all":
-            df = pd.read_sql(
-                f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NULL;",
-                self.engine,
-            )
-        else:
-            df = pd.read_sql(
-                f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NULL "
-                f"and question_level = '{question_level}';",
-                self.engine,
-            )
+
+        df = pd.read_sql(
+            f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NULL;",
+            self.engine,
+        )
 
         # embed the facts
         # check df size, if it is empty, then return
@@ -251,7 +238,7 @@ class RAGRank:
                 futures.append(executor.submit(self._process_question_row, row))
             concurrent.futures.wait(futures)
 
-    def benchmark(
+    def benchmark_naive_rag(
         self,
         question_level: str = "complex",
         random_eval: bool = False,
@@ -275,22 +262,11 @@ class RAGRank:
 
         """
 
-        if random_eval:
-            questions_df = pd.read_sql(
-                f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NOT NULL ORDER BY RANDOM() LIMIT 2000;",
-                self.engine,
-            )
-        elif question_level == "all":
-            questions_df = pd.read_sql(
-                f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NOT NULL;",
-                self.engine,
-            )
-        else:
-            questions_df = pd.read_sql(
-                f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NOT NULL "
-                f"AND question_level = '{question_level}';",
-                self.engine,
-            )
+        questions_df = pd.read_sql(
+            f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NOT NULL;",
+            self.engine,
+        )
+
         questions_df["embedding"] = questions_df["embedding"].apply(
             lambda x: list(map(float, x[1:-1].split(",")))
         )
@@ -373,6 +349,27 @@ class RAGRank:
         ranks_df = pd.DataFrame(ranks)
         ranks_df.to_csv(LOGS_DIR / f"{question_level}_ranks.csv")
         mrr = mean_reciprocal_rank(ranks_df["rank"].tolist())
+        self.log_metrics(ranks_df, question_level, semantic_parse)
+
+    def benchmark_graph_rag(
+        self,
+        semantic_parse: bool = False,
+    ):
+        """
+        Args:
+            semantic_parse: Whether the semantic parse is used
+
+
+        """
+        pass
+
+    def log_metrics(self, ranks_df, question_level, semantic_parse):
+        """
+        Args:
+            ranks_df: The ranks dataframe
+            question_level: The question level
+            semantic_parse: Whether the semantic parse is used
+        """
         logger.info(
             f"MRR: {mrr}, Question Level: {question_level}, Semantic Parse: {semantic_parse}"
         )
@@ -586,12 +583,10 @@ if __name__ == "__main__":
         rag.embed_kg()
 
     with timer(logger, "Embed Questions"):
-        rag.embed_questions(question_level=metric_question_level, random_eval=False)
+        rag.embed_questions()
 
-    with timer(logger, "Benchmark without semantic parse"):
-        rag.benchmark(question_level=metric_question_level, random_eval=False)
+    with timer(logger, "Benchmark Naive RAG without semantic parse"):
+        rag.benchmark_naive_rag(semantic_parse=False)
 
-    with timer(logger, "Benchmark with semantic parse"):
-        rag.benchmark(
-            question_level=metric_question_level, semantic_parse=True, random_eval=False
-        )
+    with timer(logger, "Benchmark Naive RAG with semantic parse"):
+        rag.benchmark_naive_rag(semantic_parse=True)
