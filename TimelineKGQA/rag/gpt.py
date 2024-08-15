@@ -75,18 +75,28 @@ class RAGRank:
         """
         # it is the sqlalchemy connection
         with self.engine.connect() as cursor:
-            result = cursor.execute(
-                text(
-                    f"SELECT column_name FROM information_schema.columns WHERE table_name = '{self.table_name}' "
-                    f"AND column_name = 'embedding';"
+            for embedding_column_name in [
+                "embedding",
+                "subject_embedding",
+                "predicate_embedding",
+                "object_embedding",
+                "start_time_embedding",
+                "end_time_embedding",
+            ]:
+                result = cursor.execute(
+                    text(
+                        f"SELECT column_name FROM information_schema.columns WHERE table_name = '{self.table_name}' "
+                        f"AND column_name = '{embedding_column_name}';"
+                    )
                 )
-            )
-            if not result.fetchone():
-                cursor.execute(
-                    text(f"ALTER TABLE {self.table_name} ADD COLUMN embedding vector;")
-                )
+                if not result.fetchone():
+                    cursor.execute(
+                        text(
+                            f"ALTER TABLE {self.table_name} ADD COLUMN {embedding_column_name} vector;"
+                        )
+                    )
 
-            cursor.commit()
+                cursor.commit()
 
         with self.engine.connect() as cursor:
             result = cursor.execute(
@@ -160,6 +170,44 @@ class RAGRank:
                 ),
             )
             cursor.commit()
+
+    def _process_kg_row(self, row):
+        """
+        Process the KG row, and embed the subject and object
+
+        """
+        subject_embedding = embedding_content(row["subject"])
+        object_embedding = embedding_content(row["object"])
+        with self.engine.connect() as cursor:
+            cursor.execute(
+                text(
+                    f"UPDATE {self.table_name} SET subject_embedding = array{subject_embedding}::vector, "
+                    f"object_embedding = array{object_embedding}::vector WHERE id = {row['id']};"
+                ),
+            )
+            cursor.commit()
+
+    def embed_kg(self):
+        """
+        Embed the subject and object of the facts for now
+
+        """
+        df = pd.read_sql(
+            f"SELECT * FROM {self.table_name};",
+            self.engine,
+        )
+        if df.shape[0] == 0:
+            return
+
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=self.max_workers
+        ) as executor:
+            futures = []
+            for index, row in tqdm(
+                df.iterrows(), total=df.shape[0], desc="Embedding KG"
+            ):
+                futures.append(executor.submit(self._process_kg_row, row))
+            concurrent.futures.wait(futures)
 
     def embed_questions(
         self, question_level: str = "complex", random_eval: bool = False
@@ -243,7 +291,6 @@ class RAGRank:
                 f"AND question_level = '{question_level}';",
                 self.engine,
             )
-
         questions_df["embedding"] = questions_df["embedding"].apply(
             lambda x: list(map(float, x[1:-1].split(",")))
         )
@@ -306,7 +353,6 @@ class RAGRank:
         for index, row in tqdm(
             questions_df.iterrows(), total=questions_df.shape[0], desc="Benchmark"
         ):
-
             top_30_events = top_30_indices[index].tolist()
             # get all the events from self.events_df
             facts = self.event_df.iloc[top_30_events]["fact"].tolist()
@@ -535,6 +581,9 @@ if __name__ == "__main__":
 
     with timer(logger, "Embed Facts"):
         rag.embed_facts()
+
+    with timer(logger, "Embed KG"):
+        rag.embed_kg()
 
     with timer(logger, "Embed Questions"):
         rag.embed_questions(question_level=metric_question_level, random_eval=False)
