@@ -1,3 +1,6 @@
+import argparse
+from typing import List
+
 import gradio as gr
 import matplotlib.pyplot as plt
 import numpy as np
@@ -8,6 +11,7 @@ import torch
 from sklearn.metrics.pairwise import cosine_similarity
 from sqlalchemy import create_engine, text
 from tqdm import tqdm
+from transformers.models.tapas.tokenization_tapas import Question
 
 from TimelineKGQA.constants import LOGS_DIR
 from TimelineKGQA.openai_utils import embedding_content
@@ -93,9 +97,48 @@ class RAGRank:
                 )
                 cursor.commit()
 
-    def benchmark_graph_rag(self, semantic_parse=False):
+    def benchmark_naive_rag(self, semantic_parse: bool = False):
+        self.event_df["fact"] = (
+            self.event_df["subject"]
+            + "|"
+            + self.event_df["predicate"]
+            + "|"
+            + self.event_df["object"]
+            + "|"
+            + self.event_df["start_time"]
+            + "|"
+            + self.event_df["end_time"]
+        )
         questions_df = self._load_questions()
         similarities = self._calculate_similarities(questions_df)
+
+        if semantic_parse:
+            mask_result_matrix = self.semantic_parse(questions_df)
+            similarities = similarities + mask_result_matrix
+
+        top_30_values, top_30_indices = torch.topk(similarities, 30, dim=1)
+
+        ranks = self._evaluate_rankings(questions_df, top_30_indices)
+        self._save_and_log_results(ranks, "naive", semantic_parse)
+
+    def benchmark_graph_rag(self, semantic_parse=False):
+        self.event_df["fact"] = (
+            self.event_df["subject"]
+            + "|"
+            + self.event_df["predicate"]
+            + "|"
+            + self.event_df["object"]
+            + "|"
+            + self.event_df["start_time"]
+            + "|"
+            + self.event_df["end_time"]
+        )
+        questions_df = self._load_questions()
+        similarities = self._calculate_similarities(questions_df)
+        if semantic_parse:
+            mask_result_matrix = self.semantic_parse(questions_df)
+            similarities = similarities + mask_result_matrix
+
         top_30_values, top_30_indices = torch.topk(similarities, 30, dim=1)
         ranks = self._evaluate_rankings(questions_df, top_30_indices)
         self._save_and_log_results(ranks, "graph", semantic_parse)
@@ -112,12 +155,13 @@ class RAGRank:
 
     def _calculate_similarities(self, questions_df):
         q_emb = np.array(questions_df["embedding"].tolist(), dtype="float64")
-        s_emb = np.array(self.event_df["subject_embedding"].tolist(), dtype="float64")
-        o_emb = np.array(self.event_df["object_embedding"].tolist(), dtype="float64")
+        # s_emb = np.array(self.event_df["subject_embedding"].tolist(), dtype="float64")
+        # o_emb = np.array(self.event_df["object_embedding"].tolist(), dtype="float64")
         e_emb = np.array(self.event_df["embedding"].tolist(), dtype="float64")
-        return torch.tensor(
-            np.dot(q_emb, s_emb.T) + np.dot(q_emb, o_emb.T) + np.dot(q_emb, e_emb.T)
-        )
+        # return torch.tensor(
+        #     np.dot(q_emb, s_emb.T) + np.dot(q_emb, o_emb.T) + np.dot(q_emb, e_emb.T)
+        # )
+        return torch.tensor(np.dot(q_emb, e_emb.T))
 
     def _evaluate_rankings(self, questions_df, top_30_indices):
         ranks = []
@@ -176,14 +220,85 @@ class RAGRank:
         question_df = self._get_question_data(pk)
         if isinstance(question_df, str):
             return question_df, None
+        event_info = "\n".join([event for event in question_df["events"]])
 
         fact_data = self._get_fact_data(question_df)
         if isinstance(fact_data, str):
             return fact_data, None
-
+        top3_facts_str, top3_value, ground_truths_rank_and_value = (
+            self._get_top_wrong_facts(question_df, fact_data)
+        )
+        # calculate the rank
         fig = self._create_visualization(question_df, fact_data)
-        info_text = f"Question: {question_df['question']}\nLevel: {question_df['question_level']}\nNumber of facts: {len(fact_data)}"
+
+        info_text = f"""Question: {question_df['question']}
+Level: {question_df['question_level']}
+Number of facts: {len(fact_data)}
+Ground Truth facts: \n{event_info}
+Ground truth facts rank and similarity: {ground_truths_rank_and_value}
+-----
+Top 3 facts: \n{top3_facts_str}
+Top 3 simlarity: {top3_value.tolist()}
+"""
         return info_text, fig
+
+    def _get_top_wrong_facts(self, question_df: pd.DataFrame, fact_data):
+        """
+        We want to know the rank of the correct fact in the list of facts.
+        We also want to know the top 3 facts that are wrong, if Hits@3 is 0.
+        """
+        logger.info(question_df)
+        question_embedding_str = question_df["embedding"]
+        question_embedding_array = np.fromstring(
+            question_embedding_str[1:-1], sep=",", dtype="float64"
+        ).reshape(1, -1)
+        events_embedding_array = np.array(
+            self.event_df["embedding"].tolist(), dtype="float64"
+        )
+
+        similarities = torch.mm(
+            torch.tensor(question_embedding_array, dtype=torch.float32),
+            torch.tensor(events_embedding_array, dtype=torch.float32).T,
+        )
+
+        # Get the top 3 ids
+        top3_values, top3_indices = torch.topk(similarities, 3, dim=1)
+        top3_indices = top3_indices[0].tolist()
+        top3_facts_df = self.event_df.iloc[top3_indices]
+
+        top3_facts_str = "\n".join(
+            [
+                f"{row['subject']} {row['predicate']} {row['object']} {row['start_time']} {row['end_time']}"
+                for _, row in top3_facts_df.iterrows()
+            ]
+        )
+        top3_ids = top3_facts_df["id"].tolist()
+
+        # Locate the indices of ground truth facts
+        ground_truth_fact_ids = [fact[-1] for fact in fact_data]
+        ground_truth_fact_indices = self.event_df[
+            self.event_df["id"].isin(ground_truth_fact_ids)
+        ].index.tolist()
+        logger.info(f"Ground truth fact indices: {ground_truth_fact_indices}")
+
+        ground_truths_rank_and_value = []
+        if ground_truth_fact_indices:
+            # Get the rank of the correct fact within the similarity matrix based on the index
+            for i, index in enumerate(ground_truth_fact_indices):
+                logger.info(
+                    f"Similarity value of the correct fact {i}: {similarities[0][index].item()}"
+                )
+                rank = (similarities[0] >= similarities[0][index]).sum().item()
+                logger.info(f"Rank of the correct fact {i}: {rank}")
+                ground_truths_rank_and_value.append(
+                    (rank, similarities[0][index].item())
+                )
+        else:
+            logger.warning("No ground truth facts found in the event_df")
+
+        logger.info(f"Top 3 facts:\n{top3_facts_str}")
+
+        return top3_facts_str, top3_values, ground_truths_rank_and_value
 
     def _get_question_data(self, pk):
         query = f"SELECT * FROM {self.table_name}_questions WHERE embedding IS NOT NULL"
@@ -198,6 +313,7 @@ class RAGRank:
         fact_data = []
         for fact in question_df["events"]:
             try:
+                logger.info(fact)
                 subject, predicate, object, start_time, end_time = fact.split("|")
                 fact_df = self.event_df[
                     (self.event_df["subject"] == subject)
@@ -213,6 +329,8 @@ class RAGRank:
                             fact_df["embedding"].values[0],
                             fact_df["subject_embedding"].values[0],
                             fact_df["object_embedding"].values[0],
+                            # add indice of the fact
+                            fact_df["id"].values[0],
                         )
                     )
             except Exception as e:
@@ -232,7 +350,7 @@ class RAGRank:
             {"font.size": 16, "axes.titlesize": 20, "axes.labelsize": 18}
         )
 
-        for i, (fact, fact_emb, subj_emb, obj_emb) in enumerate(fact_data):
+        for i, (fact, fact_emb, subj_emb, obj_emb, fact_id) in enumerate(fact_data):
             # ax_text = fig.add_subplot(gs[3 * i, 0])
             # ax_text.axis('off')
             # ax_text.text(0, 0.5, f"Fact {i + 1}: {fact.replace('|', ' | ')}", fontsize=18, wrap=True)
@@ -259,15 +377,14 @@ class RAGRank:
             ax_matrix.set_xticklabels(
                 ["Question"] + self.word_tokenize(question), rotation=45, ha="right"
             )
-            ax_matrix.set_title(f"Similarity Matrix for {fact}", fontsize=22, pad=20)
+            ax_matrix.set_title(
+                f"{question} \n Similarity Matrix for {fact}", fontsize=16, pad=20
+            )
 
             # Remove top and left spines
             ax_matrix.spines["top"].set_visible(False)
             ax_matrix.spines["right"].set_visible(False)
             ax_matrix.spines["left"].set_visible(False)
-
-            # Adjust layout
-            # plt.tight_layout()
 
         return fig
 
@@ -305,8 +422,66 @@ class RAGRank:
     def get_word_embedding(self, word):
         return embedding_content(word)
 
+    def semantic_parse(self, questions_df: pd.DataFrame):
+        """
+        Filter the facts based on the entity
+        if it is candidate, mark as 1
+        if it is not candidate, mark as 0
+        Then use this to mask the similarity matrix
+        not candidate one set as -inf
+        Then do the top 30
+        Return will be a len(questions_df) x len(events_df) matrix, with 1 and 0
+        """
+
+        def extract_entities(events: List[str]):
+            """
+            Extract the entities from the event
+            Args:
+                events: The event string
+            Returns:
+                The entities in the event
+            """
+            the_entities = []
+            for event in events:
+                try:
+                    elements = event.split("|")
+                    the_entities.append(elements[0])
+                    the_entities.append(elements[2])
+                except Exception as e:
+                    logger.debug(e)
+
+            return the_entities
+
+        questions_df["entities"] = questions_df["events"].apply(
+            lambda x: extract_entities(x)
+        )
+        # get all value to be -2
+        result_matrix = np.zeros(
+            (len(questions_df), len(self.event_df)), dtype="float64"
+        )
+        result_matrix = result_matrix - 2
+        for index, row in tqdm(
+            questions_df.iterrows(), total=questions_df.shape[0], desc="Semantic Parse"
+        ):
+            entities = row["entities"]
+            for entity in entities:
+                result_matrix[index] = np.where(
+                    self.event_df["subject"] == entity, 1, result_matrix[index]
+                )
+                result_matrix[index] = np.where(
+                    self.event_df["object"] == entity, 1, result_matrix[index]
+                )
+        return result_matrix
+
 
 def launch_gradio_app(rag):
+    """
+    Input can be a question ID or left blank for random question.
+    Then it should pull out the question and its associated facts.
+    Also the rank of the associated facts with naive similarity.
+    Also pull out all facts better than the associated facts.
+
+    """
     iface = gr.Interface(
         fn=rag.vis_question_answer_similarity,
         inputs=gr.Textbox(label="Enter Question ID (leave blank for random)"),
@@ -319,12 +494,43 @@ def launch_gradio_app(rag):
 
 
 if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(description="RAG Rank")
+    parser.add_argument("--table_name", type=str, default="unified_kg_icews_actor")
+    parser.add_argument("--host", type=str, default="localhost")
+    parser.add_argument("--port", type=int, default=5433)
+    parser.add_argument("--user", type=str, default="tkgqa")
+    parser.add_argument("--password", type=str, default="tkgqa")
+    parser.add_argument("--db_name", type=str, default="tkgqa")
+    parser.add_argument("--preprocess", action="store_true", default=False)
+    parser.add_argument("--benchmark", type=str, default="naive")
+    parser.add_argument("--semantic_parse", action="store_true", default=False)
+    args = parser.parse_args()
+
     rag = RAGRank(
-        table_name="unified_kg_icews_actor",
-        host="localhost",
-        port=5433,
-        user="tkgqa",
-        password="tkgqa",
-        db_name="tkgqa",
+        table_name=args.table_name,
+        host=args.host,
+        port=args.port,
+        user=args.user,
+        password=args.password,
+        db_name=args.db_name,
     )
-    launch_gradio_app(rag)
+
+    if args.preprocess:
+        with timer(logger, "Add Embedding Column"):
+            rag.add_embedding_column()
+
+        with timer(logger, "Embed Facts"):
+            rag.embed_facts()
+
+        with timer(logger, "Embed KG"):
+            rag.embed_kg()
+
+    if args.benchmark == "naive":
+        rag.benchmark_naive_rag(semantic_parse=args.semantic_parse)
+
+    elif args.benchmark == "graph":
+        rag.benchmark_graph_rag(semantic_parse=args.semantic_parse)
+    else:
+        # then load page
+        launch_gradio_app(rag)
