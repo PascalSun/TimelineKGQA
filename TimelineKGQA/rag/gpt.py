@@ -1,4 +1,5 @@
 import argparse
+import re
 from typing import List
 
 import gradio as gr
@@ -414,10 +415,15 @@ Top 3 simlarity: {top3_value.tolist()}
     def _cosine_similarity(self, embedding1, embeddings2):
         return [cosine_similarity([embedding1], [emb])[0][0] for emb in embeddings2]
 
+    # def word_tokenize(self, text):
+    #     enc = tiktoken.encoding_for_model("gpt-4")
+    #     token_ids = enc.encode(text)
+    #     return [enc.decode([token_id]) for token_id in token_ids]
+
     def word_tokenize(self, text):
-        enc = tiktoken.encoding_for_model("gpt-4")
-        token_ids = enc.encode(text)
-        return [enc.decode([token_id]) for token_id in token_ids]
+        # Split on whitespace and punctuation, keeping the punctuation as separate tokens
+        tokens = re.findall(r"\b\w+\b|[^\w\s]", text)
+        return tokens
 
     def get_word_embedding(self, word):
         return embedding_content(word)
