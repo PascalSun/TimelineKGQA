@@ -19,3 +19,4 @@ flake8
 tqdm
 gradio
 tiktoken
+mesop
