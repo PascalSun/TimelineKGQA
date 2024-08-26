@@ -20,3 +20,4 @@ tqdm
 gradio
 tiktoken
 mesop
+seaborn
