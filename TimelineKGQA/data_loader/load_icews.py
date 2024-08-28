@@ -30,8 +30,9 @@ class ICEWSDataLoader:
         view_sector_tree_web: bool = False,
         token: str = "",
         queue_name: str = "",
+        db_connection_str: str = DB_CONNECTION_STR,
     ):
-        self.engine = create_engine(DB_CONNECTION_STR)
+        self.engine = create_engine(db_connection_str)
         self.data_type = data_type
         self.view_sector_tree_web = view_sector_tree_web
         self.api = API(token=token)
@@ -699,14 +700,23 @@ if __name__ == "__main__":
         help="Field name",
         default=None,
     )
+
+    parser.add_argument(
+        "--db_connection_str",
+        type=str,
+        help="Database connection string",
+        default="postgresql://pascal:homepc@0.tcp.au.ngrok.io:18687/timelinekgqa",
+    )
     # parse the arguments
     args = parser.parse_args()
+    logger.info(args.db_connection_str)
     # initialize the ICEWSDataLoader
     icews_data_loader = ICEWSDataLoader(
         data_type=args.data_name,
         view_sector_tree_web=args.explore_data_view_sector,
         token=args.token,
         queue_name=args.queue_embedding_name,
+        db_connection_str=args.db_connection_str,
     )
 
     mode = args.mode
