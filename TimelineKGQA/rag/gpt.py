@@ -1,4 +1,5 @@
 import argparse
+import re
 from typing import List
 
 import gradio as gr
@@ -242,6 +243,33 @@ Top 3 simlarity: {top3_value.tolist()}
 """
         return info_text, fig
 
+        def process_question_answer_similarity(self, pk=None):
+            question_df = self._get_question_data(pk)
+            if isinstance(question_df, str):
+                return question_df, None
+            event_info = "\n".join([event for event in question_df["events"]])
+
+            fact_data = self._get_fact_data(question_df)
+            if isinstance(fact_data, str):
+                return fact_data, None
+            top3_facts_str, top3_value, ground_truths_rank_and_value = (
+                self._get_top_wrong_facts(question_df, fact_data)
+            )
+            # calculate the rank
+            fig = self._create_visualization(question_df, fact_data)
+
+            info_text = f"""
+            - Question: {question_df['question']}
+            - Level: {question_df['question_level']}
+            - Number of facts: {len(fact_data)}
+            - Ground Truth facts: \n{event_info}
+            - Ground truth facts rank and similarity: {ground_truths_rank_and_value}
+            -----
+            - Top 3 facts: \n{top3_facts_str}
+            - Top 3 simlarity: {top3_value.tolist()}
+            """
+            return info_text, fig.to_html()
+
     def _get_top_wrong_facts(self, question_df: pd.DataFrame, fact_data):
         """
         We want to know the rank of the correct fact in the list of facts.
@@ -414,10 +442,15 @@ Top 3 simlarity: {top3_value.tolist()}
     def _cosine_similarity(self, embedding1, embeddings2):
         return [cosine_similarity([embedding1], [emb])[0][0] for emb in embeddings2]
 
+    # def word_tokenize(self, text):
+    #     enc = tiktoken.encoding_for_model("gpt-4")
+    #     token_ids = enc.encode(text)
+    #     return [enc.decode([token_id]) for token_id in token_ids]
+
     def word_tokenize(self, text):
-        enc = tiktoken.encoding_for_model("gpt-4")
-        token_ids = enc.encode(text)
-        return [enc.decode([token_id]) for token_id in token_ids]
+        # Split on whitespace and punctuation, keeping the punctuation as separate tokens
+        tokens = re.findall(r"\b\w+\b|[^\w\s]", text)
+        return tokens
 
     def get_word_embedding(self, word):
         return embedding_content(word)
@@ -478,7 +511,7 @@ def launch_gradio_app(rag):
     """
     Input can be a question ID or left blank for random question.
     Then it should pull out the question and its associated facts.
-    Also the rank of the associated facts with naive similarity.
+    Also, the rank of the associated facts with naive similarity.
     Also pull out all facts better than the associated facts.
 
     """

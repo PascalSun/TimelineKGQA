@@ -17,3 +17,7 @@ mkdocs_gen_files
 mkdocs-encryptcontent-plugin
 flake8
 tqdm
+gradio
+tiktoken
+mesop
+seaborn
