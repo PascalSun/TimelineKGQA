@@ -210,7 +210,7 @@ class AllenTemporalSimulator:
         elif start1 > start2:
             return "after"  # range 1 is after point2
 
-    def visualize(self):
+    def visualize(self, center_point=None):
         """
         First generate the 3D surface for the visualization
         """
@@ -250,7 +250,8 @@ class AllenTemporalSimulator:
         """
         if self.mode == "timeranges":
             # define a center point
-            center_point = (25, 75)
+            if not center_point:
+                center_point = (25, 75)
             start, end = center_point
             fig.add_trace(
                 go.Scatter3d(
@@ -284,7 +285,11 @@ class AllenTemporalSimulator:
         if self.mode == "timepoints":
 
             # define a center point for timepoint
-            center_point = (50, 50)
+            if not center_point:
+                center_point = (50, 50)
+            else:
+                assert len(center_point) == 2, "Center point must be a tuple of 2 values"
+                assert center_point[0] == center_point[1], "Center point must be a time point"
             start, end = center_point
             fig.add_trace(
                 go.Scatter3d(
@@ -310,7 +315,11 @@ class AllenTemporalSimulator:
                 fig.add_trace(trace)
 
         if self.mode == "timepointrange":
-            center_point = (50, 50)
+            if not center_point:
+                center_point = (50, 50)
+            else:
+                assert len(center_point) == 2, "Center point must be a tuple of 2 values"
+                assert center_point[0] != center_point[1], "Center point must be a time range"
             start, end = center_point
             fig.add_trace(
                 go.Scatter3d(
@@ -339,7 +348,11 @@ class AllenTemporalSimulator:
                 fig.add_trace(trace)
 
         if self.mode == "timerangepoint":
-            center_point = (25, 75)
+            if not center_point:
+                center_point = (25, 75)
+            else:
+                assert len(center_point) == 2, "Center point must be a tuple of 2 values"
+                assert center_point[0] != center_point[1], "Center point must be a time range"
             start, end = center_point
             fig.add_trace(
                 go.Scatter3d(
@@ -379,7 +392,7 @@ class AllenTemporalSimulator:
                 aspectmode="cube",
                 aspectratio=dict(x=1, y=1, z=1),
             ),
-            title="Allen's 13 Temporal Relations Visualization",
+            title=f"Allen's 13 Temporal Relations Visualization for {self.mode}",
             legend_title="Temporal Relations",
             legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
         )
@@ -391,7 +404,7 @@ class AllenTemporalSimulator:
 
 
 if __name__ == "__main__":
-    simulator = AllenTemporalSimulator(
-        n=1, m=10000, max_time=100, mode="timerangepoint"
-    )
-    simulator.visualize()
+
+    for mode in ["surface", "timeranges", "timepoints", "timepointrange", "timerangepoint"]:
+        simulator = AllenTemporalSimulator(n=1, m=10000, max_time=100, mode=mode)
+        simulator.visualize()
