@@ -1,6 +1,7 @@
 import loguru
 import numpy as np
 import plotly.graph_objects as go
+from TimelineKGQA.constants import DATA_DIR
 
 logger = loguru.logger
 
@@ -26,6 +27,8 @@ class AllenTemporalSimulator:
             "finished_by": ("#FFD700", "square-open"),  # gold, square-open
             "equals": ("#00FFFF", "diamond"),  # cyan, diamond
         }
+        self.output_dir = DATA_DIR / "simulations"
+        self.output_dir.mkdir(exist_ok=True, parents=True)
 
     def generate_surface(self):
         """
@@ -384,7 +387,7 @@ class AllenTemporalSimulator:
         # Show plot
         fig.show()
         # to html
-        fig.write_html(f"allen_temporal_relations.html_{self.mode}")
+        fig.write_html(self.output_dir / f"{self.mode}_allen_temporal_relations.html")
 
 
 if __name__ == "__main__":
