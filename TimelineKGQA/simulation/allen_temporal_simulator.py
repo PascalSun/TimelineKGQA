@@ -170,22 +170,22 @@ class AllenTemporalSimulator:
         elif start1 == start2 and end1 == end2:
             return "equals"
 
-    def determine_relation_timepointrange(self, point1, point2):
+    def determine_relation_timepointrange(self, point_1, time_range_2):
         """
         Point 1 will be a time point, and point 2 will be a time range
         So there will be 5 relationships: before, starts, during, finishes, after
 
         """
-        start1, end1 = point1
-        start2, end2 = point2
+        start1, end1 = point_1 # point1 is a time point, so start1 = end1
+        start2, end2 = time_range_2
 
-        if end1 < start2:
-            return "before"
-        elif start1 == start2 and end1 < end2:
-            return "starts"
-        elif start1 > start2 and end1 < end2:
+        if start1 < start2:
+            return "before" # point1 is before range2
+        elif start1 == start2:
+            return "starts" # point1 starts range2
+        elif start1 > start2 and start1 < end2:
             return "during"
-        elif start1 < start2 and end1 == end2:
+        elif start1 == end2:
             return "finishes"
         elif start1 > start2:
             return "after"
@@ -385,7 +385,7 @@ class AllenTemporalSimulator:
             scene=dict(
                 xaxis_title="Start Time",
                 yaxis_title="End Time",
-                zaxis_title="Total Time",
+                zaxis_title="Duration",
                 xaxis=dict(range=[self.max_time, 0], autorange="reversed"),
                 yaxis=dict(range=[self.max_time, 0], autorange="reversed"),
                 zaxis=dict(range=[0, self.max_time * 2]),
