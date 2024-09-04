@@ -8,19 +8,19 @@ class AllenTemporalSimulator:
         self.m = m  # number of points to generate around each random point
         self.max_time = max_time  # maximum time value for all axes
         self.color_shape_map = {
-            "before": ("red", "circle"),
-            "after": ("red", "square"),
-            "meets": ("blue", "circle"),
-            "met_by": ("blue", "square"),
-            "overlaps": ("green", "circle"),
-            "overlapped_by": ("green", "square"),
-            "starts": ("purple", "circle"),
-            "started_by": ("purple", "square"),
-            "during": ("orange", "circle"),
-            "contains": ("orange", "square"),
-            "finishes": ("yellow", "circle"),
-            "finished_by": ("yellow", "square"),
-            "equals": ("cyan", "diamond"),
+            "before": ("#FF0000", "circle"),  # bright red, circle
+            "after": ("#FF4500", "square"),  # orange-red, square
+            "meets": ("#1E90FF", "circle-open"),  # dodger blue, circle-open
+            "met_by": ("#4169E1", "square-open"),  # royal blue, square-open
+            "overlaps": ("#32CD32", "cross"),  # lime green, cross
+            "overlapped_by": ("#228B22", "x"),  # forest green, x
+            "starts": ("#800080", "diamond"),  # purple, diamond
+            "started_by": ("#9932CC", "diamond-open"),  # dark orchid, diamond-open
+            "during": ("#FFA500", "circle"),  # orange, circle
+            "contains": ("#FF8C00", "square"),  # dark orange, square
+            "finishes": ("#FFFF00", "circle-open"),  # yellow, circle-open
+            "finished_by": ("#FFD700", "square-open"),  # gold, square-open
+            "equals": ("#00FFFF", "diamond"),  # cyan, diamond
         }
 
     def generate_surface(self):
@@ -44,12 +44,40 @@ class AllenTemporalSimulator:
         start, end = point
         nearby_points = []
         for _ in range(self.m):
-            new_start = np.random.uniform(
-                max(0, start - 100), min(self.max_time, start + 100)
-            )
-            new_end = np.random.uniform(
-                max(new_start + 0.1, end - 100), min(self.max_time, end + 100)
-            )
+            # random select a relationship to generate a nearby point
+            temporal_relation = np.random.choice(list(self.color_shape_map.keys()))
+            if temporal_relation == "meets":
+                new_start = end
+                new_end = np.random.uniform(new_start + 0.1, self.max_time)
+            elif temporal_relation == "met_by":
+                new_end = start
+                new_start = np.random.uniform(0, new_end - 0.1)
+            elif temporal_relation == "starts":
+                new_start = start
+                new_end = np.random.uniform(start + 0.1, self.max_time)
+
+            elif temporal_relation == "started_by":
+                new_end = end
+                new_start = np.random.uniform(0, new_end - 0.1)
+
+            elif temporal_relation == "finishes":
+                new_end = end
+                new_start = np.random.uniform(0, new_end - 0.1)
+
+            elif temporal_relation == "finished_by":
+                new_start = start
+                new_end = np.random.uniform(start + 0.1, self.max_time)
+
+            elif temporal_relation == "equals":
+                new_start = start
+                new_end = end
+            else:
+                new_start = np.random.uniform(
+                    max(0, start - 100), min(self.max_time, start + 100)
+                )
+                new_end = np.random.uniform(
+                    max(new_start + 0.1, end - 100), min(self.max_time, end + 100)
+                )
             nearby_points.append((new_start, new_end))
         return nearby_points
 
@@ -89,21 +117,6 @@ class AllenTemporalSimulator:
 
         fig = go.Figure()
 
-        # Add reference surface
-        fig.add_trace(
-            go.Surface(
-                x=X,
-                y=Y,
-                z=Z,
-                colorscale=[[0, "lightgray"], [1, "lightgray"]],
-                showscale=False,
-                opacity=0.3,
-            )
-        )
-
-        # Generate random points
-        points = self.generate_points()
-
         # Create a trace for each relation
         traces = {
             relation: go.Scatter3d(
@@ -117,27 +130,27 @@ class AllenTemporalSimulator:
             for relation, (color, shape) in self.color_shape_map.items()
         }
 
-        # Visualize points and their relations
-        for point in points:
-            start, end = point
-            fig.add_trace(
-                go.Scatter3d(
-                    x=[start],
-                    y=[end],
-                    z=[end - start],
-                    mode="markers",
-                    marker=dict(size=7, color="black", symbol="cross"),
-                    showlegend=False,
-                )
+        # define a center point
+        center_point = (25, 75)
+        start, end = center_point
+        fig.add_trace(
+            go.Scatter3d(
+                x=[start],
+                y=[end],
+                z=[end - start],
+                mode="markers",
+                marker=dict(size=7, color="black", symbol="cross"),
+                showlegend=False,
             )
+        )
 
-            nearby_points = self.generate_nearby_points(point)
-            for nearby_point in nearby_points:
-                n_start, n_end = nearby_point
-                relation = self.determine_relation(point, nearby_point)
-                traces[relation].x = traces[relation].x + (n_start,)
-                traces[relation].y = traces[relation].y + (n_end,)
-                traces[relation].z = traces[relation].z + (n_end - n_start,)
+        nearby_points = self.generate_nearby_points(center_point)
+        for nearby_point in nearby_points:
+            n_start, n_end = nearby_point
+            relation = self.determine_relation(center_point, nearby_point)
+            traces[relation].x = traces[relation].x + (n_start,)
+            traces[relation].y = traces[relation].y + (n_end,)
+            traces[relation].z = traces[relation].z + (n_end - n_start,)
 
         # Add all traces to the figure
         for trace in traces.values():
@@ -165,5 +178,5 @@ class AllenTemporalSimulator:
 
 
 if __name__ == "__main__":
-    simulator = AllenTemporalSimulator(1, 1000000, max_time=100)
+    simulator = AllenTemporalSimulator(1, 10000, max_time=100)
     simulator.visualize()
