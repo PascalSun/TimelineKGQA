@@ -55,15 +55,13 @@ def page():
                 style=_STYLE_CHAT_INPUT,
             )
         with me.content_button(
-                color="primary",
-                type="flat",
-                disabled=state.in_progress,
-                on_click=on_click_submit_chat_msg,
-                style=_STYLE_CHAT_BUTTON,
+            color="primary",
+            type="flat",
+            disabled=state.in_progress,
+            on_click=on_click_submit_chat_msg,
+            style=_STYLE_CHAT_BUTTON,
         ):
-            me.icon(
-                _LABEL_BUTTON_IN_PROGRESS if state.in_progress else _LABEL_BUTTON
-            )
+            me.icon(_LABEL_BUTTON_IN_PROGRESS if state.in_progress else _LABEL_BUTTON)
 
 
 def on_chat_input(e: me.InputEvent):
@@ -110,9 +108,7 @@ _COLOR_CHAT_BUBBLE_BOT = "#ebf3ff"
 _COLOR_CHAT_BUUBBLE_EDITED = "#f2ebff"
 
 _DEFAULT_PADDING = me.Padding.all(20)
-_DEFAULT_BORDER_SIDE = me.BorderSide(
-    width="1px", style="solid", color="#ececec"
-)
+_DEFAULT_BORDER_SIDE = me.BorderSide(width="1px", style="solid", color="#ececec")
 
 _LABEL_BUTTON = "send"
 _LABEL_BUTTON_IN_PROGRESS = "pending"

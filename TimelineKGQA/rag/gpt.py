@@ -57,9 +57,9 @@ class RAGRank:
                 "end_time_embedding",
             ]:
                 if not cursor.execute(
-                        text(
-                            f"SELECT column_name FROM information_schema.columns WHERE table_name = '{self.table_name}' AND column_name = '{col}';"
-                        )
+                    text(
+                        f"SELECT column_name FROM information_schema.columns WHERE table_name = '{self.table_name}' AND column_name = '{col}';"
+                    )
                 ).fetchone():
                     cursor.execute(
                         text(f"ALTER TABLE {self.table_name} ADD COLUMN {col} vector;")
@@ -100,15 +100,15 @@ class RAGRank:
 
     def benchmark_naive_rag(self, semantic_parse: bool = False):
         self.event_df["fact"] = (
-                self.event_df["subject"]
-                + "|"
-                + self.event_df["predicate"]
-                + "|"
-                + self.event_df["object"]
-                + "|"
-                + self.event_df["start_time"]
-                + "|"
-                + self.event_df["end_time"]
+            self.event_df["subject"]
+            + "|"
+            + self.event_df["predicate"]
+            + "|"
+            + self.event_df["object"]
+            + "|"
+            + self.event_df["start_time"]
+            + "|"
+            + self.event_df["end_time"]
         )
         questions_df = self._load_questions()
         similarities = self._calculate_similarities(questions_df)
@@ -124,15 +124,15 @@ class RAGRank:
 
     def benchmark_graph_rag(self, semantic_parse=False):
         self.event_df["fact"] = (
-                self.event_df["subject"]
-                + "|"
-                + self.event_df["predicate"]
-                + "|"
-                + self.event_df["object"]
-                + "|"
-                + self.event_df["start_time"]
-                + "|"
-                + self.event_df["end_time"]
+            self.event_df["subject"]
+            + "|"
+            + self.event_df["predicate"]
+            + "|"
+            + self.event_df["object"]
+            + "|"
+            + self.event_df["start_time"]
+            + "|"
+            + self.event_df["end_time"]
         )
         questions_df = self._load_questions()
         similarities = self._calculate_similarities(questions_df)
@@ -167,7 +167,7 @@ class RAGRank:
     def _evaluate_rankings(self, questions_df, top_30_indices):
         ranks = []
         for index, row in tqdm(
-                questions_df.iterrows(), total=len(questions_df), desc="Evaluating Rankings"
+            questions_df.iterrows(), total=len(questions_df), desc="Evaluating Rankings"
         ):
             top_30_events = top_30_indices[index].tolist()
             facts = self.event_df.iloc[top_30_events]["fact"].tolist()
@@ -349,7 +349,7 @@ Top 3 simlarity: {top3_value.tolist()}
                     & (self.event_df["object"] == object)
                     & (self.event_df["start_time"] == start_time)
                     & (self.event_df["end_time"] == end_time)
-                    ]
+                ]
                 if not fact_df.empty:
                     fact_data.append(
                         (
@@ -383,7 +383,7 @@ Top 3 simlarity: {top3_value.tolist()}
             # ax_text.axis('off')
             # ax_text.text(0, 0.5, f"Fact {i + 1}: {fact.replace('|', ' | ')}", fontsize=18, wrap=True)
 
-            ax_matrix = fig.add_subplot(gs[3 * i + 1: 3 * i + 3, 0])
+            ax_matrix = fig.add_subplot(gs[3 * i + 1 : 3 * i + 3, 0])
             similarities = self.calculate_similarities(
                 question, question_embedding, fact_emb, subj_emb, obj_emb
             ).T
@@ -417,12 +417,12 @@ Top 3 simlarity: {top3_value.tolist()}
         return fig
 
     def calculate_similarities(
-            self,
-            question,
-            question_embedding,
-            fact_embedding,
-            subj_embedding,
-            obj_embedding,
+        self,
+        question,
+        question_embedding,
+        fact_embedding,
+        subj_embedding,
+        obj_embedding,
     ):
         question_words = self.word_tokenize(question)
         similarities = [
@@ -494,7 +494,7 @@ Top 3 simlarity: {top3_value.tolist()}
         )
         result_matrix = result_matrix - 2
         for index, row in tqdm(
-                questions_df.iterrows(), total=questions_df.shape[0], desc="Semantic Parse"
+            questions_df.iterrows(), total=questions_df.shape[0], desc="Semantic Parse"
         ):
             entities = row["entities"]
             for entity in entities:
