@@ -1,6 +1,6 @@
 services:
   postgis:
-    image: postgis/postgis
+    image: postgis/postgis:16
     build:
       context: ./
       dockerfile: Dockerfile

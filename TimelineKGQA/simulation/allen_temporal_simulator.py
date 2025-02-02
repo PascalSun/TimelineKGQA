@@ -1,6 +1,7 @@
 import loguru
 import numpy as np
 import plotly.graph_objects as go
+
 from TimelineKGQA.constants import DATA_DIR
 
 logger = loguru.logger
@@ -176,13 +177,13 @@ class AllenTemporalSimulator:
         So there will be 5 relationships: before, starts, during, finishes, after
 
         """
-        start1, end1 = point_1 # point1 is a time point, so start1 = end1
+        start1, end1 = point_1  # point1 is a time point, so start1 = end1
         start2, end2 = time_range_2
 
         if start1 < start2:
-            return "before" # point1 is before range2
+            return "before"  # point1 is before range2
         elif start1 == start2:
-            return "starts" # point1 starts range2
+            return "starts"  # point1 starts range2
         elif start1 > start2 and start1 < end2:
             return "during"
         elif start1 == end2:
@@ -288,8 +289,12 @@ class AllenTemporalSimulator:
             if not center_point:
                 center_point = (50, 50)
             else:
-                assert len(center_point) == 2, "Center point must be a tuple of 2 values"
-                assert center_point[0] == center_point[1], "Center point must be a time point"
+                assert (
+                    len(center_point) == 2
+                ), "Center point must be a tuple of 2 values"
+                assert (
+                    center_point[0] == center_point[1]
+                ), "Center point must be a time point"
             start, end = center_point
             fig.add_trace(
                 go.Scatter3d(
@@ -318,8 +323,12 @@ class AllenTemporalSimulator:
             if not center_point:
                 center_point = (50, 50)
             else:
-                assert len(center_point) == 2, "Center point must be a tuple of 2 values"
-                assert center_point[0] != center_point[1], "Center point must be a time range"
+                assert (
+                    len(center_point) == 2
+                ), "Center point must be a tuple of 2 values"
+                assert (
+                    center_point[0] != center_point[1]
+                ), "Center point must be a time range"
             start, end = center_point
             fig.add_trace(
                 go.Scatter3d(
@@ -351,8 +360,12 @@ class AllenTemporalSimulator:
             if not center_point:
                 center_point = (25, 75)
             else:
-                assert len(center_point) == 2, "Center point must be a tuple of 2 values"
-                assert center_point[0] != center_point[1], "Center point must be a time range"
+                assert (
+                    len(center_point) == 2
+                ), "Center point must be a tuple of 2 values"
+                assert (
+                    center_point[0] != center_point[1]
+                ), "Center point must be a time range"
             start, end = center_point
             fig.add_trace(
                 go.Scatter3d(
@@ -405,6 +418,12 @@ class AllenTemporalSimulator:
 
 if __name__ == "__main__":
 
-    for mode in ["surface", "timeranges", "timepoints", "timepointrange", "timerangepoint"]:
+    for mode in [
+        "surface",
+        "timeranges",
+        "timepoints",
+        "timepointrange",
+        "timerangepoint",
+    ]:
         simulator = AllenTemporalSimulator(n=1, m=10000, max_time=100, mode=mode)
         simulator.visualize()
