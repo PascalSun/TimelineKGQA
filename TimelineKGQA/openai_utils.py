@@ -11,7 +11,7 @@ def paraphrase_simple_question(
     question: str,
     answer: str = None,
     answer_type: str = None,
-    model_name: str = "gpt-3.5-turbo",
+    model_name: str = "gpt-4o",
 ) -> str:
     """
     Paraphrases the given question using the OpenAI model specified.
@@ -64,7 +64,7 @@ def paraphrase_simple_question(
 
 def paraphrase_medium_question(
     question: str,
-    model_name: str = "gpt-3.5-turbo",
+    model_name: str = "gpt-4o",
 ) -> str:
     """
     Paraphrases the given question using the OpenAI model specified.

@@ -1,4 +1,4 @@
-FROM postgis/postgis
+FROM postgis/postgis:16-master
 RUN apt-get update && apt-get install -y \
     build-essential \
     git \
