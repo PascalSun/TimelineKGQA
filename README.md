@@ -1,5 +1,7 @@
 # TimelineKGQA
 
+[![DOI](https://zenodo.org/badge/806079735.svg)](https://doi.org/10.5281/zenodo.14788349)
+
 A universal temporal question-answering pair generator for any temporal knowledge graph, revealing the landscape of
 Temporal Knowledge Graph Question Answering beyond the Great Dividing Range of Large Language Models.
 
