@@ -1,0 +1,35 @@
+file: unified_kg_xx
+description: This file contains the unified KG
+columns:
+id,subject,subject_json,predicate,predicate_json,object,object_json,start_time,end_time
+
+id: unique identifier for each triple
+subject: subject of the triple
+subject_json: json object containing information about the subject, you can treat it as subject attributes
+predicate: predicate of the triple
+predicate_json: json object containing information about the predicate, you can treat it as predicate attributes
+object: object of the triple
+object_json: json object containing information about the object, you can treat it as object attributes
+start_time: start time of the triple
+end_time: end time of the triple
+
+file: unified_kg_xx_questions
+description: This file contains the generated questions for the unified KG
+columns:
+id,source_kg_id,question,answer,paraphrased_question,events,question_level,question_type,answer_type,temporal_relation,split
+
+id: unique identifier for each question
+source_kg_id: id of the triple in the unified KG, it is combining the relevant KG triples id
+question: the generated question, which has not been paraphrased
+answer: the answer to the question
+paraphrased_question: the paraphrased question via GPT-4o
+events: events that are related to the question, split by "|" for multiple events
+question_level: the level of the question, which is either "simple", "medium", or "hard"
+question_type: the type of the question, timeline_position_retrieval_timeline_position_retrieval which is TPO+TPO, etc
+answer_type: the type of the answer, which is either "entity", "duration", etc
+temporal_relation: the temporal relation between the subject and object, which is either "before", "after", etc
+split: the split of the question, which is either "train", "dev", or "test"
+
+
+Each data we provide both json and csv format, to avoid potential data load issue.
+
