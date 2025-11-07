@@ -24,7 +24,7 @@ question: the generated question, which has not been paraphrased
 answer: the answer to the question
 paraphrased_question: the paraphrased question via GPT-4o
 events: events that are related to the question, split by "|" for multiple events
-question_level: the level of the question, which is either "simple", "medium", or "hard"
+question_level: the level of the question, which is either "simple", "medium", or "complex"
 question_type: the type of the question, timeline_position_retrieval_timeline_position_retrieval which is TPO+TPO, etc
 answer_type: the type of the answer, which is either "entity", "duration", etc
 temporal_relation: the temporal relation between the subject and object, which is either "before", "after", etc

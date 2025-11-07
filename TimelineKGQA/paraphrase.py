@@ -59,8 +59,11 @@ class Paraphraser:
                 paraphrased_question = paraphrase_simple_question(question)
             elif level == "medium":
                 paraphrased_question = paraphrase_medium_question(question)
-            elif level == "hard":
+            elif level == "complex":
                 paraphrased_question = paraphrase_medium_question(question)
+            else:
+                raise ValueError(level)
+
             # update the paraphrased question in the database
             self.cursor.execute(
                 f"UPDATE {self.table_name} SET paraphrased_question = %s WHERE id = %s",
