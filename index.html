@@ -1,0 +1,2639 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+      
+        <link rel="next" href="Code/">
+      
+      
+      <link rel="icon" href="assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.23">
+    
+    
+      
+        <title>TimelineKGQA</title>
+      
+    
+    
+      <link rel="stylesheet" href="assets/stylesheets/main.84d31ad4.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#timelinekgqa" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="." title="TimelineKGQA" class="md-header__button md-logo" aria-label="TimelineKGQA" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            TimelineKGQA
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              TimelineKGQA
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="." class="md-tabs__link">
+        
+  
+  
+    
+  
+  TimelineKGQA
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="Code/" class="md-tabs__link">
+          
+  
+  
+  Code
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="." title="TimelineKGQA" class="md-nav__button md-logo" aria-label="TimelineKGQA" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    TimelineKGQA
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    TimelineKGQA
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="." class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    TimelineKGQA
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#motivation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Motivation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#timelines" class="md-nav__link">
+    <span class="md-ellipsis">
+      Timelines
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-human-brain-do-the-temporal-question-answering" class="md-nav__link">
+    <span class="md-ellipsis">
+      How human brain do the temporal question answering?
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="How human brain do the temporal question answering?">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#information-indexing" class="md-nav__link">
+    <span class="md-ellipsis">
+      Information Indexing
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#information-retrieval" class="md-nav__link">
+    <span class="md-ellipsis">
+      Information Retrieval
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#temporal-questions-categorisation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Temporal Questions Categorisation
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Temporal Questions Categorisation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#simple-timeline-and-one-event-involved" class="md-nav__link">
+    <span class="md-ellipsis">
+      Simple: Timeline and One Event Involved
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#medium-timeline-and-two-events-involved" class="md-nav__link">
+    <span class="md-ellipsis">
+      Medium: Timeline and Two Events Involved
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#complex-timeline-and-multiple-events-involved" class="md-nav__link">
+    <span class="md-ellipsis">
+      Complex: Timeline and Multiple Events Involved
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#other-perspectives" class="md-nav__link">
+    <span class="md-ellipsis">
+      Other perspectives
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#timelinekgqa-generator" class="md-nav__link">
+    <span class="md-ellipsis">
+      TimelineKGQA Generator
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="TimelineKGQA Generator">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#generated-question-answering-pairs-for-icews-actor-and-cronquestion-kg" class="md-nav__link">
+    <span class="md-ellipsis">
+      Generated Question Answering Pairs for ICEWS Actor and CronQuestion KG
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#temporal-question-answering-solutions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Temporal Question Answering Solutions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Temporal Question Answering Solutions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rag" class="md-nav__link">
+    <span class="md-ellipsis">
+      RAG
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tkgqa-embedding" class="md-nav__link">
+    <span class="md-ellipsis">
+      TKGQA Embedding
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#text2sql" class="md-nav__link">
+    <span class="md-ellipsis">
+      Text2SQL
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#finetuning" class="md-nav__link">
+    <span class="md-ellipsis">
+      Finetuning
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#evaluation-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      Evaluation Metrics
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#evaluation-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      Evaluation Results
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Evaluation Results">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#systematic-comparison-between-rag-and-tkgqa-embedding" class="md-nav__link">
+    <span class="md-ellipsis">
+      Systematic Comparison between RAG and TKGQA Embedding
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hits1-for-text2sql" class="md-nav__link">
+    <span class="md-ellipsis">
+      Hits@1 for Text2SQL
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#finetuning-accuracy" class="md-nav__link">
+    <span class="md-ellipsis">
+      Finetuning accuracy
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#development-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      Development Setup
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Development Setup">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#install-the-package" class="md-nav__link">
+    <span class="md-ellipsis">
+      Install the package
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#folder-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      Folder Structure
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Code
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Code
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Code/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Index
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Code/constants/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Constants
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Code/generator/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Generator
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Code/openai_utils/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Openai utils
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Code/paraphrase/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Paraphrase
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Code/processor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Processor
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Code/templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Templates
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Code/utils/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Utils
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_9" id="__nav_2_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Data loader
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_9">
+            <span class="md-nav__icon md-icon"></span>
+            Data loader
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Code/data_loader/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Index
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Code/data_loader/load_cronquestions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Load cronquestions
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Code/data_loader/load_icews/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Load icews
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_10" id="__nav_2_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Demo
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_10">
+            <span class="md-nav__icon md-icon"></span>
+            Demo
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Code/demo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Index
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Code/demo/data_exploration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Data exploration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Code/demo/sparql_based_rag/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Sparql based rag
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_11" id="__nav_2_11_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Rag
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_11">
+            <span class="md-nav__icon md-icon"></span>
+            Rag
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Code/rag/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Index
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Code/rag/finetune_llm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Finetune llm
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Code/rag/gpt/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Gpt
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Code/rag/metrics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Metrics
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Code/rag/question2sql/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Question2sql
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_12" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_12" id="__nav_2_12_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Reasoning
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_12">
+            <span class="md-nav__icon md-icon"></span>
+            Reasoning
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Code/reasoning/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Index
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Code/reasoning/openai_reasoning/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Openai reasoning
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Code/reasoning/reasoning/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Reasoning
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_13" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_13" id="__nav_2_13_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Simulation
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_13">
+            <span class="md-nav__icon md-icon"></span>
+            Simulation
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Code/simulation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Index
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="Code/simulation/allen_temporal_simulator/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Allen temporal simulator
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#motivation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Motivation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#timelines" class="md-nav__link">
+    <span class="md-ellipsis">
+      Timelines
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-human-brain-do-the-temporal-question-answering" class="md-nav__link">
+    <span class="md-ellipsis">
+      How human brain do the temporal question answering?
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="How human brain do the temporal question answering?">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#information-indexing" class="md-nav__link">
+    <span class="md-ellipsis">
+      Information Indexing
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#information-retrieval" class="md-nav__link">
+    <span class="md-ellipsis">
+      Information Retrieval
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#temporal-questions-categorisation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Temporal Questions Categorisation
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Temporal Questions Categorisation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#simple-timeline-and-one-event-involved" class="md-nav__link">
+    <span class="md-ellipsis">
+      Simple: Timeline and One Event Involved
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#medium-timeline-and-two-events-involved" class="md-nav__link">
+    <span class="md-ellipsis">
+      Medium: Timeline and Two Events Involved
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#complex-timeline-and-multiple-events-involved" class="md-nav__link">
+    <span class="md-ellipsis">
+      Complex: Timeline and Multiple Events Involved
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#other-perspectives" class="md-nav__link">
+    <span class="md-ellipsis">
+      Other perspectives
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#timelinekgqa-generator" class="md-nav__link">
+    <span class="md-ellipsis">
+      TimelineKGQA Generator
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="TimelineKGQA Generator">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#generated-question-answering-pairs-for-icews-actor-and-cronquestion-kg" class="md-nav__link">
+    <span class="md-ellipsis">
+      Generated Question Answering Pairs for ICEWS Actor and CronQuestion KG
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#temporal-question-answering-solutions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Temporal Question Answering Solutions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Temporal Question Answering Solutions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rag" class="md-nav__link">
+    <span class="md-ellipsis">
+      RAG
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tkgqa-embedding" class="md-nav__link">
+    <span class="md-ellipsis">
+      TKGQA Embedding
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#text2sql" class="md-nav__link">
+    <span class="md-ellipsis">
+      Text2SQL
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#finetuning" class="md-nav__link">
+    <span class="md-ellipsis">
+      Finetuning
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#evaluation-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      Evaluation Metrics
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#evaluation-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      Evaluation Results
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Evaluation Results">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#systematic-comparison-between-rag-and-tkgqa-embedding" class="md-nav__link">
+    <span class="md-ellipsis">
+      Systematic Comparison between RAG and TKGQA Embedding
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hits1-for-text2sql" class="md-nav__link">
+    <span class="md-ellipsis">
+      Hits@1 for Text2SQL
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#finetuning-accuracy" class="md-nav__link">
+    <span class="md-ellipsis">
+      Finetuning accuracy
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#development-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      Development Setup
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Development Setup">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#install-the-package" class="md-nav__link">
+    <span class="md-ellipsis">
+      Install the package
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#folder-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      Folder Structure
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="timelinekgqa">TimelineKGQA</h1>
+<p>A universal temporal question-answering pair generator for any temporal knowledge graph, revealing the landscape of
+Temporal Knowledge Graph Question Answering beyond the Great Dividing Range of Large Language Models.</p>
+<p>To download we generated two datasets based on ICEWS Actor and CronQuestions KG, please visit the following
+link: <a href="https://github.com/PascalSun/TimelineKGQA/tree/main/Datasets">TimelineKGQA Datasets</a></p>
+<hr />
+<ul>
+<li><a href="#motivation">Motivation</a></li>
+<li><a href="#timelines">Timelines</a></li>
+<li><a href="#how-human-brain-do-the-temporal-question-answering">How human brain do the temporal question answering?</a><ul>
+<li><a href="#information-indexing">Information Indexing</a></li>
+<li><a href="#information-retrieval">Information Retrieval</a></li>
+</ul>
+</li>
+<li><a href="#temporal-questions-categorisation">Temporal Questions Categorisation</a><ul>
+<li><a href="#simple-timeline-and-one-event-involved">Simple: Timeline and One Event Involved</a></li>
+<li><a href="#medium-timeline-and-two-events-involved">Medium: Timeline and Two Events Involved</a></li>
+<li><a href="#complex-timeline-and-multiple-events-involved">Complex: Timeline and Multiple Events Involved</a></li>
+<li><a href="#other-perspectives">Other perspectives</a></li>
+</ul>
+</li>
+<li><a href="#timelinekgqa-generator">TimelineKGQA Generator</a></li>
+<li><a href="#temporal-question-answering-solutions">Temporal Question Answering Solutions</a><ul>
+<li><a href="#rag">RAG</a></li>
+<li><a href="#tkgqa-embedding">TKGQA Embedding</a></li>
+<li><a href="#text2sql">Text2SQL</a></li>
+<li><a href="#finetuning">Finetuning</a></li>
+<li><a href="#evaluation-metrics">Evaluation Metrics</a></li>
+<li><a href="#evaluation-results">Evaluation Results</a><ul>
+<li><a href="#systematic-comparison-between-rag-and-tkgqa-embedding">Systematic Comparison between RAG and TKGQA Embedding</a></li>
+<li><a href="#hits1-for-text2sql">Hits@1 for Text2SQL</a></li>
+<li><a href="#finetuning-accuracy">Finetuning accuracy</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#development-setup">Development Setup</a><ul>
+<li><a href="#install-the-package">Install the package</a></li>
+<li><a href="#folder-structure">Folder Structure</a></li>
+</ul>
+</li>
+</ul>
+<hr />
+<h2 id="motivation">Motivation</h2>
+<p>Since the release of ChatGPT in late 2022, one of the most successful applications of large language models (LLMs), the
+entire field of Question Answering (QA) research has undergone a significant transformation.
+Researchers in the QA field now face a crucial question:</p>
+<p><strong>What unique value does your QA research offer when compared to LLMs?</strong></p>
+<p>The underlying challenge is:</p>
+<p><strong>If your research cannot surpass or effectively leverage LLMs, what is its purpose?</strong></p>
+<p>These same questions are also pressing the Knowledge Graph QA research community.</p>
+<p>Knowledge graphs provide a simple, yet powerful and natural format to organize complex information. Performing QA over
+knowledge graphs is a natural extension of their use, especially when you want to fully exploit their potential.
+Temporal question answering over knowledge graphs allows us to retrieve information based on temporal constraints,
+enabling historical analysis, causal analysis, and making predictions—an essential aspect of AI research.</p>
+<p>So we are wondering:</p>
+<p><strong>What's the landscape of Temporal Knowledge Graph Question Answering beyond the Great Dividing Range of Large Language
+Models after 2022?</strong></p>
+<p>The literature seems have not provided a clear answer to this question.</p>
+<hr />
+<h2 id="timelines">Timelines</h2>
+<p>We will begin with question answering datasets, as they are fundamental to any progress in this field. Without datasets,
+we can't do anything. They are our climbing rope, guiding us to the other side of the Great Dividing Range.</p>
+<p>Current available datasets for the Temporal Knowledge Graph Question Answering are limited.
+For example, the most latest and popular TKGQA dataset: CronQuestions, containing limited types of questions, temporal
+relations, temporal granularity is only to year level.</p>
+<p>Our real world temporal questions is way more comphrehensive than this.</p>
+<p>We all know that we are living on top of the timeline, and it only goes forward, no way looking back.
+The questions we are asking are all related to the timeline, which is totally underesimated in current TKGQA research.</p>
+<p>If we view all the temporal questions from the timeline perspective, we have this following types of timelines:</p>
+<ul>
+<li><strong>Straight Homogenous(Objective)</strong> Timeline:<ul>
+<li>Exact date when it happens, for example, [2023-05-01 10:00:00, 2023-05-01 10:30:00]</li>
+<li>This is normally asking question about the facts, and upon the facts, we can do the analysis.</li>
+<li>For example, crime analysis, historical analysis, etc.</li>
+<li>Under this timeline, human will focus more on <strong>Temporal Logic</strong></li>
+</ul>
+</li>
+<li><strong>Cycle Homogenous(Objective)</strong> Timeline:<ul>
+<li>Monday, First day of Month, Spring, 21st Century, etc.</li>
+<li>This is normally asking question about the patterns.</li>
+<li>Under this timeline, human will focus more on <strong>Temporal Pattern</strong></li>
+</ul>
+</li>
+<li><strong>Straight Homogenous(Subjective)</strong> Timeline:<ul>
+<li>If you sleep during night, it will be fast for you in the 8 hours, however, if someone is working overnight,
+  time will be slow for him.</li>
+<li>This is normally asking question about the perception of time.</li>
+<li>How is your recent life goes?</li>
+<li>Depending on the person, the perception of the meaning for the "recent" will be different.</li>
+<li>Under this timeline, human will focus more on <strong>Temporal Modifier</strong></li>
+</ul>
+</li>
+<li><strong>Cycle Heterogeneous(Subjective)</strong> Timeline:<ul>
+<li>History has its trend, however, it takes thousands years get the whole world into industrialization.</li>
+<li>And then it only takes 100 years to get the whole world into information age.</li>
+<li>So the spiaral speed of the timeline is not homogenous.</li>
+<li>Under this timeline, human will focus more on <strong>Temporal Modifier</strong> also, but more trying to understand the
+  development of human society, universe, etc.</li>
+</ul>
+</li>
+</ul>
+<p>We can not handle them all in a one go, and current TKGQA research is in front of the door of the <strong>Straight Homogenous(
+Objective)</strong> Timeline.</p>
+<p>We will try to advance the research in this area first, and then try to extend to the other areas.</p>
+<hr />
+<h2 id="how-human-brain-do-the-temporal-question-answering">How human brain do the temporal question answering?</h2>
+<h3 id="information-indexing">Information Indexing</h3>
+<p>When we see something, for example, an accident happen near our home in today morning.
+We need to first index this event into our brain.
+As we live in a three dimension space together with a time dimension,
+when we want to store this in our memory, (we will treat our memory as a N dimension space)</p>
+<ol>
+<li>Index the spatial dimensions: is this close to my home or close to one of the point of interest in my mind</li>
+<li>Index the temporal dimension: Temporal have several aspects<ul>
+<li>Treat temporal as <strong>Straight Homogenous(Objective)</strong> Timeline:<ul>
+<li>Exact date when it happens, for example, [2023-05-01 10:00:00, 2023-05-01 10:30:00]</li>
+</ul>
+</li>
+<li>Treat temporal as <strong>Cycle Homogenous(Objective)</strong> Timeline:<ul>
+<li>Monday, First day of Month, Spring, 21st Century, etc.</li>
+<li>(You can aslo cycle the timeline based on your own requirement)</li>
+</ul>
+</li>
+<li>Treat temporal as <strong>Straight Homogenous(Subjective)</strong> Timeline:<ul>
+<li>If you sleep during night, it will be fast for you in the 8 hours, however, if someone is working overnight,
+  time will be slow for him.</li>
+</ul>
+</li>
+<li>Treat temporal as <strong>Cycle Heterogeneous(Subjective)</strong> Timeline:<ul>
+<li>Life has different turning points for everyone, until they reach the end of their life.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Then index the information part: What happen, who is involved, what is the impact, etc.</li>
+</ol>
+<p>So in summary, we can say that in our mind, if we treat the event as embedding in our human mind:</p>
+<ul>
+<li>part of the embedding will represent the temporal dimension information,</li>
+<li>part of the embedding will represent the spatial dimension information,</li>
+<li>the rest of the embedding will represent the general information part.</li>
+</ul>
+<p>This will help us to retrieve the information when we need it.</p>
+<h3 id="information-retrieval">Information Retrieval</h3>
+<p>So when we try to retrieval the information, espeically the temporal part of the information.
+Normally we have several types:</p>
+<ul>
+<li><strong>Timeline Retrieval</strong>:<ul>
+<li>When Bush starts his term as president of US?<ul>
+<li>First: <strong>General Information Retrieval</strong>  =&gt; [(Bush, start, president of US), (Bush, term, president of US)]</li>
+<li>Second: <strong>Timeline Retrieval</strong> =&gt; [(Bush, start, president of US, 2000, 2000),
+  (Bush, term, president of US, 2000, 2008)]</li>
+<li>Third: Answer the question based on the timeline information</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><strong>Temporal Constrained Retrieval</strong>:<ul>
+<li>In 2009, who is the president of US?<ul>
+<li>First: <strong>General Information Retrieval</strong>  =&gt; [(Bush, president of US),
+  (Obama, president of US), (Trump, president of US)]</li>
+<li>Second: <strong>Temporal Constraint Retrieval</strong> =&gt; [(Obama, president of US, 2009, 2016)]</li>
+<li>Third: Answer the question based on the temporal constraint information</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p>Three key things here:</p>
+<ul>
+<li><strong>General Information Retrieval</strong>: Retrieve the general information from the knowledge graph based on the question</li>
+<li><strong>Temporal Constrained Retrieval</strong>: Filter on general information retrieval, apply the temporal constraint</li>
+<li><strong>Timeline Retrieval</strong>: Based on general information retrieval, recover the timeline information</li>
+</ul>
+<p>Extend from this, it is retrieve the information for one fact, or you can name it event/truth, etc.
+If we have multiple facts, or events, or truths, etc, after the retrieval, we need to comparison: set operation,
+ranking, semantic extraction, etc.</p>
+<p>And whether the question is complex or not is depending on how much information our brain need to process, and the
+different capabilities of the brain needed to process the information.</p>
+<hr />
+<h2 id="temporal-questions-categorisation">Temporal Questions Categorisation</h2>
+<p><img alt="timeline" src="imgs/timeline_categorization.jpg" /></p>
+<p>So when we try to classify the temporal questions, especially from the <strong>difficulty</strong> perspective, we classify the level
+of difficulty based on how many events involved in the question.</p>
+<ul>
+<li><strong>Simple</strong>: Timeline and One Event Involved</li>
+<li><strong>Medium</strong>: Timeline and Two Events Involved</li>
+<li><strong>Complex</strong>: Timeline and Multiple Events Involved</li>
+</ul>
+<h3 id="simple-timeline-and-one-event-involved">Simple: Timeline and One Event Involved</h3>
+<ul>
+<li>Timeline Retrieval:<ul>
+<li>When Bush starts his term as president of US?<ul>
+<li>General Information Retrieval =&gt; Timeline Recovery =&gt; Answer the question</li>
+<li>Question Focus can be: <em>Timestamp Start, Timestamp End, Duration, Timestamp Start and End</em></li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Temporal Constrained Retrieval:<ul>
+<li>In 2009, who is the president of US?<ul>
+<li>General Information Retrieval =&gt; Temporal Constraint Retrieval =&gt; Answer the question</li>
+<li>Question Focus can be: <em>Subject, Object, Predicate</em>. Can be more complex if we want mask out more elements</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h3 id="medium-timeline-and-two-events-involved">Medium: Timeline and Two Events Involved</h3>
+<ul>
+<li>Timeline Retrieval + Timeline Retrieval:<ul>
+<li>Is Bush president of US when 911 happen?<ul>
+<li><em>(General Information Retrieval =&gt; Timeline Recovery)</em> And <em>(General Information Retrieval =&gt; Timeline
+  Recovery)</em> =&gt; <em>Timeline Operation</em> =&gt; Answer the question</li>
+<li>Question Focus can be:<ul>
+<li>A new Time Range</li>
+<li>A temporal relation (Before, After, During, etc.)</li>
+<li>A list of Time Range (Ranking)</li>
+<li>or Comparison of Duration</li>
+</ul>
+</li>
+<li>Key ability here is: <strong>Timeline Operation</strong></li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Timeline Retrieval + Temporal Constrained Retrieval:<ul>
+<li>When Bush is president of US, who is the president of China?<ul>
+<li><em>(General Information Retrieval =&gt; Timeline Retrieval)</em> =&gt; <em>Temporal Semantic Operation</em> =&gt; <em>Temporal
+  Constraint Retrieval</em> =&gt; Answer the question</li>
+<li>This is same as above, Question Focus can be: <em>Subject, Object</em></li>
+<li>Key ability here is: <strong>Temporal Semantic Operation</strong></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h3 id="complex-timeline-and-multiple-events-involved">Complex: Timeline and Multiple Events Involved</h3>
+<p>In general, question focus (answer type) will only be two types when we extend from Medium Level</p>
+<ul>
+<li>Timeline Operation</li>
+<li>(Subject, Predicate, Object)</li>
+</ul>
+<p>So if we say Complex is 3 or n events and Timeline.</p>
+<ul>
+<li>Timeline Retrieval * n</li>
+<li>Timeline Retrieval * (n -1) =&gt; Semantic Operation * (n - 1)? =&gt; Temporal Constrainted Retrieval</li>
+</ul>
+<h3 id="other-perspectives">Other perspectives</h3>
+<p>And based on the <strong>Answer Type</strong>, we can classify them into:</p>
+<ul>
+<li>Factual</li>
+<li>Temporal</li>
+</ul>
+<p>Based on the <strong>Temporal Relations</strong> in the question, we can classify them into:</p>
+<ul>
+<li>Set Operation</li>
+<li>Allen Temporal Relations</li>
+<li>Ranking</li>
+<li>Duration</li>
+</ul>
+<p>Based on the <strong>Temporal Capabilities</strong>, we can classify them into:</p>
+<ul>
+<li><strong>Temporal Constrained Retrieval</strong>: Filter on general information retrieval, apply the temporal constraint</li>
+<li><strong>Timeline Retrieval</strong>: Based on general information retrieval, recover the timeline information</li>
+<li><strong>Timeline Operation</strong>: From numeric to semantic</li>
+<li><strong>Temporal Semantic Operation</strong>: From Semantic to Numeric</li>
+</ul>
+<p>To be able to answer the temporal question, we need to have the following key abilities:</p>
+<ul>
+<li><strong>General Information Retrieval</strong>: Retrieve the general information from the knowledge graph based on the question,
+  you can call this semantic parsing, or semantic retrieval</li>
+</ul>
+<hr />
+<h2 id="timelinekgqa-generator">TimelineKGQA Generator</h2>
+<p>With the above understanding, it will not be hard to programmatically generate the temporal question answering pairs for
+any temporal knowledge graph, as shown in the following figure:</p>
+<p><img alt="tkg" src="imgs/tkg.jpg" /></p>
+<p>And then we can follow the following steps to generate the question answering pairs:</p>
+<ul>
+<li>Unify the temporal knowledge graph into the above format</li>
+<li>Sampling the facts/events from the knowledge graph</li>
+<li>Generate the question answer pairs based on the facts/events</li>
+<li>Question paraphrasing via LLM</li>
+</ul>
+<p>Generating process is like:</p>
+<p><img alt="generator" src="imgs/temporal_generation.jpg" /></p>
+<h3 id="generated-question-answering-pairs-for-icews-actor-and-cronquestion-kg">Generated Question Answering Pairs for ICEWS Actor and CronQuestion KG</h3>
+<table>
+<thead>
+<tr>
+<th>Source KG</th>
+<th></th>
+<th>Train</th>
+<th>Val</th>
+<th>Test</th>
+<th>Temporal Capabilities</th>
+<th>Count</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>ICEWS Actor</strong></td>
+<td>Simple</td>
+<td>17,982</td>
+<td>5,994</td>
+<td>5,994</td>
+<td>Temporal Constrained Retrieval</td>
+<td>34,498</td>
+</tr>
+<tr>
+<td></td>
+<td>Medium</td>
+<td>15,990</td>
+<td>5,330</td>
+<td>5,330</td>
+<td>Timeline Position Retrieval</td>
+<td>79,382</td>
+</tr>
+<tr>
+<td></td>
+<td>Complex</td>
+<td>19,652</td>
+<td>6,550</td>
+<td>6,550</td>
+<td>Timeline Operation</td>
+<td>34,894</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>Temporal Semantic Operation</td>
+<td>24,508</td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td></td>
+<td><strong>53,624</strong></td>
+<td><strong>17,874</strong></td>
+<td><strong>17,874</strong></td>
+<td></td>
+<td>89,372</td>
+</tr>
+<tr>
+<td><strong>CronQuestion KG</strong></td>
+<td>Simple</td>
+<td>7,200</td>
+<td>2,400</td>
+<td>2,400</td>
+<td>Temporal Constrained Retrieval</td>
+<td>19,720</td>
+</tr>
+<tr>
+<td></td>
+<td>Medium</td>
+<td>8,252</td>
+<td>2,751</td>
+<td>2,751</td>
+<td>Timeline Position Retrieval</td>
+<td>37,720</td>
+</tr>
+<tr>
+<td></td>
+<td>Complex</td>
+<td>9,580</td>
+<td>3,193</td>
+<td>3,193</td>
+<td>Timeline Arithmetic Operation</td>
+<td>21,966</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>Temporal Semantic Operation</td>
+<td>15,720</td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td></td>
+<td><strong>25,032</strong></td>
+<td><strong>8,344</strong></td>
+<td><strong>8,344</strong></td>
+<td></td>
+<td>41,720</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>Answers Detailed Types</th>
+<th>ICEWS Actor</th>
+<th>CronQuestions KG</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Subject</td>
+<td>17,249</td>
+<td>9,860</td>
+</tr>
+<tr>
+<td>Object</td>
+<td>17,249</td>
+<td>9,860</td>
+</tr>
+<tr>
+<td>Timestamp Start</td>
+<td>4,995</td>
+<td>2,000</td>
+</tr>
+<tr>
+<td>Timestamp End</td>
+<td>4,995</td>
+<td>2,000</td>
+</tr>
+<tr>
+<td>Timestamp Range</td>
+<td>4,995</td>
+<td>2,000</td>
+</tr>
+<tr>
+<td>Duration</td>
+<td>4,995</td>
+<td>2,000</td>
+</tr>
+<tr>
+<td>Relation Duration</td>
+<td>9,971</td>
+<td>4,000</td>
+</tr>
+<tr>
+<td>Relation Ranking</td>
+<td>4,981</td>
+<td>2,000</td>
+</tr>
+<tr>
+<td>Relation Union or Intersection</td>
+<td>19,942</td>
+<td>8,000</td>
+</tr>
+</tbody>
+</table>
+<p>For comparison, here is the statistics for the CronQuestions dataset:</p>
+<table>
+<thead>
+<tr>
+<th>Difficulty</th>
+<th>Template Count</th>
+<th>Question Count</th>
+<th>Question Categorization</th>
+<th>Count</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Simple</td>
+<td>158</td>
+<td>177,922</td>
+<td>Simple.Factual</td>
+<td>106,208</td>
+</tr>
+<tr>
+<td>Medium</td>
+<td>165</td>
+<td>90,641</td>
+<td>Simple.Temporal</td>
+<td>71,714</td>
+</tr>
+<tr>
+<td>Complex</td>
+<td>331</td>
+<td>141,437</td>
+<td>Medium.Factual</td>
+<td>90,641</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td>Medium.Temporal</td>
+<td>0</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td>Complex.Factual</td>
+<td>67,709</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td>Complex.Temporal</td>
+<td>73,728</td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td><strong>654</strong></td>
+<td><strong>410,000</strong></td>
+<td></td>
+<td><strong>410,000</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="temporal-question-answering-solutions">Temporal Question Answering Solutions</h2>
+<p><img alt="solution" src="imgs/solutions.jpg" /></p>
+<h3 id="rag">RAG</h3>
+<p>The first hot spot is the <em>Retrieval Augmented Generation(RAG)</em>, which will use the large language model embedding as
+the semantic index, to retrieve question relevant information from the knowledge graph, and then generate the answer
+based on the retrieved information.</p>
+<p><strong>Really this will be the dominant solution in the future?</strong></p>
+<h3 id="tkgqa-embedding">TKGQA Embedding</h3>
+<p>On this side of the Great Dividing Range, people focused on the graph embedding ways to solve the question answering
+over the knowledge graph.
+However, due to the challenge from the LLMs, people are tend to ignore LLM in their research for this stream, or just
+give up this area.
+There is not much work released in the past years regarding this area.</p>
+<p><strong>Are this way really out of dated?</strong></p>
+<p>From the technical perspective, current temporal knowledge graph embedding ways will not fit with our proposed and
+generated dataset, because for the complex questions, the relevant fact will be 3, and they should have no difference
+between this three.
+If all three hit, then the Hits@1 is True.</p>
+<p>So we developed a contrastive learning based temporal knowledge graph embedding way to solve this problem.</p>
+<h3 id="text2sql">Text2SQL</h3>
+<p>The third way may never think about being a competitor in the KGQA area, but the LLMs provide this potential, as the
+knowledge graph in theory is just one table with a lot of interconnections.
+So generate a sql to retrieve related information will be not that hard for the LLM.</p>
+<p><strong>Will it really perform well in this area?</strong></p>
+<h3 id="finetuning">Finetuning</h3>
+<p>The last way in theory should be the easiest way for application if you have QA pairs, because if you want to fine tune
+the ChatGPT, they will do it for you, all you need to do is to provide the QA pairs.
+However, one of the main problem is lacking of QA pairs.
+Which we have solved the problem above.</p>
+<p><strong>So what's the real performance of this way if you do have enough QA pairs?</strong></p>
+<h3 id="evaluation-metrics">Evaluation Metrics</h3>
+<ul>
+<li><strong>Hits@K</strong>: The percentage of questions where the correct answer is within the top K retrieved answers.</li>
+<li><strong>MRR</strong>: The mean reciprocal rank of the correct answer.</li>
+</ul>
+<p>The Hits@K metric, used to evaluate the accuracy of event retrieval, is defined by the following criteria in our
+scenario:</p>
+<div class="highlight"><pre><span></span><code>\text{Hits@K} = 
+\begin{cases} 
+  1 &amp; \text{if } \sum_{i=0}^{nN-1}r_i = n \\
+  0 &amp; \text{otherwise},
+\end{cases}
+</code></pre></div>
+<p>where $r_i$ is an indicator function described as:</p>
+<div class="highlight"><pre><span></span><code>r_i = 
+\begin{cases}
+  1 &amp; \text{if the $i$-th retrieved triplet matches an event} \\
+  0 &amp; \text{otherwise}.
+\end{cases}
+</code></pre></div>
+<p>The $n$ represents the number of involved events for the question.
+In this framework, $r_i$ functions as an indicator that takes the value 1 if the $i$-th retrieved triplet corresponds to
+one of the designated events, and 0 otherwise. The indexing for $r_i$ begins at 0.</p>
+<p>The Mean Reciprocal Rank (MRR) is defined as follows:</p>
+<div class="highlight"><pre><span></span><code>\text{MRR} = \frac{1}{Q} \sum_{q=1}^Q \frac{1}{\text{rank}_q + 1}
+</code></pre></div>
+<p>where $Q$ denotes the number of queries, and $\text{rank}_q$ is defined as the position of the first relevant document,
+i.e., $\text{rank}_q = \min { i : r_i = 1 }$.
+In our scenario, the definition of $\text{rank}_q$ needs to be adjusted to accommodate multiple relevance within the
+same set of results.</p>
+<p>It is defined as:</p>
+<div class="highlight"><pre><span></span><code>\text{rank}_q = \sum_{i=0}^{\|\mathcal{F}\|} \left\lfloor \frac{i}{n} \right\rfloor r_i
+</code></pre></div>
+<p>where $|\mathcal{F}|$ is the number of facts.</p>
+<h3 id="evaluation-results">Evaluation Results</h3>
+<h4 id="systematic-comparison-between-rag-and-tkgqa-embedding">Systematic Comparison between RAG and TKGQA Embedding</h4>
+<p>As these two are similar approaches, so we will evaluate them together.</p>
+<table>
+<thead>
+<tr>
+<th>Dataset</th>
+<th>Model</th>
+<th>MRR (Overall)</th>
+<th>MRR (Simple)</th>
+<th>MRR (Medium)</th>
+<th>MRR (Complex)</th>
+<th>Hits@1 (Overall)</th>
+<th>Hits@1 (Simple)</th>
+<th>Hits@1 (Medium)</th>
+<th>Hits@1 (Complex)</th>
+<th>Hits@3 (Overall)</th>
+<th>Hits@3 (Simple)</th>
+<th>Hits@3 (Medium)</th>
+<th>Hits@3 (Complex)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>ICEWS Actor</strong></td>
+<td>RAG</td>
+<td>0.365</td>
+<td>0.726</td>
+<td>0.274</td>
+<td>0.106</td>
+<td>0.265</td>
+<td>0.660</td>
+<td>0.128</td>
+<td>0.011</td>
+<td>0.391</td>
+<td>0.776</td>
+<td>0.331</td>
+<td>0.086</td>
+</tr>
+<tr>
+<td></td>
+<td>RAG_semantic</td>
+<td>0.427</td>
+<td>0.794</td>
+<td>0.337</td>
+<td>0.162</td>
+<td>0.301</td>
+<td>0.723</td>
+<td>0.164</td>
+<td>0.022</td>
+<td>0.484</td>
+<td>0.852</td>
+<td>0.424</td>
+<td>0.195</td>
+</tr>
+<tr>
+<td></td>
+<td>TimelineKGQA</td>
+<td><strong>0.660</strong></td>
+<td><strong>0.861</strong></td>
+<td><strong>0.632</strong></td>
+<td><strong>0.497</strong></td>
+<td><strong>0.486</strong></td>
+<td><strong>0.782</strong></td>
+<td><strong>0.435</strong></td>
+<td><strong>0.257</strong></td>
+<td><strong>0.858</strong></td>
+<td><strong>0.929</strong></td>
+<td><strong>0.845</strong></td>
+<td><strong>0.805</strong></td>
+</tr>
+<tr>
+<td><strong>CronQuestions KG</strong></td>
+<td>RAG</td>
+<td>0.331</td>
+<td>0.771</td>
+<td>0.218</td>
+<td>0.101</td>
+<td>0.235</td>
+<td>0.704</td>
+<td>0.092</td>
+<td>0.009</td>
+<td>0.348</td>
+<td>0.824</td>
+<td>0.249</td>
+<td>0.077</td>
+</tr>
+<tr>
+<td></td>
+<td>RAG_semantic</td>
+<td>0.344</td>
+<td>0.775</td>
+<td>0.229</td>
+<td>0.122</td>
+<td>0.237</td>
+<td><strong>0.707</strong></td>
+<td>0.094</td>
+<td>0.010</td>
+<td>0.371</td>
+<td><strong>0.828</strong></td>
+<td>0.267</td>
+<td>0.122</td>
+</tr>
+<tr>
+<td></td>
+<td>TimelineKGQA</td>
+<td><strong>0.522</strong></td>
+<td><strong>0.788</strong></td>
+<td><strong>0.510</strong></td>
+<td><strong>0.347</strong></td>
+<td><strong>0.319</strong></td>
+<td>0.676</td>
+<td><strong>0.283</strong></td>
+<td><strong>0.103</strong></td>
+<td><strong>0.758</strong></td>
+<td>0.759</td>
+<td><strong>0.667</strong></td>
+<td><strong>0.834</strong></td>
+</tr>
+</tbody>
+</table>
+<h4 id="hits1-for-text2sql">Hits@1 for Text2SQL</h4>
+<table>
+<thead>
+<tr>
+<th>Dataset</th>
+<th>Model</th>
+<th>Hits@1 (Overall)</th>
+<th>Hits@1 (Simple)</th>
+<th>Hits@1 (Medium)</th>
+<th>Hits@1 (Complex)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>ICEWS Actor</strong></td>
+<td>GPT3.5_base</td>
+<td>0.179</td>
+<td>0.268</td>
+<td>0.170</td>
+<td>0.105</td>
+</tr>
+<tr>
+<td></td>
+<td>GPT3.5_semantic</td>
+<td>0.358</td>
+<td>0.537</td>
+<td>0.311</td>
+<td>0.232</td>
+</tr>
+<tr>
+<td></td>
+<td>GPT3.5_semantic.oneshot</td>
+<td>0.432</td>
+<td>0.611</td>
+<td>0.354</td>
+<td>0.328</td>
+</tr>
+<tr>
+<td></td>
+<td>GPT4o_semantic.oneshot</td>
+<td>0.485</td>
+<td>0.650</td>
+<td>0.392</td>
+<td><strong>0.408</strong></td>
+</tr>
+<tr>
+<td></td>
+<td>TimelineKGQA</td>
+<td><strong>0.486</strong></td>
+<td><strong>0.782</strong></td>
+<td><strong>0.435</strong></td>
+<td>0.257</td>
+</tr>
+<tr>
+<td><strong>CronQuestions KG</strong></td>
+<td>GPT3.5_base</td>
+<td>0.158</td>
+<td>0.393</td>
+<td>0.079</td>
+<td>0.052</td>
+</tr>
+<tr>
+<td></td>
+<td>GPT3.5_semantic</td>
+<td>0.236</td>
+<td>0.573</td>
+<td>0.130</td>
+<td>0.076</td>
+</tr>
+<tr>
+<td></td>
+<td>GPT3.5_semantic.oneshot</td>
+<td>0.281</td>
+<td>0.583</td>
+<td>0.179</td>
+<td>0.143</td>
+</tr>
+<tr>
+<td></td>
+<td>GPT4o_semantic.oneshot</td>
+<td><strong>0.324</strong></td>
+<td>0.623</td>
+<td>0.201</td>
+<td><strong>0.207</strong></td>
+</tr>
+<tr>
+<td></td>
+<td>TimelineKGQA</td>
+<td>0.319</td>
+<td><strong>0.676</strong></td>
+<td><strong>0.283</strong></td>
+<td>0.103</td>
+</tr>
+</tbody>
+</table>
+<h4 id="finetuning-accuracy">Finetuning accuracy</h4>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Rephrased</th>
+<th>Question_as_answer</th>
+<th>Simple_for_medium</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GPT-3.5-Turbo</td>
+<td>0.60</td>
+<td>0.18</td>
+<td>0.36</td>
+</tr>
+<tr>
+<td>GPT-4o-mini</td>
+<td>0.62</td>
+<td>0.00</td>
+<td>0.25</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="development-setup">Development Setup</h2>
+<h3 id="install-the-package">Install the package</h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># cd to current directory</span>
+<span class="nb">cd</span><span class="w"> </span>TimelineKGQA
+python3<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>venv
+pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+<span class="c1"># if you are doing development</span>
+pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.dev.txt
+
+<span class="c1"># and then install the package</span>
+pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
+</code></pre></div>
+<p>If you are doing development, you will also need a database to store the knowledge graph.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># spin up the database</span>
+docker-compose<span class="w"> </span>up<span class="w"> </span>-d
+
+<span class="c1"># After this we need to load the data</span>
+
+<span class="c1"># for icews_dict</span>
+<span class="nb">source</span><span class="w"> </span>venv/bin/activate
+<span class="nb">export</span><span class="w"> </span><span class="nv">OPENAI_API_KEY</span><span class="o">=</span>sk-proj-xxx
+<span class="c1"># this will load the icews_dicts data into the database</span>
+python3<span class="w"> </span>-m<span class="w"> </span>TimelineKGQA.data_loader.load_icews<span class="w"> </span>--mode<span class="w"> </span>load_data<span class="w"> </span>--data_name<span class="w"> </span>icews_dicts
+<span class="c1"># this will create the unified knowledge graph</span>
+python3<span class="w"> </span>-m<span class="w"> </span>TimelineKGQA.data_loader.load_icews<span class="w"> </span>--mode<span class="w"> </span>actor_unified_kg
+
+<span class="c1"># this will generate the question answering pairs</span>
+python3<span class="w"> </span>-m<span class="w"> </span>TimelineKGQA.generator
+</code></pre></div>
+<h3 id="folder-structure">Folder Structure</h3>
+<div class="highlight"><pre><span></span><code>TimelineKGQA/
+├──<span class="w"> </span>TimelineKGQA/
+│<span class="w">   </span>├──<span class="w"> </span>__init__.py
+│<span class="w">   </span>├──<span class="w"> </span>generator.py
+│<span class="w">   </span>├──<span class="w"> </span>processor.py
+│<span class="w">   </span>└──<span class="w"> </span>utils.py
+├──<span class="w"> </span>tests/
+│<span class="w">   </span>├──<span class="w"> </span>__init__.py
+│<span class="w">   </span>├──<span class="w"> </span>test_generator.py
+│<span class="w">   </span>└──<span class="w"> </span>test_processor.py
+├──<span class="w"> </span>docs/
+│<span class="w">   </span>└──<span class="w"> </span>...
+├──<span class="w"> </span>examples/
+│<span class="w">   </span>└──<span class="w"> </span>basic_usage.py
+├──<span class="w"> </span>setup.py
+├──<span class="w"> </span>requirements.txt
+├──<span class="w"> </span>README.md
+└──<span class="w"> </span>LICENSE
+</code></pre></div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": ".", "features": ["search.suggest", "navigation.tabs"], "search": "assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="assets/javascripts/bundle.f55a23d4.min.js"></script>
+      
+    
+  </body>
+</html>
