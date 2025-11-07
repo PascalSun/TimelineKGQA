@@ -9,8 +9,6 @@ theme:
     repo: fontawesome/brands/github
 plugins:
   - search
-  - encryptcontent:
-      global_password: 'TimelineKGQA'
   - gen-files:
       scripts:
         - script/gen_ref_pages.py
