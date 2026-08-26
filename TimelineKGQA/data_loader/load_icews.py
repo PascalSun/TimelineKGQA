@@ -704,8 +704,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--db_connection_str",
         type=str,
-        help="Database connection string",
-        default="postgresql://pascal:homepc@0.tcp.au.ngrok.io:18687/timelinekgqa",
+        help="Database connection string (defaults to $TIMELINEKGQA_DB_URL)",
+        default=os.environ.get("TIMELINEKGQA_DB_URL"),
     )
     # parse the arguments
     args = parser.parse_args()
